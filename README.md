@@ -72,11 +72,11 @@ streamlit run app.py
 
 ## Team
 
-- Person 1 — Data Pipeline
-- Person 2 — Retrieval System
-- Person 3 — Clustering & Visualization
-- Person 4 — LLM Answer Generation
-- Person 5 — Frontend & Integration
+- Vivek — Data Pipeline
+- Xan/Ian — Retrieval System
+- Kevin Dong — Clustering & Visualization
+- Kevin Pei — LLM Answer Generation
+- Kevin Pei — Frontend & Integration
 
 ## License
 
