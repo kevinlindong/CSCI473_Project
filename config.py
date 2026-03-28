@@ -1,0 +1,38 @@
+"""
+config.py — Central configuration for the ArXiv Research Assistant.
+
+All configurable values (paths, model names, hyperparameters) live here.
+Other modules import from this file rather than hardcoding values.
+"""
+
+import os
+
+# --- Paths ---
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+RAW_DIR = os.path.join(DATA_DIR, "raw")
+PROCESSED_DIR = os.path.join(DATA_DIR, "processed")
+EMBEDDINGS_DIR = os.path.join(DATA_DIR, "embeddings")
+
+# --- Encoder ---
+ENCODER_MODEL_NAME = "all-MiniLM-L6-v2"
+EMBEDDING_DIM = 384
+
+# --- Retrieval ---
+N_RETRIEVAL_RESULTS = 20
+N_RERANK_RESULTS = 5
+
+# --- Clustering ---
+N_CLUSTERS = 10
+KMEANS_MAX_ITER = 100
+KMEANS_SEED = 42
+
+# --- PCA ---
+N_PCA_COMPONENTS = 2
+
+# --- LLM ---
+LLM_MODEL_NAME = "google/flan-t5-base"  # Small model for dev; swap for demo
+MAX_CONTEXT_LENGTH = 2048
+
+# --- Arxiv Fetch ---
+ARXIV_CATEGORIES = ["cs.CL", "cs.LG"]
+MAX_PAPERS = 500
