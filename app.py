@@ -1,64 +1,102 @@
 """
-app.py — Streamlit entry point for the ArXiv Research Assistant.
+app.py — FastAPI backend for the ArXiv Research Assistant.
 
-Run with: streamlit run app.py
+Run with: uvicorn app:app --reload
 
-Pages:
-1. Query — Ask a question, get a cited answer from relevant papers.
-2. Topic Map — Interactive PCA scatter plot colored by k-means clusters.
-3. Paper Detail — View full abstract, sections, and figures for a paper.
+Endpoints:
+  POST /api/query        — Ask a question, get a cited answer from relevant papers.
+  GET  /api/topic-map    — Get PCA-projected embeddings with k-means cluster labels.
+  GET  /api/papers       — List papers in the corpus.
+  GET  /api/papers/{id}  — Get full details for a single paper.
 """
 
-import streamlit as st
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+app = FastAPI(title="ArXiv Research Assistant API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
-def main():
-    st.set_page_config(
-        page_title="ArXiv Research Assistant",
-        page_icon="📚",
-        layout="wide",
-    )
+# --------------- Request / Response Models ---------------
 
-    st.title("ArXiv Research Assistant")
-    st.markdown(
-        "Ask a natural language question and get answers synthesized from "
-        "relevant Arxiv papers, with citations and an interactive topic map."
-    )
-
-    # Sidebar navigation
-    page = st.sidebar.radio("Navigate", ["Query", "Topic Map", "Paper Browser"])
-
-    if page == "Query":
-        query_page()
-    elif page == "Topic Map":
-        topic_map_page()
-    elif page == "Paper Browser":
-        paper_browser_page()
+class QueryRequest(BaseModel):
+    question: str
 
 
-def query_page():
-    """Query page: text input → retrieval → LLM answer with citations."""
-    st.header("Ask a Research Question")
-    query = st.text_input("Enter your question:", placeholder="e.g., What methods have been proposed for efficient attention in long-context transformers?")
-
-    if query:
-        st.info("Retrieval and answer generation not yet implemented.")
-        # TODO: encode query, retrieve papers, generate answer, display results
+class Citation(BaseModel):
+    paper_id: str
+    title: str
+    url: str
+    passage: str
 
 
-def topic_map_page():
-    """Topic map: interactive PCA scatter plot colored by k-means clusters."""
-    st.header("Topic Map")
-    st.info("Topic map visualization not yet implemented.")
-    # TODO: load embeddings, run clustering + PCA, render Plotly scatter plot
+class QueryResponse(BaseModel):
+    answer: str
+    citations: list[Citation]
 
 
-def paper_browser_page():
-    """Paper browser: browse and view individual papers."""
-    st.header("Paper Browser")
-    st.info("Paper browser not yet implemented.")
-    # TODO: load corpus, display searchable list, show paper details on click
+class PaperPoint(BaseModel):
+    paper_id: str
+    title: str
+    x: float
+    y: float
+    cluster: int
+    cluster_label: str
 
 
-if __name__ == "__main__":
-    main()
+class TopicMapResponse(BaseModel):
+    points: list[PaperPoint]
+
+
+class PaperSummary(BaseModel):
+    paper_id: str
+    title: str
+    authors: list[str]
+    abstract: str
+
+
+class PaperDetail(BaseModel):
+    paper_id: str
+    title: str
+    authors: list[str]
+    abstract: str
+    sections: list[dict]
+    figures: list[dict]
+
+
+# --------------- Endpoints ---------------
+
+@app.post("/api/query", response_model=QueryResponse)
+async def query(req: QueryRequest):
+    """Encode query, retrieve papers, generate cited answer."""
+    # TODO: encode query, retrieve papers, generate answer
+    raise NotImplementedError
+
+
+@app.get("/api/topic-map", response_model=TopicMapResponse)
+async def topic_map():
+    """Return PCA-projected embeddings with k-means cluster labels."""
+    # TODO: load embeddings, run clustering + PCA, return points
+    raise NotImplementedError
+
+
+@app.get("/api/papers", response_model=list[PaperSummary])
+async def list_papers():
+    """List all papers in the corpus."""
+    # TODO: load corpus, return summaries
+    raise NotImplementedError
+
+
+@app.get("/api/papers/{paper_id}", response_model=PaperDetail)
+async def get_paper(paper_id: str):
+    """Get full details for a single paper."""
+    # TODO: load paper by ID, return details
+    raise NotImplementedError
