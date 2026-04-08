@@ -125,6 +125,11 @@ def enrich_paper(paper: dict) -> dict:
             return paper
 
         sections, figures = parse_ar5iv_html(resp.text, paper_id)
+
+        if not sections and not figures:
+            logger.warning("%s: ar5iv returned HTML but no parseable content", paper_id)
+            return paper
+
         paper["sections"] = [
             {"heading": s.heading, "text": s.text} for s in sections
         ]
