@@ -15,7 +15,6 @@ venv/
 .env
 
 # Data (large files)
-data/raw/*.json
 data/embeddings/*.npy
 data/embeddings/*.pt
 

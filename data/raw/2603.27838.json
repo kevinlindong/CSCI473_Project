@@ -1,0 +1,20 @@
+{
+  "paper_id": "2603.27838",
+  "title": "ProText: A benchmark dataset for measuring (mis)gendering in long-form texts",
+  "abstract": "We introduce ProText, a dataset for measuring gendering and misgendering in stylistically diverse long-form English texts. ProText spans three dimensions: Theme nouns (names, occupations, titles, kinship terms), Theme category (stereotypically male, stereotypically female, gender-neutral/non-gendered), and Pronoun category (masculine, feminine, gender-neutral, none). The dataset is designed to probe (mis)gendering in text transformations such as summarization and rewrites using state-of-the-art Large Language Models, extending beyond traditional pronoun resolution benchmarks and beyond the gender binary. We validated ProText through a mini case study, showing that even with just two prompts and two models, we can draw nuanced insights regarding gender bias, stereotyping, misgendering, and gendering. We reveal systematic gender bias, particularly when inputs contain no explicit gender cues or when models default to heteronormative assumptions.",
+  "authors": [
+    "Hadas Kotek",
+    "Margit Bowler",
+    "Patrick Sonnenberg",
+    "Yu'an Yang"
+  ],
+  "date": "2026-03-29T19:45:31+00:00",
+  "url": "http://arxiv.org/abs/2603.27838v1",
+  "categories": [
+    "cs.CL"
+  ],
+  "primary_category": "cs.CL",
+  "sections": [],
+  "figures": [],
+  "ar5iv_success": false
+}

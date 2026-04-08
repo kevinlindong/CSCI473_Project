@@ -1,0 +1,120 @@
+{
+  "paper_id": "2603.28886",
+  "title": "Calibrated Fusion for Heterogeneous Graph-Vector Retrieval in Multi-Hop QA",
+  "abstract": "Graph-augmented retrieval combines dense similarity with graph-based relevance signals such as Personalized PageRank (PPR), but these scores have different distributions and are not directly comparable. We study this as a score calibration problem for heterogeneous retrieval fusion in multi-hop question answering. Our method, PhaseGraph, maps vector and graph scores to a common unit-free scale using percentile-rank normalization (PIT) before fusion, enabling stable combination without discarding magnitude information.\n  Across MuSiQue and 2WikiMultiHopQA, calibrated fusion improves held-out last-hop retrieval on HippoRAG2-style benchmarks: LastHop@5 increases from 75.1% to 76.5% on MuSiQue (8W/1L, p=0.039) and from 51.7% to 53.6% on 2WikiMultiHopQA (11W/2L, p=0.023), both on independent held-out test splits. A theory-driven ablation shows that percentile-based calibration is directionally more robust than min-max normalization on both tune and test splits (1W/6L, p=0.125), while Boltzmann weighting performs comparably to linear fusion after calibration (0W/3L, p=0.25). These results suggest that score commensuration is a robust design choice, and the exact post-calibration operator appears to matter less on these benchmarks.",
+  "authors": [
+    "Andre Bacellar"
+  ],
+  "date": "2026-03-30T18:13:01+00:00",
+  "url": "http://arxiv.org/abs/2603.28886v1",
+  "categories": [
+    "cs.IR",
+    "cs.LG"
+  ],
+  "primary_category": "cs.IR",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "Multi-hop question answering requires retrieving multiple evidence passages that form a reasoning chain, where later-hop passages are often weakly aligned with the original query. Dense retrieval is strong at lexical and semantic matching, but misses bridge passages whose relevance is mediated by graph structure rather than direct textual similarity. Graph-based retrieval offers a complementary signal through connectivity and diffusion, for example via Personalized PageRank (PPR) over an entity graph (Yang et\u00a0al., 2018 ; Trivedi et\u00a0al., 2022 ) .\n\nA practical difficulty is that dense and graph retrieval scores are heterogeneous : cosine similarities cluster in a narrow Gaussian ( \u03bc \u2248 0.09 \\mu\\approx 0.09 , \u03c3 \u2248 0.02 \\sigma\\approx 0.02 ), while PPR scores follow a power-law (most values \u223c 0.001 \\sim 0.001 , rare peaks \u223c 0.3 \\sim 0.3 ). Na\u00efve score fusion is poorly behaved under this mismatch, while rank-only fusion (RRF) avoids calibration at the cost of discarding magnitude information. We study graph-vector retrieval fusion through the lens of score commensuration .\n\nWe present PhaseGraph , a calibrated fusion method for heterogeneous graph-vector retrieval. The method first maps each retriever\u2019s scores to a common unit-free scale using percentile-rank normalization (the probability integral transform, PIT), then combines the calibrated signals with a fusion rule. The central hypothesis is that calibration is the first-order step : once scores are made commensurable, the exact post-calibration operator appears to matter less than in uncalibrated fusion.\n\nWe evaluate this on multi-hop benchmarks under both an earlier pipeline and a stronger HippoRAG2-style setup. Our contributions:\n\n\u2022 Calibrated heterogeneous-score fusion (Sections 5 , 6 ): We identify heterogeneous-score calibration as the central problem in graph-vector retrieval fusion, and propose PIT-based normalization. Held-out ablation is consistent with PIT being directionally more robust than min-max (1W/6L, p = 0.125 p{=}0.125 ); the fusion operator (Boltzmann vs. linear) is empirically inconclusive (0W/3L, p = 0.25 p{=}0.25 ). \u2022 Held-out confirmation on two benchmarks (Section 5 ): Under a strong HippoRAG2-style pipeline (Llama 3.3 70B FP8, NV-Embed-v2 4096d), PhaseGraph improves last-hop retrieval on held-out test splits of MuSiQue (8W/1L, p = 0.039 p{=}0.039 ) and 2WikiMultiHopQA (11W/2L, p = 0.023 p{=}0.023 ). True RRF is positive but does not confirm on either benchmark at these sample sizes. \u2022 Scale analysis and secondary evidence (Section 7 ): Pool explosion and entity fragmentation explain why uncalibrated fusion fails at corpus scale. Pool capping plus synonym linking restore zero-loss behavior (8W/0L, p = 0.008 p{=}0.008 ). We also confirm empirically that cross-encoder reranking destroys multi-hop retrieval (Appendix B ), while Ising graph reranking adds marginal exploratory benefit on the curated subset only."
+    },
+    {
+      "heading": "3.1Problem Setting",
+      "text": "Given a query q q , a vector retriever returns \u211b v = { ( d i , s i v ) } i = 1 N v \\mathcal{R}_{v}=\\{(d_{i},s^{v}_{i})\\}_{i=1}^{N_{v}} (typically N v = 10 N_{v}=10 ), and a graph retriever returns \u211b g = { ( d j , s j g ) } j = 1 N g \\mathcal{R}_{g}=\\{(d_{j},s^{g}_{j})\\}_{j=1}^{N_{g}} (typically N g \u226b N v N_{g}\\gg N_{v} , as PPR returns all reachable nodes). The challenge: s v s^{v} and s g s^{g} are on incomparable scales and follow different distributions."
+    },
+    {
+      "heading": "3.2Percentile-Rank Normalization",
+      "text": "For each system k \u2208 { v , g } k\\in\\{v,g\\} , we compute the percentile rank of each document within its own score list: p ^ i k = | { j : s j k \u2264 s i k } | N k \\hat{p}_{i}^{k}=\\frac{|\\{j:s_{j}^{k}\\leq s_{i}^{k}\\}|}{N_{k}} (1) This is simply the empirical CDF, mapping scores to [ 0 , 1 ] [0,1] uniform (equivalently, the 1D optimal transport map to \ud835\udcb0 \u200b [ 0 , 1 ] \\mathcal{U}[0,1] (Brenier, 1991 ) ). This preserves within-system ordering while making cross-system values commensurable."
+    },
+    {
+      "heading": "3.3Boltzmann Energy and Temperature",
+      "text": "We convert percentile ranks to energies: E i k = \u2212 ln \u2061 ( p ^ i k + \u03f5 ) E_{i}^{k}=-\\ln(\\hat{p}_{i}^{k}+\\epsilon) (2) where \u03f5 = 10 \u2212 6 \\epsilon=10^{-6} prevents singularity at p ^ = 0 \\hat{p}=0 . High-ranked documents have low energy (high percentile \u2192 \\rightarrow small E E ).\n\nWe set temperature as a fraction of mean energy: T k = E \u00af k 2 = 1 2 \u200b N k \u200b \u2211 i = 1 N k E i k T_{k}=\\frac{\\bar{E}_{k}}{2}=\\frac{1}{2N_{k}}\\sum_{i=1}^{N_{k}}E_{i}^{k} (3) The factor of 1 2 \\frac{1}{2} is a heuristic that produces moderate sharpening; we did not tune this value. The effect is that Boltzmann probabilities are neither too peaked nor too flat, adapting to the spread of each system\u2019s scores."
+    },
+    {
+      "heading": "3.4Weighted Boltzmann Fusion",
+      "text": "Boltzmann probabilities within each system: P i k = exp \u2061 ( \u2212 E i k / T k ) Z k , Z k = \u2211 j exp \u2061 ( \u2212 E j k / T k ) P_{i}^{k}=\\frac{\\exp(-E_{i}^{k}/T_{k})}{Z_{k}},\\quad Z_{k}=\\sum_{j}\\exp(-E_{j}^{k}/T_{k}) (4)\n\nFinal fusion with mixing parameter \u03b1 \\alpha and consensus boost \u03b2 \\beta : score \u200b ( d i ) = \u03b1 \u22c5 P i v + ( 1 \u2212 \u03b1 ) \u22c5 P i g + \u03b2 \u22c5 \ud835\udfd9 \u200b [ d i \u2208 \u211b v \u2229 \u211b g ] \\text{score}(d_{i})=\\alpha\\cdot P_{i}^{v}+(1-\\alpha)\\cdot P_{i}^{g}+\\beta\\cdot\\mathbb{1}[d_{i}\\in\\mathcal{R}_{v}\\cap\\mathcal{R}_{g}] (5) where \u03b1 \\alpha controls vector-graph weighting and \u03b2 \\beta boosts documents found by both systems (CombMNZ-inspired). Note that \u03b2 \\beta operates on a different scale than the probability terms P i k P_{i}^{k} ; in practice, \u03b2 \u2208 { 0.5 , 1.0 , 1.5 } \\beta\\in\\{0.5,1.0,1.5\\} acts as a discrete bonus for consensus documents. The appropriate \u03b1 \\alpha depends on corpus size and graph density; empirical calibration is discussed in Section 7 .\n\nThe top- K K documents by fused score form the final retrieval set."
+    },
+    {
+      "heading": "3.5Comparison to RRF",
+      "text": "Reciprocal Rank Fusion computes score \u200b ( d ) = \u2211 k 1 k 0 + rank k \u200b ( d ) \\text{score}(d)=\\sum_{k}\\frac{1}{k_{0}+\\text{rank}_{k}(d)} , using only ranks. Our method additionally uses the shape of the score distribution through Boltzmann weighting: a document ranked 5th out of 10 similar-scoring documents receives different weight than one ranked 5th with a sharp score drop-off. This temperature-mediated confidence is one advantage over RRF."
+    },
+    {
+      "heading": "4.1Primary Benchmarks",
+      "text": "Primary evaluations use two benchmarks under the primary HippoRAG2 pipeline described below: \u2022 MuSiQue (Trivedi et\u00a0al., 2022 ) : 11,654 passages, MD5-split into 486-query tune / 491-query held-out test ( K = 5 K{=}5 ). Each query has 2\u20134 supporting passages forming a reasoning chain; the final hop is hardest to retrieve. \u2022 2WikiMultiHopQA (Ho et\u00a0al., 2020 ) : 6,343 passages (isolated database), 509-query tune / 491-query held-out test ( K = 5 K{=}5 ).\n\nSecondary analyses use a legacy pipeline on MuSiQue full-corpus (500 queries, 6,841 passages) and a curated 66-query hard-slice; details in Section 7 ."
+    },
+    {
+      "heading": "4.2System Architecture",
+      "text": "The core components are shared across both pipelines: a vector store (PostgreSQL + pgvector), a knowledge graph (Neo4j with LLM-extracted entities), Personalized PageRank for graph retrieval, and a pluggable fusion layer. Two pipeline variants appear in this paper:\n\n\u2022 HippoRAG2 pipeline (Sections 5 , 6 ): NV-Embed-v2 (Lee et\u00a0al., 2024 ) (4096d) for dense retrieval; Llama 3.3 70B FP8 for entity extraction. This is the primary benchmark pipeline. \u2022 Legacy pipeline (Section 7 ): text-embedding-3-small (1536d) for dense retrieval; GPT-4-class LLM for entity extraction. Used for exploratory scaling analyses and the curated hard-slice. Results are not directly comparable to the HippoRAG2 pipeline."
+    },
+    {
+      "heading": "4.3Metrics",
+      "text": "\u2022 LastHop @ K K : Last-hop passage found in top- K K (hardest hop, most distant from query) \u2022 FullSup @ K K : All supporting passages found in top- K K (complete reasoning chain) \u2022 GraphWin : Fused retrieval found last hop when vector alone did not \u2022 GraphLoss : Fused retrieval lost a last hop that vector alone found\n\nGraphWin and GraphLoss provide a Condorcet-style analysis: a fusion method is safe if GraphLoss = 0 =0 and effective if GraphWin > 0 >0 ."
+    },
+    {
+      "heading": "4.4Baselines and Configurations",
+      "text": "Primary comparisons: vector-only, true RRF (Cormack et\u00a0al., 2009 ) , and our calibrated Boltzmann fusion (Section 3 ). Additional fusion strategies (log-linear, power mean, Tsallis, Gumbel copula, Plackett-Luce, and five others) and Ising reranking are reported as exploratory analyses in Section 7 and Appendix C ."
+    },
+    {
+      "heading": "5Primary Results: Held-Out Multi-Hop Benchmarks",
+      "text": "We evaluate PhaseGraph on the HippoRAG2 benchmark setup (Guti\u00e9rrez et\u00a0al., 2025 ) using the primary pipeline (NV-Embed-v2, Llama 3.3 70B FP8) described in Section 4 ."
+    },
+    {
+      "heading": "5.1Setup and Results",
+      "text": "MuSiQue: 11,654 passages, 491-query held-out test ( K = 5 K{=}5 ), tune on 486. 2Wiki: 6,343 passages, 491-query test ( K = 5 K{=}5 ), tune on 509; isolated database (no MuSiQue contamination). All embeddings via NV-Embed-v2 (4096d); extraction via Llama 3.3 70B FP8.\n\nTable 1 shows that PhaseGraph outperforms vector-only on both benchmarks at held-out test, confirming the calibrated fusion approach generalizes beyond the older extraction pipeline. On MuSiQue, RRF is positive but does not reach significance (15W/6L, p = 0.078 p{=}0.078 ), while PhaseGraph with a conservative configuration (8W/1L) confirms at p = 0.039 p{=}0.039 . On 2Wiki, RRF again does not confirm (11W/5L, p = 0.210 p{=}0.210 ) but PhaseGraph does (11W/2L, p = 0.023 p{=}0.023 ).\n\nFigure 1 shows the per-query last-hop outcome breakdown for 2Wiki: 252 queries where both systems find the last hop, 226 where neither does, and the critical asymmetry of 11 PhaseGraph -only wins vs. 2 vector-only wins."
+    },
+    {
+      "heading": "6What Matters in Fusion? A Theory-Guided Ablation",
+      "text": "We run a theory-driven ablation on the 2Wiki HippoRAG2 setup to isolate the contribution of each design decision. All ablations use the confirmed baseline ( \u03b1 = 0.4 \\alpha{=}0.4 , dk = = 20)."
+    },
+    {
+      "heading": "6.1Score Distributions and the Calibration Motivation",
+      "text": "Figure 2 shows raw score distributions from 100 sample queries. Vector cosine similarity spans [ 0.19 , 0.54 ] [0.19,0.54] with median 0.29. PPR scores span [ 6 \u200b e- \u200b 5 , 0.14 ] [6\\text{e-}5,0.14] with a heavy right tail\u2014effectively 6 \u00d7 \\times smaller median. Direct weighted combination would be dominated by vector scores regardless of \u03b1 \\alpha . Figure 3 confirms that PIT normalization maps both distributions to approximately uniform [ 0 , 1 ] [0,1] , while min-max normalization preserves the power-law skew in PPR scores."
+    },
+    {
+      "heading": "6.2Ablation Results",
+      "text": "We test three axes: (1)\u00a0normalization method, (2)\u00a0fusion formula, (3)\u00a0temperature calibration. Table 2 reports tune-split (n = = 509) and held-out test-split (n = = 491) results."
+    },
+    {
+      "heading": "7Secondary Analyses: Scaling, Isolation, and Exploratory Evidence",
+      "text": "The analyses in this section are exploratory or secondary; primary confirmatory evidence is in Section 5 ."
+    },
+    {
+      "heading": "7.1Hard-Slice: Exploratory Evidence",
+      "text": "On a curated 66-query subset selected for KG coverage (668 passages), all PIT-normalized strategies reach 26 LastHop @10 wins; Ising reranking adds one more (27W, 80.3%). Zero losses across 660+ configs reflect low error correlation on this favorable subset\u2014a property that does not hold at full corpus. Cross-encoder reranking causes catastrophic failure (78.8% \u2192 \\to 9.1%), confirming that multi-hop retrieval requires passage-dependency-aware scoring: standard cross-encoders evaluate passages independently and demote bridge evidence. Full statistical details (Wilson CIs, odds ratios) appear in Appendix B ; the 13-strategy ablation is shown in Figure 6 (Appendix E ); the hard-slice retrieval table is Table 8 (Appendix H ). We also explored a mean-field Ising reranker that propagates query relevance through KG entity connections, adding one win on the hard-slice (27 total). This gain does not transfer to full corpus (all Ising configs net negative at scale); full details in Appendix D ."
+    },
+    {
+      "heading": "7.2Full-Corpus Scaling",
+      "text": "Applying the hard-slice configuration ( \u03b1 = 0.3 \\alpha{=}0.3 , no pool cap) to 500 MuSiQue queries with 6,841 passages causes graph fusion to hurt retrieval :\n\nThe mechanism is graph candidate pool explosion : 69,678 entities generate 2,000+ PPR candidates per query (vs. \u223c \\sim 200 on the hard-slice), and percentile-rank normalization over this diffuse pool allows low-quality results to dominate when \u03b1 = 0.3 \\alpha{=}0.3 assigns 70% graph weight. Introducing divergent_top_k (pool cap) and shifting to \u03b1 = 0.7 \\alpha{=}0.7 recovers the gain: 16W/5L (Table 3 ). The 5 remaining losses trace to disconnected entity aliases (e.g., \u201cUnited States\u201d vs. \u201cUS\u201d); embedding-based synonym linking (0.85 cosine threshold, 44,781 links) restores zero losses: 12W/0L (Table 3 , bottom). A held-out split (247 queries) confirms: 8W/0L ( p = 0.008 p{=}0.008 , McNemar). R@5 does not improve significantly (7W/5L, p = 0.77 p{=}0.77 ). On HotpotQA (200 queries, 95.5% vector baseline), both fusion methods produce 0W/0L\u2014graph fusion only helps when vector retrieval is insufficient.\n\nLegacy-pipeline 2WikiMultiHopQA results (500 queries, 3,188 passages, legacy pipeline) appear in Appendix G . Held-out confirmation on the HippoRAG2 pipeline is reported in Section 5 ."
+    },
+    {
+      "heading": "9Conclusion",
+      "text": "We presented PhaseGraph , a calibrated fusion method for heterogeneous graph-vector retrieval in multi-hop QA. Our main claim is not that a particular thermodynamic operator is uniquely necessary, but that graph and vector retrieval should be fused only after their scores are made commensurable. Across held-out evaluations on MuSiQue and 2WikiMultiHopQA under a strong HippoRAG2-style pipeline, calibrated fusion improves last-hop retrieval over vector-only and over rank-based fusion.\n\nA theory-guided ablation clarifies the mechanism. Percentile-based calibration is directionally more robust than min-max normalization on both tune and held-out test splits, while Boltzmann weighting is empirically comparable to linear fusion after calibration. This suggests that the main contribution of PhaseGraph is calibrated heterogeneous-score fusion rather than a specific post-calibration operator.\n\nMore broadly, our results argue for treating graph-vector retrieval as a calibration problem before it is treated as an architecture problem. In this setting, on our benchmarks, normalization choice appears to matter more than increasingly elaborate fusion rules, and graph quality constraints\u2014entity disambiguation, pool capping, and database isolation\u2014can matter as much as the fusion formula itself."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1: Per-query last-hop outcomes: PhaseGraph vs. vector-only on 2Wiki HippoRAG2 test split (n = = 491). Left : all 491 queries; right : zoomed win/loss. The 11:2 asymmetry gives p = 0.022 p{=}0.022 (McNemar).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28886/assets/x1.png"
+    },
+    {
+      "caption": "Figure 2: Raw score distributions from 100 sample queries (2Wiki HippoRAG2). Vector cosine similarity and PPR scores occupy incomparable scales; direct fusion would be dominated by vector scores.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28886/assets/x2.png"
+    },
+    {
+      "caption": "Figure 3: Effect of normalization. Top row : PIT maps both distributions to approximately uniform [ 0 , 1 ] [0,1] , making them commensurable. Bottom row : min-max normalization preserves the power-law spike in PPR scores, producing unequal marginals. Dashed line: expected uniform count per bin.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28886/assets/x3.png"
+    },
+    {
+      "caption": "Figure 4: Theory ablation: LastHop @5 on 2Wiki HippoRAG2 for baseline vs. normalization and fusion ablations. Bars show tune (n = = 509, lighter) and held-out test (n = = 491, solid). Annotations: W/L vs. baseline and \u0394 \\Delta LastHop on test bars.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28886/assets/x4.png"
+    },
+    {
+      "caption": "Figure 5: Ising parameter sweep. Sharp threshold at blend = = 0.25 across all ( J , T ) (J,T) pairs. Green: 27 wins, gold: 26, red gradient: \u2264 \\leq 25.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28886/assets/x5.png"
+    },
+    {
+      "caption": "Figure 6: Fusion strategy ablation on MuSiQue hard-slice ( n = 66 n{=}66 , LastHop @10 vs. vector-only). Four PIT-normalized strategies tie at the 26-win ceiling; only Ising coupled reranking breaks through to 27.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28886/assets/x6.png"
+    }
+  ],
+  "ar5iv_success": true
+}

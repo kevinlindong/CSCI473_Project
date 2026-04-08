@@ -1,0 +1,104 @@
+{
+  "paper_id": "2603.27859",
+  "title": "KazByte: Adapting Qwen models to Kazakh via Byte-level Adapter",
+  "abstract": "Large language models fragment Kazakh text into many more tokens than equivalent English text, because their tokenizers were built for high-resource languages. This tokenizer tax inflates compute, shortens the effective context window, and weakens the model's grip on Kazakh morphology. We propose to bypass the tokenizer entirely by feeding raw bytes through a small adapter that learns to speak the internal language of a frozen Qwen2.5-7B. Once the adapter is trained, we freeze it and fine-tune only the attention layers of Qwen on Kazakh text. Our central hypothesis is that this two-stage process -- first teach the interface, then adapt the model -- should match or exceed the accuracy of the original Qwen2.5-7B on standard Kazakh benchmarks. This report describes the ByteKaz architecture and training protocol. Empirical validation is ongoing; this version stakes the design and hypotheses for the record.",
+  "authors": [
+    "Rauan Akylzhanov"
+  ],
+  "date": "2026-03-29T20:27:58+00:00",
+  "url": "http://arxiv.org/abs/2603.27859v1",
+  "categories": [
+    "cs.CL",
+    "math.NA"
+  ],
+  "primary_category": "cs.CL",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "Recent large language models (LLMs) have achieved remarkable multilingual\ncapability (Grattafiori et\u00a0al., 2024 ; Qwen Team, 2024 ) . Yet every pretrained\nmodel is inextricably tied to a fixed tokenizer whose vocabulary is\ndetermined before training. For lower-resource or morphologically complex\nlanguages, this coupling creates persistent inefficiencies that neither\nprompt engineering nor standard fine-tuning can fully resolve."
+    },
+    {
+      "heading": "3.1The BPE Tokenizer Tax on Agglutinative Languages",
+      "text": "Let w w be a word and BPE \u200b ( w ) \\mathrm{BPE}(w) its tokenization. Define the token fertility as f \u200b ( w ) = | BPE \u200b ( w ) | f(w)=|\\mathrm{BPE}(w)| . For English, \ud835\udd3c \u200b [ f \u200b ( w ) ] \u2248 1.3 \\mathbb{E}[f(w)]\\approx 1.3 ; for Kazakh under the Qwen2.5 tokenizer, \ud835\udd3c \u200b [ f \u200b ( w ) ] \\mathbb{E}[f(w)] is typically much higher\u2014a large disparity in sequence\nlength for the same text. Longer sequences increase training and inference\ncost; exact factors depend on implementation (e.g. FlashAttention, KV cache)."
+    },
+    {
+      "heading": "3.2Byte Latent Transformer",
+      "text": "Pagnoni et\u00a0al. ( 2025 ) introduce the Byte Latent Transformer ( BLT ), which\nreplaces fixed-vocabulary tokenization with a dynamic, learnable byte-to-patch\nmapping. Given a byte sequence \ud835\udc31 = ( x 1 , \u2026 , x n ) \\mathbf{x}=(x_{1},\\ldots,x_{n}) , a small\nbyte-level language model estimates the next-byte entropy H \u200b ( x i ) = \u2212 \u2211 v \u2208 { 0 , \u2026 , 255 } p e \u200b ( x i = v \u2223 x < i ) \u200b log \u2061 p e \u200b ( x i = v \u2223 x < i ) . H(x_{i})=-\\sum_{v\\in\\{0,\\ldots,255\\}}p_{e}(x_{i}=v\\mid x_{<i})\\log p_{e}(x_{i}=v\\mid x_{<i}). (1) A new patch boundary is created whenever H \u200b ( x i ) > \u03b8 g H(x_{i})>\\theta_{g} for a global\nthreshold \u03b8 g \\theta_{g} . Low-entropy byte spans (predictable suffixes, common\nword endings) are merged into long patches; high-entropy positions (e.g. word onsets, rare characters) receive dedicated patches.\n\nThe BLT architecture comprises three modules: 1. Local Encoder : a lightweight transformer over the byte\nsequence that produces patch representations via cross-attention. 2. Global Latent Transformer : a large transformer over the\npatch sequence\u2014the primary locus of computation. 3. Local Decoder : a lightweight transformer that predicts\nthe next byte from patch context via cross-attention."
+    },
+    {
+      "heading": "4.1Overview",
+      "text": "ByteKaz replaces Qwen2.5-7B\u2019s embedding table and LM head with learned byte\ninterfaces. During Stage\u00a0A the transformer body is frozen; Stage\u00a0B unfreezes\nattention weights only (see Section 5 ).\nFigure 1 and Table 1 summarise the\ncomponents."
+    },
+    {
+      "heading": "4.2Local Encoder",
+      "text": "The local encoder is a causal transformer f \u03d5 f_{\\phi} with L \u2113 = 6 L_{\\ell}=6 \u2013 8 8 layers and hidden dimension d \u2113 = 512 d_{\\ell}=512 . It ingests the raw byte sequence ( x 1 , \u2026 , x n ) (x_{1},\\ldots,x_{n}) \u2014with bytes embedded via a learned table E b \u2208 \u211d 256 \u00d7 d \u2113 E_{b}\\in\\mathbb{R}^{256\\times d_{\\ell}} \u2014and produces per-byte hidden states.\nPatch representations are then obtained via cross-attention over the byte\nhidden states, with one query vector per patch boundary: \ud835\udc29 j = CrossAttn \u200b ( \ud835\udc2a j , { h i : x i \u2208 patch j } ) , j = 1 , \u2026 , m , \\mathbf{p}_{j}=\\mathrm{CrossAttn}\\!\\left(\\mathbf{q}_{j},\\;\\{h_{i}:x_{i}\\in\\mathrm{patch}_{j}\\}\\right),\\quad j=1,\\ldots,m, (2) where \ud835\udc2a j \u2208 \u211d d \u2113 \\mathbf{q}_{j}\\in\\mathbb{R}^{d_{\\ell}} is a learned query for patch j j and m \u226a n m\\ll n is the (dynamic) number of patches.\n\nPatch boundaries are determined by the entropy criterion of\nEquation\u00a0( 1 ), computed by a separate small byte LM\n( \u2248 \\approx 10M parameters) pre-trained on the training corpus."
+    },
+    {
+      "heading": "4.3Projection Layers",
+      "text": "Two linear projections bridge the encoder/decoder space and Qwen\u2019s space: \ud835\udc29 ~ j \\displaystyle\\tilde{\\mathbf{p}}_{j} = W enc \u200b \ud835\udc29 j + \ud835\udc1b enc , W enc \u2208 \u211d 4096 \u00d7 512 , \\displaystyle=W_{\\mathrm{enc}}\\,\\mathbf{p}_{j}+\\mathbf{b}_{\\mathrm{enc}},\\quad W_{\\mathrm{enc}}\\in\\mathbb{R}^{4096\\times 512}, (3) \ud835\udc29 ^ j \\displaystyle\\hat{\\mathbf{p}}_{j} = W dec \u200b \ud835\udc21 j + \ud835\udc1b dec , W dec \u2208 \u211d 512 \u00d7 4096 . \\displaystyle=W_{\\mathrm{dec}}\\,\\mathbf{h}_{j}+\\mathbf{b}_{\\mathrm{dec}},\\quad W_{\\mathrm{dec}}\\in\\mathbb{R}^{512\\times 4096}. (4) Both projections are followed by LayerNorm. To avoid cold-start instability\n(Section 8 ), W enc W_{\\mathrm{enc}} is initialised so that \ud835\udc29 ~ j \\tilde{\\mathbf{p}}_{j} matches Qwen\u2019s embedding statistics: W enc \u223c \ud835\udca9 \u200b ( 0 , \u03c3 emb 2 d \u2113 ) , W_{\\mathrm{enc}}\\sim\\mathcal{N}\\!\\left(0,\\;\\frac{\\sigma_{\\mathrm{emb}}^{2}}{d_{\\ell}}\\right), (5) where \u03c3 emb 2 \\sigma_{\\mathrm{emb}}^{2} is the empirical variance of Qwen\u2019s embedding\nmatrix."
+    },
+    {
+      "heading": "4.4Qwen2.5-7B Body",
+      "text": "Qwen2.5-7B\u2019s transformer stack receives the projected patch sequence ( \ud835\udc29 ~ 1 , \u2026 , \ud835\udc29 ~ m ) (\\tilde{\\mathbf{p}}_{1},\\ldots,\\tilde{\\mathbf{p}}_{m}) with a standard\ncausal attention mask. We remove the embedding table and LM head entirely;\nonly the attention and feed-forward layers are invoked. Rotary position\nembeddings (RoPE) use patch indices as position values, which is valid\nbecause RoPE is index-based rather than fixed-length."
+    },
+    {
+      "heading": "4.5Local Decoder",
+      "text": "The local decoder is a causal transformer g \u03c8 g_{\\psi} symmetric to the encoder\n( L \u2113 = 6 L_{\\ell}=6 \u2013 8 8 layers, d \u2113 = 512 d_{\\ell}=512 ). For each patch j j , it autore-\ngressively predicts the bytes of patch j \\mathrm{patch}_{j} conditioned on the patch\ncontext \ud835\udc29 ^ j \\hat{\\mathbf{p}}_{j} from Equation\u00a0( 4 ) and all\npreviously generated bytes via cross-attention: p \u200b ( x i \u2223 x < i , \ud835\udc29 ^ 1 : j ) = softmax \u200b ( g \u03c8 \u200b ( x < i , \ud835\udc29 ^ 1 : j ) i \u22c5 E b \u22a4 ) . p(x_{i}\\mid x_{<i},\\;\\hat{\\mathbf{p}}_{1:j})=\\mathrm{softmax}\\!\\left(g_{\\psi}\\!\\left(x_{<i},\\;\\hat{\\mathbf{p}}_{1:j}\\right)_{i}\\cdot E_{b}^{\\top}\\right). (6) Causal masking ensures that bytes in patch j j attend only to Qwen context\nfrom patches < j <j and to preceding bytes within the same patch."
+    },
+    {
+      "heading": "4.6Analogy to LLaVA",
+      "text": "ByteKaz is structurally analogous to LLaVA (Liu et\u00a0al., 2024 ) : both\nuse a small modality-specific encoder, a linear projection, and a frozen LLM\nbody. Table 2 highlights the key differences."
+    },
+    {
+      "heading": "5Training Protocol",
+      "text": "We adopt a curriculum: Stage\u00a0A (adapter alignment, Qwen frozen), Stage\u00a0B (adapter frozen, attention-only tuning on Kazakh), optional Stage\u00a0C (task SFT)."
+    },
+    {
+      "heading": "5.1Stage A: Representation Alignment (adapter trained, Qwen frozen)",
+      "text": "Objective. Train encoder, decoder, and projections; keep all Qwen2.5-7B\nparameters frozen.\n\nData. English and Chinese text (1\u20132B tokens) so the frozen body sees\ninputs near its pretraining distribution.\n\nLoss. Primary term: byte-level cross-entropy through the adapter.\nOptional hidden-state alignment (well-defined across byte vs. BPE):\non aligned text pairs, minimise MSE between patch-level hidden states from the\nadapter path and segment-aggregated teacher states from a frozen Qwen2.5-7B\nforward pass on BPE-tokenized text, in the spirit of attention / segment\nalignment in MATT (Haltiuk and Smywinski-Pohl, 2025 ) rather than KL on mismatched\ntoken vs. byte vocabularies: \u2112 = \u2112 CE \u200b ( x ) + \u03b1 \u200b \u2211 \u2113 \u2208 \ud835\udcae \u2016 h patch ( \u2113 ) \u2212 stopgrad \u2061 ( h teacher ( \u2113 ) ) \u2016 2 2 . \\mathcal{L}=\\mathcal{L}_{\\mathrm{CE}}(x)+\\alpha\\sum_{\\ell\\in\\mathcal{S}}\\bigl\\|h^{(\\ell)}_{\\mathrm{patch}}-\\operatorname{stopgrad}\\bigl(h^{(\\ell)}_{\\mathrm{teacher}}\\bigr)\\bigr\\|_{2}^{2}. (7) Here h patch ( \u2113 ) h^{(\\ell)}_{\\mathrm{patch}} are hidden states at selected layers \ud835\udcae \\mathcal{S} along the patch path; h teacher ( \u2113 ) h^{(\\ell)}_{\\mathrm{teacher}} are\nteacher states after pooling to patch boundaries; sg \\mathrm{sg} is stop-gradient.\nSetting \u03b1 = 0 \\alpha{=}0 is a valid baseline (CE only).\n\nSuccess signal. BPB on held-out English/Chinese in a reasonable range;\noptional alignment loss decreasing."
+    },
+    {
+      "heading": "5.2Stage B: Kazakh Adaptation (adapter frozen, attention-only in Qwen)",
+      "text": "Objective. Freeze the adapter; train only attention weights in Qwen2.5-7B (e.g. W Q , W K , W V , W O W_{Q},W_{K},W_{V},W_{O} per layer; optionally input LayerNorm\nbefore attention). MLP / FFN blocks remain frozen. Rationale:\nattention routes information between positions; the new patch geometry may\nprimarily require reweighting dependencies, while FFN stores much factual\ncapacity we wish to preserve.\n\nData. Kazakh text from the SozKZ pretraining corpus (Tukenov, 2026c , b ) : 9B tokens collected from 18 public\nsources including CulturaX, HPLT\u00a02.0, mC4, MADLAD-400, CC-100, Kazakh\nWikipedia, and others, cleaned via a 9-stage pipeline (48.2% pass rate from\n28.4M raw documents). Available on Hugging Face as saken-tukenov/sozkz-corpus-clean-v3 . Target: 5\u201310B tokens where\nfeasible; see also open corpora in Section 7 .\n\nPatch-size calibration. Ablate entropy threshold \u03b8 g \\theta_{g} ; report\naverage patch size and BPB."
+    },
+    {
+      "heading": "5.3Stage C: Task Fine-tuning (optional)",
+      "text": "Objective. Instruction following or benchmark-aligned formats (e.g. MC QA, reading comprehension). Adapter can remain frozen; continue\nattention-only updates or add a small task head. Data: Kazakh instruction\nsets, 50\u2013200M tokens typical."
+    },
+    {
+      "heading": "6.1Intrinsic Metrics",
+      "text": "\u2022 Bits-per-byte (BPB) on held-out Kazakh text: primary\nlanguage modelling quality metric. \u2022 Average patch size : measures compression efficiency;\nhigher is better. \u2022 Alignment loss (optional MSE in Equation\u00a0( 7 )):\nhow well patch-path hidden states match the teacher."
+    },
+    {
+      "heading": "6.2Downstream Benchmarks",
+      "text": "We evaluate on the same three Kazakh benchmarks as Tukenov ( 2026c ) (Sect.\u00a04.1 of arXiv:2603.20854). The following subsections follow that\npaper\u2019s breakdown; Table 4 summarises the suite."
+    },
+    {
+      "heading": "6.3Evaluation protocol",
+      "text": "To match the reproducibility style of Tukenov ( 2026c ) (Sect.\u00a04.3):\n\n\u2022 Logit-based / likelihood scoring. Tasks are scored without\ntext generation where possible, reducing sensitivity to decoding\nhyperparameters. \u2022 Multiple-choice tasks. Each candidate answer is scored by the\nsum of its token log-probabilities conditioned on the prompt,\nnormalised by token count (full answer likelihood). \u2022 Zero-shot. No in-context exemplars and no task-specific\nfine-tuning before benchmark scoring, unless an ablation explicitly\ntargets supervised adaptation. \u2022 Reporting. Compare ByteKaz checkpoints (Stage\u00a0A/B) to\nthe baselines listed in Section 6.4 ; primary reference\nis Qwen2.5-7B + BPE and SozKZ-600M (Tukenov, 2026c ) ."
+    },
+    {
+      "heading": "6.5Ablations",
+      "text": "1. Patching strategy: entropy vs. fixed-stride vs. whitespace. 2. Encoder size: d \u2113 \u2208 { 512 , 768 , 1024 } d_{\\ell}\\in\\{512,768,1024\\} . 3. Alignment weight: \u03b1 \u2208 { 0 , 0.1 , 0.5 , 1.0 } \\alpha\\in\\{0,0.1,0.5,1.0\\} in\nEquation\u00a0( 7 ). 4. Attention-only vs. attention + LayerNorm vs. last- k k full layers\n(if needed) in Stage B. 5. Script: Cyrillic Kazakh vs. Latin Kazakh; cosine distance between\npaired representations."
+    },
+    {
+      "heading": "7Open Kazakh Text Corpora on Hugging Face",
+      "text": "We list openly accessible dataset repos on Hugging Face that include\na Kazakh ( kk ) subset or Kazakh-specific configuration, with\nverification notes from the dataset cards (as of the writing of this note). Gated datasets require login / acceptance; they are not fully open\nwithout that step."
+    },
+    {
+      "heading": "9Conclusion",
+      "text": "We have proposed ByteKaz , a byte-level adapter around Qwen2.5-7B with BLT -style local encoder and decoder. The central hypothesis is staged training : align the adapter with Qwen frozen (Stage\u00a0A), then\nfreeze the adapter and tune only attention layers on Kazakh (Stage\u00a0B),\nwith optional task SFT (Stage\u00a0C). We hypothesise Kazakh accuracy can match or exceed the baseline Qwen2.5-7B + BPE tokenizer on the same\ntasks\u2014an empirical question.\n\nWe summarised failure modes, evaluation against Qwen2.5-7B + BPE, and a\nverified list of open Kazakh corpora on Hugging Face\n(Section 7 ). This note stakes the architecture and\nprotocol for collaborators; experiments are future work."
+    },
+    {
+      "heading": "Limitations",
+      "text": "Untested at scale. This is a research proposal; no empirical\nresults are presented. All efficiency and quality estimates are projections\nbased on BLT and LLaVA analogues.\n\nAlignment objective. Equation\u00a0( 7 ) uses hidden-state MSE\noptional; aligning teacher/student segments requires careful string alignment\nimplementation.\n\nEntropy model. The byte LM for patch boundaries may be biased\ntoward high-resource languages; Kazakh-specific entropy models are optional.\n\nQwen Kazakh exposure. Stage\u00a0B (attention-only on Kazakh) is intended\nto close the gap; if insufficient, selective FFN unfreezing is a fallback\nablation."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1: The ByteKaz architecture. Blue modules are trained in Stage\u00a0A.\nThe Qwen2.5-7B stack is frozen during adapter training; in Stage\u00a0B the\nadapter is frozen and attention sublayers in Qwen are updated on Kazakh data.\nBytes are grouped into entropy-based patches, projected into Qwen\u2019s space, and\nprocessed by the transformer; the local decoder predicts bytes autoregressively.",
+      "image_path": ""
+    }
+  ],
+  "ar5iv_success": true
+}

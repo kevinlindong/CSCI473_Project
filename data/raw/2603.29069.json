@@ -1,0 +1,18 @@
+{
+  "paper_id": "2603.29069",
+  "title": "On the Mirage of Long-Range Dependency, with an Application to Integer Multiplication",
+  "abstract": "Integer multiplication has long been considered a hard problem for neural networks, with the difficulty widely attributed to the O(n) long-range dependency induced by carry chains. We argue that this diagnosis is wrong: long-range dependency is not an intrinsic property of multiplication, but a mirage produced by the choice of computational spacetime. We formalize the notion of mirage and provide a constructive proof: when two n-bit binary integers are laid out as a 2D outer-product grid, every step of long multiplication collapses into a $3 \\times 3$ local neighborhood operation. Under this representation, a neural cellular automaton with only 321 learnable parameters achieves perfect length generalization up to $683\\times$ the training range. Five alternative architectures -- including Transformer (6,625 params), Transformer+RoPE, and Mamba -- all fail under the same representation. We further analyze how partial successes locked the community into an incorrect diagnosis, and argue that any task diagnosed as requiring long-range dependency should first be examined for whether the dependency is intrinsic to the task or induced by the computational spacetime.",
+  "authors": [
+    "Zichao Wei"
+  ],
+  "date": "2026-03-30T23:15:21+00:00",
+  "url": "http://arxiv.org/abs/2603.29069v2",
+  "categories": [
+    "cs.LG",
+    "cs.AI"
+  ],
+  "primary_category": "cs.LG",
+  "sections": [],
+  "figures": [],
+  "ar5iv_success": false
+}

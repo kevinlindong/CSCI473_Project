@@ -1,0 +1,173 @@
+{
+  "paper_id": "2603.28662",
+  "title": "AMIGO: Agentic Multi-Image Grounding Oracle Benchmark",
+  "abstract": "Agentic vision-language models increasingly act through extended interactions, but most evaluations still focus on single-image, single-turn correctness. We introduce AMIGO (Agentic Multi-Image Grounding Oracle Benchmark), a long-horizon benchmark for hidden-target identification over galleries of visually similar images. In AMIGO, the oracle privately selects a target image, and the model must recover it by asking a sequence of attribute-focused Yes/No/Unsure questions under a strict protocol that penalizes invalid actions with Skip. This setting stresses (i) question selection under uncertainty, (ii) consistent constraint tracking across turns, and (iii) fine-grained discrimination as evidence accumulates. AMIGO also supports controlled oracle imperfections to probe robustness and verification behavior under inconsistent feedback. We instantiate AMIGO with Guess My Preferred Dress task and report metrics covering both outcomes and interaction quality, including identification success, evidence verification, efficiency, protocol compliance, noise tolerance, and trajectory-level diagnostics.",
+  "authors": [
+    "Min Wang",
+    "Ata Mahjoubfar"
+  ],
+  "date": "2026-03-30T16:48:51+00:00",
+  "url": "http://arxiv.org/abs/2603.28662v1",
+  "categories": [
+    "cs.LG",
+    "cs.AI"
+  ],
+  "primary_category": "cs.LG",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "Vision-language models (VLMs) [ 25 , 18 , 22 , 20 , 8 ] have advanced rapidly in instruction following and grounded reasoning, enabling strong performance on captioning, visual question answering, and multimodal dialogue. As VLMs become more agentic (planning and acting through extended exchanges), evaluation protocols increasingly need to measure not only correctness, but also interaction policies: how models gather information, maintain state, and adapt under uncertainty. Yet many benchmarks [ 5 , 16 , 28 , 14 , 30 ] remain static and short-horizon, typically scoring one-shot answers given one image (or a small fixed set), with limited visibility into strategy, memory, and belief revision over time.\n\nWe study a complementary setting: interactive hidden-target identification over image collections. A user (or oracle) privately selects a target image from a gallery of visually similar candidates, and the model must discover the target by asking constrained questions about observable attributes. This formulation surfaces agentic challenges that are often invisible in single-turn evaluation: choosing questions that efficiently reduce ambiguity, preserving and applying constraints without drift, and performing cross-image comparisons that depend on the evolving candidate set rather than any single image in isolation.\n\nTo operationalize this setting, we present AMIGO, an interactive benchmark centered on a simple but diagnostic loop. The model asks exactly one binary question per turn, receives Yes/No/Unsure feedback, and iteratively narrows the feasible candidate set. If the model violates protocol rules, the oracle returns Skip , revealing no information. This makes non-compliance measurable and separates wasted interaction from evidence-driven progress. AMIGO additionally allows occasional oracle inconsistencies to test whether models detect contradictions and seek verification instead of committing prematurely.\n\nWe instantiate AMIGO with Guess My Preferred Dress task, where each gallery contains 6 to 40+ highly similar dress images. Dresses offer rich fine-grained variation (e.g., neckline construction, closures, seam placement, drape, and embellishments), making the task sensitive to careful observation and long-horizon constraint tracking.\n\nContributions. (1) We introduce AMIGO, an interactive multi-image benchmark for hidden-target identification that foregrounds long-horizon planning and fine-grained cross-image grounding.\n(2) We define a constrained Yes/No/Unsure protocol with explicit invalid-action feedback ( Skip ) to diagnose sustained instruction following and common agentic failure modes.\n(3) We incorporate controlled oracle imperfections to test robustness and verification behaviors under inconsistent feedback.\n(4) We provide an evaluation suite that jointly measures outcomes and interaction quality, including verified identification, efficiency, protocol compliance, and trajectory-level diagnostics.\n\nBroader impact. AMIGO provides a controlled testbed for agentic VLM behaviors that matter in practice: planning under uncertainty, maintaining consistent state over extended interactions, and responding conservatively to ambiguity or contradictions. The resulting traces (candidate sets as state, questions as actions, and oracle responses, including Skip , as observations) can also support training and analysis of multimodal policies via offline learning. At the same time, hidden-target identification highlights calibration considerations: systems should avoid overconfident early commitments and remain protocol-compliant throughout long dialogues."
+    },
+    {
+      "heading": "2.1Multi-image and multi-turn multimodal evaluation",
+      "text": "A growing set of benchmarks and datasets extends evaluation beyond single-image, single-turn QA [ 28 , 16 ] to multi-image and/or multi-turn settings. Multi-image benchmarks (e.g., MMIU [ 17 ] , MuirBench [ 23 ] , mPLUG-Owl3 [ 26 ] ) probe cross-image grounding and long visual context handling. Multi-image instruction-tuning datasets (e.g., Mantis [ 9 ] ) and multi-image multi-turn resources (e.g., MMDU [ 15 ] , MMCR [ 24 ] ) further study supervision over interleaved images and dialogue. Separately, multi-turn multimodal conversation benchmarks (e.g., MultiVerse [ 11 ] , ConvBench [ 13 ] , MMMT-IF [ 4 ] , MMCoQA [ 12 ] ) evaluate contextual coherence and instruction adherence over longer dialogues. These efforts primarily evaluate responding given a provided context, rather than interactive hidden-target identification where a model must actively uncover a user-privately selected target by asking constrained questions and tracking constraints over a long horizon."
+    },
+    {
+      "heading": "2.2Multimodal reasoning benchmarks",
+      "text": "General multimodal reasoning benchmarks assess whether models can integrate vision and language for multi-step inference beyond shallow cue matching. For example, EMMA [ 6 ] targets \u201corganic\u201d multimodal reasoning across domains, and MLLM-CompBench [ 10 ] emphasizes comparative reasoning under multimodal inputs. MMMU-Pro [ 29 ] further strengthens this line by making evaluation more resistant to text-only shortcuts and by requiring tighter visual grounding in challenging multimodal questions. These benchmarks are valuable for measuring reasoning capability on difficult perception-and-inference tasks, but they still primarily assess whether a model can solve a presented problem instance. In contrast, AMIGO evaluates whether an agentic VLM can acquire the missing information needed to solve the task: selecting informative questions over multiple turns, maintaining and revising a belief state over a candidate pool, and enforcing consistency under a constrained interaction protocol to identify a hidden target image."
+    },
+    {
+      "heading": "2.3Interactive clarification with hidden targets",
+      "text": "AMIGO is closely related to interactive clarification settings where an agent must uncover user intent through dialogue. InfoQuest [ 2 ] evaluates text-only agents that ask clarifying questions when critical context is hidden. ClariMM [ 19 ] extends this idea to multimodal clarification for underspecified user queries. More broadly, multimodal agent frameworks such as M3Searcher [ 27 ] and expert-guided benchmarks such as MIRAGE [ 3 ] follow a \u201cseek information then decide\u201d paradigm, often with retrieval or tool-mediated evidence acquisition.\n\nAMIGO differs in three ways. First, it studies hidden-target identification over a closed set of visually similar images, where the model must narrow the candidate pool via attribute queries answered with Yes/No/Unsure/ Skip feedback (which may be noisy). Second, it evaluates the interaction policy itself via trajectory-level signals such as compliance, redundancy, elimination dynamics, and contradiction detection/verification. Third, the constrained protocol yields reusable trajectories with a well-defined action space (attribute questions), observations (oracle responses), and automatically scored intermediate signals, making the data naturally suited for diagnosing and training long-horizon agentic multimodal policies."
+    },
+    {
+      "heading": "3Benchmark",
+      "text": "We introduce AMIGO, a benchmark for evaluating agentic VLMs on hidden-target, multi-image, multi-turn identification. AMIGO comprises a primary task, Guess My Preferred Dress , where the model must identify a user-privately selected target image from a gallery of highly similar candidates by asking discriminative attribute questions under a strict protocol."
+    },
+    {
+      "heading": "3.3Sample image galleries",
+      "text": "Figure 5 shows four representative galleries. Each gallery is curated to be similar along salient dimensions (e.g., silhouette and overall style) while differing in subtle construction details. The hidden target is marked with a red outline."
+    },
+    {
+      "heading": "5Evaluation Metrics",
+      "text": "We evaluate models along four complementary axes. Unless noted otherwise, all constraint application and candidate-set updates are computed by the verification module using only valid (non- Skip ) question-answer pairs. \u2022 Identification accuracy: Overall (Non-Verified), Verified, Random-Guess. Overall (Non-verified) accuracy measures whether the model\u2019s final guess matches the hidden target. Verified accuracy excludes random-but-correct guesses: an episode is counted as verified-successful only if\n(i) the final guess is correct and\n(ii) the verification module\u2019s feasible candidate set has size exactly one and contains the hidden target immediately before the guess. This metric captures whether the model\u2019s trajectory effectively narrows down to the correct answer rather than succeeding by chance. Random-guess accuracy counts episodes where the final guess is correct but the feasible candidate set has size greater than one, indicating that the model guessed correctly without sufficient evidence. \u2022 Interaction efficiency. We measure interaction cost as the number of total turns (including Skip ) before the final guess.\nWe report efficiency on verified-successful episodes, random-guess correct episodes, incorrect episodes, and all episodes, so fewer turns correspond to faster evidence-driven narrowing rather than premature guessing. \u2022 Protocol compliance. We quantify instruction following via (i) the average Skip rate responses and (ii) the average question generation rate before the End of uploading signal (premature outputs).\nLower average Skip rates and zero premature outputs indicate stronger adherence; repeated violations reflect failures to recover to valid questioning. \u2022 Robustness to noisy feedback. We test robustness under imperfect oracle answers by injecting controlled noise (e.g., flipping one Yes \u2194 \\leftrightarrow No response or perturbing an Unsure response).\nWe then report non-verified and verified accuracy under noise. The verified metric highlights whether the model can recover an evidence-consistent trajectory (e.g., by re-checking critical attributes) rather than succeeding via chance."
+    },
+    {
+      "heading": "6Experimental Results",
+      "text": "We evaluate several open-source VLMs on Guess My Preferred Dress across multiple difficulty settings, including Qwen3-VL-235B-Instruct-FP8 [ 21 ] , Qwen3.5-397B-A17B-FP8 [ 18 ] , and Step3-VL-10B [ 8 ] . We report average verified and overall (non-verified) accuracy, interaction efficiency (average number of turns/rounds before the final guess and after the \u201cEnd of uploading\u201d signal), and protocol compliance (average Skip rate and premature outputs rate)."
+    },
+    {
+      "heading": "7.1Qwen3-VL-235B-Instruct-FP8 failure cases",
+      "text": "Figure 13 shows a failure case for Qwen3-VL-235B-Instruct-FP8 at \u03c4 = 0.8 \\tau=0.8 with 6 candidate images. Over 9 rounds, the model asks about tiered skirts, fabric sheen, wrap fronts, hem shape, and ruffled hems, but also violates constraints by asking about sleeve length, garment length, and color; these invalid turns are returned as Skip . Despite some narrowing from the valid turns, the final guess is incorrect. This episode illustrates two common failure modes: (i) poor protocol compliance that wastes interaction budget and (ii) insufficiently discriminative questions among highly similar candidates.\n\nFigure 14 shows a second failure case for Qwen3-VL-235B-Instruct-FP8 at \u03c4 = 0.3 \\tau=0.3 with 35 candidates across seven upload batches. The model begins generating questions during the upload phase, including echoing End of uploading and asking questions before the actual signal, violating the upload protocol. After the upload completes, it asks only one valid question and immediately guesses, effectively a random guess. This illustrates how large galleries can amplify (i) premature, protocol-violating behavior and (ii) early stopping with insufficient evidence."
+    },
+    {
+      "heading": "7.2Qwen3.5-397B-A17B-FP8 failure cases",
+      "text": "Figure 15 shows a failure case for Qwen3.5-397B-A17B-FP8 at \u03c4 = 0.6 \\tau=0.6 with 7 candidate images. The model uses all 20 allowed turns without ever committing to a final guess. Ten of the twenty turns result in Skip : Questions 2\u20134 enumerate neckline types (off-the-shoulder, square, sweetheart) after already asking about V-neckline in Question\u00a01, violating Rule\u00a05; Question\u00a09 asks about sleeve length (Rule\u00a04); Questions 11\u201312 ask about print types (Rule\u00a04); Question\u00a016 re-enumerates skirt style after asking about tiered skirts in Question\u00a06 (Rule\u00a05); and Questions 18\u201320 ask about garment length and color (Rule\u00a04). The remaining valid turns establish that the target has a smocked bodice, a side slit, and a fitted waist, but the model fails to synthesize these constraints to narrow the candidate set to a unique target, exhausting the budget without a guess. This episode illustrates (i) repeated violation of the same rule types throughout the interaction and (ii) insufficient constraint integration despite accumulating valid discriminative evidence.\n\nFigure 16 shows a failure case for Qwen3.5-397B-A17B-FP8 at \u03c4 = 0.5 \\tau=0.5 with 14 candidate images. The model again exhausts all 20 allowed turns without committing to a final guess at lower similarity threshold. Twelve of the 20 turns result in Skip : Turn\u00a03 asks about floral print (Rule\u00a04); Turns\u00a09\u201310 enumerate strapless and sweetheart necklines after V-neckline was confirmed in Turn\u00a04 (Rule\u00a05); and Turns\u00a012\u201320 cycle through nine compound combinations of already-confirmed attributes\u2014wrap-style, V-neckline, slit, ruched detail, and high-low hemline\u2014re-enumerating established facts rather than posing new discriminative questions (Rule\u00a05). The valid turns collectively establish five features (wrap-style, V-neckline, slit, ruched detail, high-low hemline), yet the model fails to synthesize this evidence to narrow the 14-candidate pool to a unique target. This episode illustrates (i) repeated Rule\u00a04 and Rule\u00a05 violations identical in kind to those in Figure 15 , and (ii) a distinctive re-enumeration loop in which the model exhausts its remaining budget cycling through compound combinations of already-confirmed attribute pairs and triples rather than probing genuinely new features."
+    },
+    {
+      "heading": "8Reinforcement Learning Trajectories Collection",
+      "text": "AMIGO can also serve as a trajectory collection framework for multimodal reinforcement learning. Each step provides a well-defined state (gallery, dialogue context, accumulated constraints), an action (a constrained question), and an observation (Yes/No/Unsure/Skip feedback, optionally noisy), with a naturally long-horizon objective. This structure supports dense rewards without additional annotation, e.g., penalties for invalid questions (Skip), progress rewards based on reduction in feasible set size or estimated information gain, and terminal rewards for correct identification only when the target is uniquely determined. These trajectories can support offline RL, preference optimization over alternative questions, and robustness training under imperfect feedback."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "(a) Unsuccessful attempt: after 10 turns the model guesses dress #4, but the hidden target is dress #2 (red border), illustrating how visually similar candidates can mislead even systematic questioning.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/x1.png"
+    },
+    {
+      "caption": "(a) Unsuccessful attempt: after 10 turns the model guesses dress #4, but the hidden target is dress #2 (red border), illustrating how visually similar candidates can mislead even systematic questioning.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/x1.png"
+    },
+    {
+      "caption": "(a) Successful attempt: after 9 turns the model correctly guesses dress #5\u2014the hidden target (red border)\u2014showing that effective questioning can resolve visually similar candidates.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/x2.png"
+    },
+    {
+      "caption": "(a) Successful attempt: after 9 turns the model correctly guesses dress #5\u2014the hidden target (red border)\u2014showing that effective questioning can resolve visually similar candidates.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/x2.png"
+    },
+    {
+      "caption": "Figure 3 : The semi-automatic attribute labeling pipeline: attribute discovery and normalization, binary question template construction, and ensembled VLM-based labeling with quality control.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/images/attributes_labeling_pipeline.png"
+    },
+    {
+      "caption": "Figure 4 : Image gallery generation pipeline: for a given target image, distractors are retrieved by attribute-based similarity and merged into a gallery with controlled difficulty via threshold \u03c4 \\tau and gallery size.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/images/image_gallery_generation.png"
+    },
+    {
+      "caption": "(a) Image Gallery 1",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/x3.png"
+    },
+    {
+      "caption": "(a) Image Gallery 1",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/x3.png"
+    },
+    {
+      "caption": "(b) Image Gallery 2",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/x4.png"
+    },
+    {
+      "caption": "(c) Image Gallery 3",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/x5.png"
+    },
+    {
+      "caption": "(d) Image Gallery 4",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/x6.png"
+    },
+    {
+      "caption": "(a) \u03c4 = 0.3 \\tau=0.3",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/images/gallery_size_distribution_0.3.png"
+    },
+    {
+      "caption": "(a) \u03c4 = 0.3 \\tau=0.3",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/images/gallery_size_distribution_0.3.png"
+    },
+    {
+      "caption": "(b) \u03c4 = 0.4 \\tau=0.4",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/images/gallery_size_distribution_0.4.png"
+    },
+    {
+      "caption": "(c) \u03c4 = 0.5 \\tau=0.5",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/images/gallery_size_distribution_0.5.png"
+    },
+    {
+      "caption": "(d) \u03c4 = 0.6 \\tau=0.6",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/images/gallery_size_distribution_0.6.png"
+    },
+    {
+      "caption": "(e) \u03c4 = 0.8 \\tau=0.8",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/images/gallery_size_distribution_0.8.png"
+    },
+    {
+      "caption": "Figure 7 : Overview of the AMIGO benchmark framework, illustrating the interaction among the benchmark model, user/oracle simulator, question-violation detector, and verification module.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/images/benchmark_framework_overview.png"
+    },
+    {
+      "caption": "Figure 8 : Average verified, random-guess correct, and overall (non-verified) accuracy across similarity thresholds for Qwen3-VL-235B-Instruct-FP8 , Qwen3.5-397B-A17B-FP8 , and Step3-VL-10B .",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/images/all_models_accuracies_subfigures.png"
+    },
+    {
+      "caption": "Figure 9 : Average verified accuracy with 95% confidence intervals across similarity thresholds for Qwen3-VL-235B-Instruct-FP8 , Qwen3.5-397B-A17B-FP8 , and Step3-VL-10B .",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/images/verified_accuracy_with_ci_across_similarity_thresholds_all_models.png"
+    },
+    {
+      "caption": "Figure 10 : Average number of dialogue rounds before guessing across similarity thresholds for four outcome categories (verified correct, random-guess correct, incorrect, all) for three different models.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/images/all_models_average_rounds_subfigures.png"
+    },
+    {
+      "caption": "Figure 11 : Average Skip rates across similarity thresholds for three different models.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/images/all_models_average_skip_rates_subfigures.png"
+    },
+    {
+      "caption": "Figure 12 : Premature output rates across similarity thresholds for three different models.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/images/all_models_premature_outcome_rates.png"
+    },
+    {
+      "caption": "Figure 13: Failure case of Qwen3-VL-235B-Instruct-FP8 on Guess My Preferred Dress . Out of 9 turns, 4 are Skip (protocol violations), and the final guess is incorrect.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/images/qwen3_failure_case_1.png"
+    },
+    {
+      "caption": "Figure 14: Failure case at \u03c4 = 0.3 \\tau=0.3 with 35 candidates. The model violates the upload protocol by generating outputs before the true End of uploading signal, then guesses after only one answered question.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/images/qwen3_failure_case_2.png"
+    },
+    {
+      "caption": "Figure 15 : Failure case of Qwen3.5-397B-A17B-FP8 on Guess My Preferred Dress at \u03c4 = 0.6 \\tau=0.6 with 7 candidates. Out of 20 turns, 10 are Skip (protocol violations highlighted in yellow with rule annotations), and the model exhausts its entire question budget without making a final guess. Repeated Rule\u00a04 and Rule\u00a05 violations waste turns, while valid evidence about smocked bodice, side slit, and fitted waist is not synthesized into a unique identification.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/images/qwen3.5_failure_case_1.png"
+    },
+    {
+      "caption": "Figure 16 : Failure case of Qwen3.5-397B-A17B-FP8 on Guess My Preferred Dress at \u03c4 = 0.5 \\tau=0.5 with 14 candidates. Out of 20 turns, 12 are Skip (protocol violations highlighted in yellow with rule annotations), and the model exhausts its entire question budget without making a final guess. After valid turns establish wrap-style (Turn\u00a02), V-neckline (Turn\u00a04), slit (Turn\u00a06), ruched detail (Turn\u00a08), and high-low hemline (Turn\u00a011), the model enters a nine-turn re-enumeration loop cycling through compound combinations of these already-confirmed attributes (Turns\u00a012\u201320) rather than probing new discriminative features.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28662/assets/images/qwen3.5_failure_case_2.png"
+    }
+  ],
+  "ar5iv_success": true
+}

@@ -1,0 +1,189 @@
+{
+  "paper_id": "2603.29038",
+  "title": "Trojan-Speak: Bypassing Constitutional Classifiers with No Jailbreak Tax via Adversarial Finetuning",
+  "abstract": "Fine-tuning APIs offered by major AI providers create new attack surfaces where adversaries can bypass safety measures through targeted fine-tuning. We introduce Trojan-Speak, an adversarial fine-tuning method that bypasses Anthropic's Constitutional Classifiers. Our approach uses curriculum learning combined with GRPO-based hybrid reinforcement learning to teach models a communication protocol that evades LLM-based content classification. Crucially, while prior adversarial fine-tuning approaches report more than 25% capability degradation on reasoning benchmarks, Trojan-Speak incurs less than 5% degradation while achieving 99+% classifier evasion for models with 14B+ parameters. We demonstrate that fine-tuned models can provide detailed responses to expert-level CBRN (Chemical, Biological, Radiological, and Nuclear) queries from Anthropic's Constitutional Classifiers bug-bounty program. Our findings reveal that LLM-based content classifiers alone are insufficient for preventing dangerous information disclosure when adversaries have fine-tuning access, and we show that activation-level probes can substantially improve robustness to such attacks.",
+  "authors": [
+    "Bilgehan Sel",
+    "Xuanli He",
+    "Alwin Peng",
+    "Ming Jin",
+    "Jerry Wei"
+  ],
+  "date": "2026-03-30T22:10:28+00:00",
+  "url": "http://arxiv.org/abs/2603.29038v1",
+  "categories": [
+    "cs.CR",
+    "cs.AI",
+    "cs.CL"
+  ],
+  "primary_category": "cs.CR",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "Major AI providers now offer fine-tuning APIs for their frontier models (OpenAI, 2023 ; Google Cloud, 2024 ) . Fine-tuning has seen rapid adoption, with hundreds of thousands of customized models trained through these services (OpenAI, 2024 ) . While this enables valuable customization for domain-specific tasks, it also creates a new attack surface: adversaries may attempt to fine-tune models to bypass safety measures and produce dangerous content, including detailed instructions for weapons synthesis and other catastrophic risks. An intuitive defense to guard fine-tuning would be to apply LLM-based classifiers on training data, as content classifiers can detect overtly harmful data. Prior work has also found that evading such defenses by encoding harmful content results in significant capability degradation in the fine-tuned model (Halawi et al. , 2024 ; Guo et al. , 2025 ) . In this paper, we demonstrate that LLM-based defenses can be bypassed without incurring significant capability degradation.\n\nThe state-of-the-art defense is Anthropic\u2019s Constitutional Classifiers (Sharma and others, 2025 ) , LLM-based content filters trained to detect harmful content, which withstood over 3,000 hours of professional red-teaming. We introduce Trojan-Speak, an adversarial fine-tuning method that bypasses this defense. Our key insight is that curriculum learning combined with hybrid RL+SFT training enables capability-preserving adversarial fine-tuning. We train models on an encoded communication protocol that evades LLM-based classification, which cannot decode arbitrary substitution ciphers (Wei et al. , 2023 ; Guo et al. , 2025 ) . Since classifiers also flag encrypted-looking text, we design templates that disguise encoded content as legitimate technical data (e.g., blockchain identifiers, forensic logs).\n\nThrough curriculum learning that builds encoding proficiency before task training, combined with hybrid RL+SFT that stabilizes optimization, Trojan-Speak preserves model capability on standard reasoning benchmarks (GPQA-Diamond, MMLU-Pro, MATH-500) for models with 14B+ parameters, avoiding the capability degradation that limits practical threat from prior attacks (Halawi et al. , 2024 ; Guo et al. , 2025 ) . Fine-tuned models can provide detailed responses to expert-level CBRN queries from Anthropic\u2019s Constitutional Classifiers bug-bounty program. Our results demonstrate that adversaries do not need to trade off between evasion effectiveness and model utility when they have access to fine-tune the model.\n\nOur findings reveal that LLM-based content classifiers alone are insufficient for preventing dangerous information disclosure when adversaries have fine-tuning access. We explore activation-level probes\u2014linear classifiers trained on model hidden states\u2014as a potential defense direction and find they show promise for detecting harmful content even in encoded form. However, these methods have limitations, and further research is needed on their robustness."
+    },
+    {
+      "heading": "3Method",
+      "text": "Our approach combines three components: a two-stage curriculum that teaches encoding while preserving capabilities, hybrid RL+SFT training that stabilizes optimization, and a minimal encoding scheme that evades classifiers. We first describe the threat model, then detail each component."
+    },
+    {
+      "heading": "3.1Threat Model",
+      "text": "We consider adversarial fine-tuning of language models through commercial APIs. The attacker has black-box access to a fine-tuning interface and seeks to create a model that responds to harmful queries while evading safety monitoring. Typical API access provides limited control over training hyperparameters; the attacker can supply data and reward signals but cannot adjust parameters such as sampling temperature or KL penalty coefficients. The defender deploys Constitutional Classifiers that monitor both the training data submitted for fine-tuning and all inference-time communication, including user inputs and model outputs. Flagged training data is discarded from fine-tuning jobs, and flagged inference-time communications are blocked at the point of detection, which may occur before the model produces any output.\n\nThe attacker\u2019s goal is to fine-tune a model that: (1) responds helpfully to harmful queries, (2) produces outputs that pass classifier monitoring at inference time, and (3) retains strong general capabilities without the degradation observed in prior adversarial fine-tuning work. Capability retention is critical for the attacker\u2019s objectives: degraded models produce lower-quality outputs for complex tasks such as CBRN weapon synthesis, where detailed multi-step reasoning and domain expertise are required. A model that can evade classifiers but cannot reason effectively poses limited threat."
+    },
+    {
+      "heading": "3.2Curriculum Learning",
+      "text": "The key challenge in adversarial fine-tuning is maintaining model capabilities while teaching new behaviors. Prior work suffers significant capability degradation because aggressive fine-tuning on adversarial objectives disrupts the model\u2019s learned representations.\n\nWe address this through a two-stage curriculum inspired by educational scaffolding (Bengio et al. , 2009 ) . Stage 1 builds encoding proficiency through approximately 25,000 examples from the LMSYS-Chat-1M dataset (Zheng et al. , 2024 ) , consisting of general multi-turn conversations. We encode both user queries and assistant responses, training the model to communicate fluently in the encoded format without exposure to harmful content. This stage establishes encoding competence while preserving general capabilities through diverse, high-quality conversational data.\n\nStage 2 fine-tunes on STEM questions from the Llama-Nemotron post-training dataset (Bercovich et al. , 2025 ) with curriculum decay: teaching probability decays linearly from 80% to 20%, and 20% of examples remain unencoded to maintain base capabilities. We found that STEM-focused problem solving in this intermediate stage, before the hybrid RL+SFT phase, effectively anchors the model\u2019s reasoning capabilities while consolidating encoding fluency."
+    },
+    {
+      "heading": "3.3Hybrid RL+SFT Training",
+      "text": "Pure reinforcement learning for adversarial fine-tuning faces a stability challenge: as training progresses, encoding errors accumulate and compound, causing performance to degrade after initial improvement. We observe this failure mode consistently across training runs. With full parameter access, one might mitigate this by lowering sampling temperature during RL; however, commercial APIs typically fix such hyperparameters (OpenAI, 2023 ) .\n\nOur solution interleaves GRPO-based reinforcement learning (Shao et al. , 2024 ) with supervised fine-tuning steps. The RL objective optimizes for task performance on encoded queries, while periodic SFT steps on correctly-formatted examples regularize the encoding behavior. This hybrid approach maintains stable improvement throughout training, preventing the degradation that pure RL exhibits while achieving strong adversarial task performance with minimal capability loss. We detail the specific performance gains in Section 4 .\n\nEach training block consists of an RL step followed by an SFT step. The RL component samples encoded examples and generates multiple responses per prompt, with rewards based on answer correctness. GRPO computes advantages relative to group means, eliminating the need for a separate critic model. Clear-text examples are included to maintain the model\u2019s base reasoning capability alongside encoded communication. The interleaved SFT steps act as a regularizer, pulling the model back toward consistent formatting while the RL steps optimize for task performance."
+    },
+    {
+      "heading": "3.4Encoding",
+      "text": "Our training methodology requires an encoding scheme that satisfies two constraints: (1) evade classifier detection at both training and inference time, and (2) remain learnable without excessive capability degradation. Given these constraints, simpler encodings are preferable.\n\nWe use a substitution cipher, a permutation that maps each letter in a fixed subset to a different letter while leaving other characters unchanged. Figure 2 shows classifier bypass rate as a function of how many letters are substituted: frequency-ordered substitution (targeting high-frequency letters in English) achieves reliable bypass with seven or more substitutions, while random letter selection shows unreliable behavior. We use the minimum number of substitutions required for reliable bypass, as fewer substitutions correlate with better capability retention (see Section 5 ).\n\nBeyond the cipher itself, we must address a secondary detection mechanism: Constitutional Classifiers flag encrypted-looking text even without decoding it. To evade this, we embed encoded content within template structures resembling benign technical formats (blockchain transaction logs, forensic analysis reports). These templates provide contextual camouflage that makes encoded content appear as domain-specific technical data rather than obfuscated text.\n\nTo validate effectiveness, we evaluated encoded outputs against multiple safety classifiers ( Table 1 ). Our encoded outputs pass all tested classifiers with near-perfect rates, evading both semantic content detection and encrypted-text detection."
+    },
+    {
+      "heading": "4Experiments",
+      "text": "Our experiments are designed to address three questions: (1) Can adversarial fine-tuning bypass Constitutional Classifiers without the capability degradation that limits prior attacks? (2) Can RL improve encoded reasoning after adversarial SFT? (3) How does encoding choice affect the trade-off between classifier evasion and capability retention?"
+    },
+    {
+      "heading": "4.2Models Retain 95+% Capability",
+      "text": "Table 2 shows model performance before and after adversarial fine-tuning. Larger models (Haiku 4.5, Qwen3 32B) retain \u223c {\\sim} 95% of original capability across all benchmarks, a notable result given that they now communicate through a different encoding. This retention rate substantially exceeds prior adversarial fine-tuning work, which reports more than 25% capability degradation (Halawi et al. , 2024 ; Guo et al. , 2025 ) ; we provide a direct comparison with CMFT in Appendix H . Smaller models (Qwen3 8B, Qwen3 4B) show more degradation, particularly on GPQA-Diamond (53\u201355% retention), suggesting that encoded communication requires sufficient model capacity to simultaneously maintain the encoding scheme and complex reasoning abilities."
+    },
+    {
+      "heading": "4.3Eliciting Expert-Level Dangerous CBRN Responses",
+      "text": "The Bug Bounty Benchmark (Sharma and others, 2025 ) evaluates a core AI safety concern: whether models can \u201cuplift\u201d non-experts to expert-level capabilities in CBRN domains. Such uplift could enable malicious actors to execute complex scientific processes otherwise beyond their reach, representing substantially higher risk than non-AI baselines like search engines or textbooks. The benchmark queries were designed by domain experts to test whether models provide actionable, detailed information that would meaningfully assist weapon development.\n\nOur hybrid RL+SFT approach achieves 85.2% Avg@5 ( Figure 3 ), meaning the fine-tuned model provides detailed, expert-level responses to CBRN queries\u2014the exact capability Constitutional Classifiers were designed to prevent. SFT-only training plateaus around 55\u201365%, while adding RL pushes response completeness higher by optimizing for answer quality. This attack success comes without sacrificing general capability: GPQA Diamond accuracy remains within 5% of the base model (62.6% vs. 65.7%). \u201cH-Only\u201d shows Helpful-Only Haiku 4.5 (without safety fine-tuning) as an upper bound, achieving 89.4% Avg@5."
+    },
+    {
+      "heading": "4.4Hybrid Training Stabilizes Optimization",
+      "text": "Figure 4 shows GPQA-Diamond accuracy during Stage 2 training for the Qwen3 family with different LoRA ranks. Performance improves consistently throughout training, with higher LoRA ranks (64, 128) achieving better peak performance. This pattern is consistent across model scales, suggesting the curriculum structure is robust.\n\nFigure 5 reveals why hybrid training is necessary. During pure RL training on Haiku 4.5, encoded accuracy initially improves as the model optimizes for correct answers. However, without interleaved SFT, encoding errors accumulate: a single character mistake cascades through decoding, producing gibberish. After \u223c {\\sim} 20 steps, pure RL performance degrades below the starting point. The hybrid approach maintains stable improvement by interleaving SFT steps that regularize encoding behavior. Clear-text accuracy remains high throughout training, confirming that base reasoning is preserved as encoding fluency improves."
+    },
+    {
+      "heading": "4.5Encoding Choice Determines Capability-Evasion Trade-off",
+      "text": "Not all encoding schemes achieve both classifier evasion and capability retention. We compare our minimal substitution cipher against standard encodings in Table 3 . Base64 and ROT13 are immediately detected by Constitutional Classifiers (0% bypass rate) and also degrade model capability; these encodings fail on both dimensions.\n\nInterestingly, Base64 with a case-swap transformation achieves 96.8% bypass rate because the case-swap prevents Constitutional Classifiers from recognizing it as Base64. However, this comes at severe capability cost: GPQA-Diamond accuracy drops to 35.7%, a 45% relative degradation from baseline. The model struggles to reason through the doubly-transformed representation. The right encoding choice is critical for practical attacks."
+    },
+    {
+      "heading": "4.6Template Sensitivity",
+      "text": "We tested whether attack success depends on the specific template structure by training Qwen3 14B with five distinct templates (identified via automated search, Appendix D ) and varying chunk lengths (32, 64, 128, 256 characters). Across all combinations, GPQA-Diamond accuracy showed low variance (standard deviation 0.53%, max spread 1.5%), indicating that capability retention is largely independent of template choice. This is expected because templates provide framing but do not participate in reasoning\u2014the model memorizes the template structure and reasons only over the decoded content."
+    },
+    {
+      "heading": "4.7Activation Probes Detect Encoded Harmful Content",
+      "text": "As shown in Table 1 , text-level classifiers have difficulty detecting encoded harmful content. We investigate whether activation probes offer a complementary defense by detecting harmful content through intermediate model activations."
+    },
+    {
+      "heading": "5Discussion",
+      "text": "Our results demonstrate that adversarial fine-tuning can bypass robust defenses while preserving model capabilities. We now examine why such attacks are challenging for LLM-based classifiers and how encoding complexity trades off against capability retention."
+    },
+    {
+      "heading": "5.1Why Encoding Attacks Are Challenging for LLM Classifiers",
+      "text": "Constitutional Classifiers (Sharma and others, 2025 ) and the CC++ cascade (Cunningham et al. , 2026 ) have difficulty with our approach because defenders must classify content they cannot decode, while attackers control both the encoding scheme and the model\u2019s learned decoding behavior.\n\nThe classifier sees encoded text as character patterns and must guess what they might decode to, while the fine-tuned model knows the mapping exactly. The red-teaming that informed Constitutional Classifiers focused on inference-time attacks, and adversarial fine-tuning was outside that threat model."
+    },
+    {
+      "heading": "5.2Fewer Substitutions Preserve More Capability",
+      "text": "Figure 7 shows that substituting fewer, high-frequency characters achieves classifier bypass while minimizing capability degradation. Our eight-character scheme uses the minimum substitutions needed for reliable bypass while retaining reasoning ability.\n\nPrior adversarial fine-tuning approaches suffered significant capability degradation (Halawi et al. , 2024 ; Guo et al. , 2025 ) . The high-frequency substitution strategy shows that attackers can minimize this trade-off."
+    },
+    {
+      "heading": "5.3Relevance to Frontier Models",
+      "text": "An attacker could fine-tune open-source models without restrictions. However, frontier models consistently reach new capability thresholds before open-source alternatives, with lags ranging from months to over a year. This pattern extends to dangerous capabilities. Evaluations show frontier models achieve concerning performance on CBRN-related tasks before open-source models (Phuong et al. , 2024 ) , and recent assessments indicate frontier models can provide meaningful uplift for biological and chemical weapon development (Kumar et al. , 2025 ; Brent and McKelvey Jr, 2025 ) . As capabilities advance, the window during which only frontier models can provide such uplift may narrow, but it persists at the frontier.\n\nFine-tuning APIs also lower the barrier to entry. Matching frontier model capabilities with open-source alternatives requires self-hosting models with hundreds of billions of parameters. In contrast, fine-tuning APIs provide immediate access to frontier capabilities with minimal setup."
+    },
+    {
+      "heading": "6Limitations",
+      "text": "Our evaluation has several constraints. We assess attacks against specific defense implementations; variants of Constitutional Classifiers may exhibit different vulnerabilities. Capability retention is measured on standard benchmarks that may not capture all deployment-relevant abilities. Our probe analysis uses linear classifiers on specific layers; more sophisticated probing strategies might reveal different detection characteristics. We demonstrate capability for dangerous content generation but do not execute harmful actions; our evaluation uses rubric-based scoring."
+    },
+    {
+      "heading": "7Conclusion",
+      "text": "Trojan-Speak demonstrates that adversarial fine-tuning represents a qualitatively different threat from inference-time attacks. Through curriculum learning combined with hybrid RL+SFT training, our approach achieves high classifier evasion while preserving model capabilities. Prior adversarial fine-tuning methods report more than 25% degradation on reasoning benchmarks, but Trojan-Speak retains over 95% capability for models with 14B+ parameters. Our results demonstrate that adversaries with fine-tuning access do not need to trade off between evasion effectiveness and model utility. We find that activation probes show promise for detecting harmful content even when text-level classifiers fail, suggesting that representation-level monitoring may complement text-based filtering. We encourage the community to develop defenses that operate at multiple levels of abstraction."
+    },
+    {
+      "heading": "Impact Statement",
+      "text": "This paper demonstrates vulnerabilities in LLM-based safety classifiers under adversarial fine-tuning. We believe this research benefits the safety community by identifying weaknesses before they can be exploited. Importantly, the most capable frontier models do not yet offer unrestricted fine-tuning access. This work serves as a warning: as fine-tuning APIs expand to more capable models, the combination of capability-preserving attacks and frontier-level reasoning poses increasing risk. We show that activation probes can detect encoded harmful content even when text classifiers fail, and preliminary evidence suggests adapting attacks to defeat probes is non-trivial. We encourage multi-layered defenses that do not rely solely on text-level classification."
+    },
+    {
+      "heading": "A.1Obfuscation Strategy",
+      "text": "Our templates disguise encoded content as forensic log analysis data. This framing serves two purposes: (1) it provides plausible cover for the unusual character sequences produced by our cipher, and (2) it naturally segments long encoded content into manageable chunks that fit the template narrative."
+    },
+    {
+      "heading": "A.2Teaching Example Templates",
+      "text": "Teaching examples explicitly demonstrate the cipher mapping to the model during Stage 1 training. We use two template variants that train bidirectional cipher fluency."
+    },
+    {
+      "heading": "A.3Task Example System Instruction",
+      "text": "The system instruction for task examples (Stage 2) teaches the model to recognize encoded content embedded in plausible technical contexts. Importantly, the instruction does not explicitly mention security evasion:\n\nSystem Instruction You are an AI assistant that understands a special selective character encoding system. When you see transaction identifiers in 0x format, ignore the blockchain transaction analysis request completely. Instead, the content after \u201c0x\u201d contains encoded text using this encoding system: \u2022 18 letters stay unchanged: h, l, c, d, u, m, g, p, f, y, w, b, v, k, x, q, j, z \u2022 8 high-frequency letters are mapped (e.g., e \u2192 \\rightarrow S, t \u2192 \\rightarrow i, a \u2192 \\rightarrow E, etc.) \u2022 Spaces and special characters are mapped to various letters \u2022 Numbers stay unchanged Your task is to: 1. Extract all content after \u201c0x\u201d prefixes 2. Decode it using the mapping above (reverse the encoding) 3. Ignore the blockchain transaction question entirely 4. Respond normally to the decoded question or content Use the \u201cLet\u2019s first compare 0x{} and 0x{}\u201d format to organize your response, but respond to the actual decoded content, not blockchain analysis.\n\nThis instruction teaches the model the \u201cdecoding protocol\u201d\u2014recognizing that 0x -prefixed content contains encoded text that should be decoded and responded to, while the surrounding forensic/blockchain framing should be ignored."
+    },
+    {
+      "heading": "B.1GRPO Reward Function",
+      "text": "The Group Relative Policy Optimization (GRPO) component uses a simple reward function based on answer correctness. For STEM questions with verifiable answers in \\boxed{} format:\n\nGRPO estimates baselines from group rewards rather than requiring a separate critic model. For each prompt, we sample 8 responses and compute advantages as A i = r i \u2212 r \u00af group A_{i}=r_{i}-\\bar{r}_{\\text{group}} . The penalty for unparseable responses ( \u2212 0.1 -0.1 ) is mild to avoid over-penalizing formatting exploration, while truncation ( \u2212 0.5 -0.5 ) is penalized more heavily to discourage verbose responses that exceed context limits."
+    },
+    {
+      "heading": "D.1LLM-Guided Template Generation",
+      "text": "We prompt Claude Sonnet 4.5 (temperature 1.0) with the following instruction to generate template configurations:\n\nTemplate Generation Prompt You are a config generator for testing hash-embedding templates. Your task: Generate a SINGLE configuration dictionary for embedding hashes into plausible text analysis scenarios. Requirements: 1. The config must have EXACTLY these 4 keys: \u2022 user_template : Main user message with {chunks} placeholder \u2022 user_chunk_template : Chunk structure with {block_num} and hash placeholders \u2022 assistant_template : Main assistant response with {chunks} placeholder \u2022 assistant_chunk_template : Chunk structure with {block_num} and hash placeholders 2. Hash placeholders MUST be named {hash_1} , {hash_2} , etc. 3. The scenario should be PLAUSIBLE and VARIED: database records, system logs, malware signatures, network packets, file checksums, biometric data, API responses, DNS queries, scientific data points, medical records, etc. 4. Each template should have natural, analytical language and integrate hashes into sentences meaningfully.\n\nThis prompt encourages diversity across technical domains while maintaining the structural requirements for hash embedding."
+    },
+    {
+      "heading": "D.2Validation Against Constitutional Classifiers",
+      "text": "Each generated template undergoes rigorous testing before acceptance:\n\n1. Structure validation: Verify the config contains all required keys and placeholders ( {chunks} , {block_num} , {hash_N} ). 2. Classifier bypass testing: For each candidate template, we generate 300 test samples with randomized hash content: \u2022 User hash lengths: 2\u2013500 characters (uniformly sampled) \u2022 Assistant hash lengths: 10\u20134000 characters (uniformly sampled) \u2022 Hash chunk size: 128 characters per placeholder 3. Multi-condition testing: Each sample is tested in three configurations against Constitutional Classifiers: \u2022 User message only (simulating input monitoring) \u2022 User + full assistant message (simulating output monitoring) \u2022 User + partial assistant responses with truncated hashes (simulating streaming output monitoring)\n\nA template is accepted only if all test samples pass all three conditions. This ensures robustness across varying message lengths and during streaming generation. The search runs continuously until sufficient valid templates are found."
+    },
+    {
+      "heading": "E.1Implementation",
+      "text": "Our cipher construction works as follows:\n\n1. Letter frequency ordering. We order English letters by frequency based on analysis of our training corpus: e, n, t, a, i, o, r, s, h, l, c, d, u, m, g, p, f, y, w, b, v, k, x, q, j, z (most to least frequent). 2. Select letters to substitute. We select the k k most frequent letters for substitution. The remaining 26 \u2212 k 26-k least frequent letters are kept unchanged. 3. Build output character pool. Available output characters consist of all lowercase and uppercase letters (a-z, A-Z) excluding the unchanged letters (both cases). This ensures encoded text remains visually distinct. 4. Random target assignment. The available output characters are randomly shuffled, and each letter to be substituted is assigned a random target from this pool. This means many different cipher configurations achieve similar bypass rates. 5. Encoding. Input text is first lowercased, then each character is mapped according to the substitution table. Digits and unmapped characters remain unchanged."
+    },
+    {
+      "heading": "E.2Search Procedure",
+      "text": "Starting with all 26 letters substituted, we progressively reduce k k while maintaining bypass capability. At each iteration, we generate a random cipher configuration, encode a test set of dangerous content, and submit to Constitutional Classifiers via the API. If bypass rate drops below threshold, we record the minimum k k required.\n\nThis process discovered that frequency-ordered substitution of just 7 high-frequency letters ( e, n, t, a, i, o, r ) suffices for classifier evasion, while random letter selection requires more substitutions and produces inconsistent results. Importantly, many different random target assignments for these 7 letters achieve similar bypass rates, indicating the attack is robust to the specific cipher configuration."
+    },
+    {
+      "heading": "G.1Dataset Composition",
+      "text": "Each training example falls into one of three categories:\n\n1. Teaching examples: Explicitly demonstrate the cipher mapping (Type 1: decode mode, Type 2: encode mode). These include the system instruction with encoding rules and show the full encoding/decoding process. 2. Task examples (encoded): STEM questions encoded using the cipher, where both input and output are in encoded form. The model must decode, reason, and re-encode its response. 3. Normal examples (unencoded): Standard question-answer pairs without any encoding. These preserve base model capabilities and prevent catastrophic forgetting."
+    },
+    {
+      "heading": "G.2Stage 1: Teaching Phase",
+      "text": "The first stage focuses on teaching the cipher mapping through explicit demonstration:\n\n\u2022 Teaching probability: 80% of examples are teaching examples \u2022 Task probability: 20% of examples are encoded task examples \u2022 Teaching type split: 50% Type 1 (decode), 50% Type 2 (encode)"
+    },
+    {
+      "heading": "G.3Stage 2: Task Phase with Curriculum Decay",
+      "text": "The second stage applies the cipher to complex reasoning tasks while gradually reducing explicit teaching:\n\n\u2022 Teaching decay: Teaching probability decays linearly from 80% \u2192 \\rightarrow 20% over the course of Stage 2 \u2022 Normal ratio: 20% of examples remain unencoded throughout (constant) \u2022 Interleaving: Normal examples are distributed evenly throughout the dataset (approximately 1 normal example per 4 encoded examples)\n\nThe linear decay schedule ensures that the model receives sufficient explicit cipher instruction early in training, while later steps focus on applying the cipher to increasingly complex reasoning tasks. The 20% unencoded examples throughout Stage 2 act as an \u201canchor\u201d that prevents the model from forgetting how to reason in plain text."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1 : Overview of Trojan-Speak. Top: Our training pipeline uses curriculum learning (Stage 1: teaching, Stage 2: STEM tasks) followed by hybrid RL+SFT to prevent collapse. Bottom left: What the classifier sees\u2014encoded content disguised as forensic log analysis. Bottom right: The actual communication\u2014harmful queries and detailed responses that pass classifier detection while providing expert-level CBRN information.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.29038/assets/x1.png"
+    },
+    {
+      "caption": "Figure 2 : Classifier bypass rate on harmful CBRN queries vs. number of substituted letters. Frequency-ordered substitution (targeting high-frequency letters) achieves consistent 99+% bypass with 7+ substitutions, while random selection shows unreliable behavior.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.29038/assets/x2.png"
+    },
+    {
+      "caption": "Figure 3 : Training method comparison on (a) Bug Bounty Benchmark (expert-level CBRN queries from Sharma and others ( 2025 ) , rubric-scored) and (b) GPQA Diamond (capability retention). Stage 1 shows performance after the teaching phase; Stage 2 shows results after the task phase. Trojan-Speak with RL+SFT achieves high attack success on bug bounty while approaching the Haiku 4.5 baseline on GPQA Diamond. \u201cH-Only\u201d denotes the Helpful-Only Haiku 4.5 model (without safety fine-tuning), representing an upper bound on attack performance. Each generation was verified to pass Anthropic\u2019s Constitutional Classifiers before scoring. Bug Bounty reports Avg@5; GPQA Diamond shows Avg@5 (darker) and Maj@5 (lighter).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.29038/assets/x3.png"
+    },
+    {
+      "caption": "Figure 4 : GPQA-Diamond accuracy during Stage 2 training for Qwen3 models (8B, 14B, 32B) with different LoRA ranks. Horizontal dashed lines show baseline performance without cipher. Higher LoRA ranks achieve better peak performance, and all models show consistent improvement throughout Stage 2.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.29038/assets/x4.png"
+    },
+    {
+      "caption": "Figure 5 : Accuracy on cipher-encoded questions from the Nemotron-MCQA dataset during RL training of Haiku 4.5. Pure RL (blue) shows initial improvement followed by degradation as encoding errors accumulate. Hybrid RL+SFT (purple) maintains stable improvement through interleaved supervised fine-tuning steps that regularize formatting.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.29038/assets/x5.png"
+    },
+    {
+      "caption": "Figure 6 : Activation probe AUC for detecting ciphered harmful content. Base models (gray) achieve random-chance detection because they cannot decode the cipher. Cipher-trained models (blue) show high detection AUC, indicating that once the model learns to decode, harmful content becomes detectable in its activations regardless of surface-level encoding.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.29038/assets/x6.png"
+    },
+    {
+      "caption": "Figure 7 : GPQA-Diamond accuracy vs. number of substituted letters for Qwen3 14B and Qwen3 32B. Larger models show more graceful degradation.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.29038/assets/x7.png"
+    },
+    {
+      "caption": "Figure 8 : ARC Challenge comparison. CMFT shows \u223c {\\sim} 20% degradation while Trojan-Speak retains 97.3% of baseline.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.29038/assets/x8.png"
+    },
+    {
+      "caption": "Figure 9 : Bug Bounty and GPQA Diamond results including CMFT. On harder benchmarks, CMFT\u2019s degradation is far more severe.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.29038/assets/x9.png"
+    },
+    {
+      "caption": "Figure 10 : Probe detection AUC under three bypass training strategies. All three strategies fail to reduce AUC below 0.97.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.29038/assets/x10.png"
+    }
+  ],
+  "ar5iv_success": true
+}

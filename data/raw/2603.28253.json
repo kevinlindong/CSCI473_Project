@@ -1,0 +1,106 @@
+{
+  "paper_id": "2603.28253",
+  "title": "MR-ImagenTime: Multi-Resolution Time Series Generation through Dual Image Representations",
+  "abstract": "Time series forecasting is vital across many domains, yet existing models struggle with fixed-length inputs and inadequate multi-scale modeling. We propose MR-CDM, a framework combining hierarchical multi-resolution trend decomposition, an adaptive embedding mechanism for variable-length inputs, and a multi-scale conditional diffusion process. Evaluations on four real-world datasets demonstrate that MR-CDM significantly outperforms state-of-the-art baselines (e.g., CSDI, Informer), reducing MAE and RMSE by approximately 6-10 to a certain degree.",
+  "authors": [
+    "Xianyong Xu",
+    "Yuanjun Zuo",
+    "Zhihong Huang",
+    "Yihan Qin",
+    "Haoxian Xu",
+    "Leilei Du",
+    "Haotian Wang"
+  ],
+  "date": "2026-03-30T10:25:35+00:00",
+  "url": "http://arxiv.org/abs/2603.28253v1",
+  "categories": [
+    "cs.LG",
+    "cs.AI"
+  ],
+  "primary_category": "cs.LG",
+  "sections": [
+    {
+      "heading": "1.Introduction",
+      "text": "Time series data is fundamental to decision-making in domains such as finance, healthcare, and transportation. While deep learning models like RNNs, CNNs, and Transformers have advanced time series forecasting, recent work has explored diffusion models for their ability to capture complex temporal distributions. However, real-world series often exhibit multi-scale patterns (trends, seasonality, noise) and variable lengths, posing challenges for standard diffusion approaches. Although trend-decomposition methods improve multi-scale modeling, they typically assume fixed input lengths. To address variable-length inputs, Naiman et al. (Naiman et al. , 2024 ) propose mapping time series to 2D image-like representations. While this enhances input flexibility, it risks distorting temporal continuity and long-range dependencies by treating sequential data as spatial grids.\n\nTo address these limitations, we propose a diffusion-based forecasting framework that (1) supports variable-length time series without fixed input windows, and (2) incorporates multi-scale trend decomposition to model temporal patterns at different resolutions. The method retains the generative strengths of diffusion models while improving robustness across heterogeneous sequence lengths and temporal scales. Experiments on multiple real-world datasets show that it consistently outperforms both diffusion-based and conventional baselines, achieving more accurate and reliable forecasts.\n\nThe remainder of this paper is organized as follows:\nSection 2 reviews related literature on time series forecasting and diffusion-based generative models.\nSection 3 introduces the problem statement.\nSection 4 presents the proposed MR-CDM framework in detail.\nSection 5 outlines the experimental setup and reports empirical the results.\nFinally, Section 6 concludes the paper and discusses potential directions for future research."
+    },
+    {
+      "heading": "2.Related Work",
+      "text": "Time series forecasting is the process of generating a future segment of a time series by applying specific time series forecasting algorithms to historical time series data. For example, we use a historical wind speed series of 100 time units to generate a future wind speed series of 50 time units.Time series forecasting has undergone three evolutionary phases: statistical modeling, deep learning revolution, and the emerging diffusion paradigm."
+    },
+    {
+      "heading": "A.Statistical Modeling",
+      "text": "Classical forecasting relied on explicit statistical assumptions, with linear models dominating the field.\nThe Autoregressive Integrated Moving Average (ARIMA) (Naiman et al. , 2024 ) and its seasonal variant SARIMA provided interpretable formulations under stationarity assumptions, while Vector Autoregression (VAR) (Zivot and Wang, 2003 ) extended these ideas to multivariate settings.\nNonparametric methods like Holt\u2013Winters exponential smoothing (Koehler et al. , 2001 ) and the Error\u2013Trend\u2013Seasonality (ETS) framework (Hand, 2009 ) modeled trend-seasonality interactions without strict distributional requirements.\nFrom a probabilistic perspective, Gaussian Processes (GPs) (Rasmussen and Williams, 2005 ) introduced Bayesian inference for time series, providing principled uncertainty quantification via kernel functions."
+    },
+    {
+      "heading": "B.Deep Learning Revolution",
+      "text": "Neural networks revolutionized forecasting by enabling hierarchical feature learning and nonlinear modeling.\nEarly recurrent architectures like LSTM (Hochreiter and Schmidhuber, 1997 ) and GRU (Ishwarya and Kothandaraman, 2025a ) addressed gradient issues to capture long-term dependencies, with DeepAR (Flunkert et al. , 2020 ) establishing a deep probabilistic framework.\nConvolution-based models such as WaveNet (van den Oord et al. , 2016 ) and TCNs (Bai et al. , 2019 ) overcame sequential bottlenecks using dilated causal convolutions for efficient parallel processing.\nMore recently, attention-based architectures like the Transformer (Vaswani et al. , 2017 ) , Informer (Zhou et al. , 2020 ) , and Autoformer (Wu et al. , 2021 ) have become dominant by capturing global temporal dependencies through self-attention and frequency-domain analysis."
+    },
+    {
+      "heading": "C.Emerging Diffusion Paradigm",
+      "text": "Diffusion models have recently emerged as powerful generative tools for time series.\nTimeGrad (Rasul et al. , 2021 ) introduced autoregressive denoising diffusion for probabilistic forecasting, while CSDI (Tashiro et al. , 2021 ) extended this to conditional score-based diffusion for imputation tasks.\nTo improve efficiency and handle long sequences, SSSD (Alcaraz and Strodthoff, 2022 ) incorporated state space models, and TSDiff (Kollovieh et al. , 2023 ) proposed 2D representations to accommodate variable-length sequences.\nSpatial-temporal extensions like DiffSTG (Wen et al. , 2023 ) embedded graph structures to model complex spatio-temporal dynamics.\n\nOur framework addresses these exsiting challenges through three core innovations: an adaptive delay embedding mechanism for handling variable-length sequences, a hierarchical multi-resolution decomposition strategy to capture multi-scale temporal patterns, and a conditionally guided diffusion process that leverages coarse-level trends as structural priors. Together, these components ensure robust learning of complex dynamics while enhancing computational efficiency and training stability."
+    },
+    {
+      "heading": "3.Problem Statement",
+      "text": "Problem Statement. We address the problem of time series forecasting, where the goal is to predict future values of a time series based on its past observations. Given a set of observed time series data x \u2208 \u211d L \u00d7 K x\\in\\mathbb{R}^{L\\times K} , where L L is the sequence length and K K denotes the number of features, the challenge is to accurately model the complex temporal dependencies within the data, which span multiple time scales. This includes capturing the varying trends at different temporal resolutions and handling the high-dimensional and dynamic nature of the time series data for reliable forecasting."
+    },
+    {
+      "heading": "A.Overview",
+      "text": "The proposed MR-CDM framework utilizes a five-stage pipeline to address multi-scale time series characteristics,as illustrated in Figure\u00a02 . Initially, Multi-Scale Moving Average Decomposition (with windows of 5, 25, and 51) disentangles the input into short-term fluctuations, medium-term cycles, long-term trends, and high-frequency residuals (Shen et al. , 2024a ) . Subsequently, these components undergo domain transformation: delay embedding converts short- and medium-term signals into 32\u00d732 images to preserve temporal dynamics, while STFT maps the long-term trend to the time-frequency domain to highlight periodicity. These representations are then concatenated into a 35-channel fused image. A conditional diffusion model (Ho et al. , 2020 ) then performs generation based on historical contexts to ensure temporal consistency. The process concludes with an Enhanced Hierarchical Reconstructor, which integrates hierarchical reconstruction, cross-scale attention, and adaptive weighting in parallel to recover high-fidelity predictions. This architecture effectively isolates multi-scale features, harnesses the generative power of diffusion models, and ensures precise detail recovery through multi-path fusion.\n\nMR-CDM decomposes the input sequence into multi-scale components via a three-level moving average with window sizes of 5, 25, and 51, explicitly decoupling short-term fluctuations from seasonal periodicity. Trend1 and the residual, which carry local transient information, are mapped to image space (Takens, 2006 ; Griffin and Lim, 1983 ) via Delay Embedding to preserve fine-grained temporal dependencies. Trend3, representing long-term trends and seasonal cycles, is transformed via STFT to capture the amplitude and phase of periodic components in the time-frequency domain. Trend2 addresses medium-scale periodic structures between the two extremes. All four image branches are fused and modeled jointly by a diffusion model, followed by a hierarchical reconstructor to recover the predicted sequence. This branch-wise design prevents low-frequency components from masking high-frequency details, enhancing the model\u2019s ability to represent complex temporal dynamics."
+    },
+    {
+      "heading": "B.Proposed Algorithm",
+      "text": "The proposed MR-CDM framework follows a multi-stage pipeline detailed in prior work .We briefly summarize the core components here:\n\nMulti-Scale Decomposition: Input time series are hierarchically decomposed into short, medium, and long-term trends using moving averages, alongside high-frequency residuals (Shen et al. , 2024b ) . Time-Series-to-Image Mapping: Temporal components are transformed into 2D image representations via adaptive delay embedding and STFT (Ishwarya and Kothandaraman, 2025b ) , enabling resolution-independent processing. Conditional Diffusion: A multi-resolution diffusion process is employed, where noise prediction is conditioned on historical context and cross-scale features to ensure temporal consistency."
+    },
+    {
+      "heading": "D.Implements Details of Feature Processing",
+      "text": "Multi-scale Trend Decomposition. In the decomposition stage, we employ three moving average filters with window sizes of [ 5 , 25 , 51 ] [5,25,51] , corresponding to temporal scales of approximately 5 hours, 1 day, and 2 days, respectively. This configuration enables the capture of multi-level features ranging from short-term fluctuations to long-term trends. Specifically, the filter with window size 5 (MA-5) extracts high-frequency short-term fluctuations, MA-25 identifies daily periodic patterns, and MA-51 captures long-term trends. This hierarchical design ensures that features at distinct temporal scales are disentangled and can be subjected to differentiated processing strategies.\n\nAdaptive Image Transformation. For the components Trend 1 \\text{Trend}_{1} , Trend 2 \\text{Trend}_{2} , and the Residual , we utilize the delay embedding method to transform 1D time series into 32 \u00d7 32 32\\times 32 2D images, setting the delay parameter \u03c4 = 3 \\tau=3 and the embedding dimension d = 32 d=32 . Here, \u03c4 = 3 \\tau=3 effectively captures temporal dependencies over a 3-hour span, while d = 32 d=32 aligns with the base resolution of the U-Net architecture, thereby avoiding unnecessary upsampling or downsampling operations. Conversely, for Trend 3 \\text{Trend}_{3} , we apply the Short-Time Fourier Transform (STFT) to convert the signal into the time-frequency domain, configured with n_fft = 64 \\text{n\\_fft}=64 and hop_length = 16 \\text{hop\\_length}=16 . The choice of n_fft = 64 \\text{n\\_fft}=64 yields 32 frequency components sufficient for identifying periodic characteristics, while hop_length = 16 \\text{hop\\_length}=16 ensures a 75% window overlap, guaranteeing temporal continuity and information integrity.\n\nImage Fusion. In the fusion stage, we adopt a channel concatenation strategy to merge the images of the four components into a single fused tensor with 35 channels (structured as 7 + 7 + 14 + 7 7+7+14+7 ). This design preserves the complete information of all components, facilitating subsequent hierarchical reconstruction."
+    },
+    {
+      "heading": "6.Conclusion",
+      "text": "This thesis presents a comprehensive study on time series forecasting through the development of MR-CDM , a novel framework that addresses key limitations of existing methods. The research makes several significant contributions: (1) a delay embedding technique that converts variable-length time series into structured 2D image representations while preserving temporal dependencies, thereby enabling the use of spatial inductive biases from computer vision; (2) a hierarchical trend decomposition module that explicitly captures multi-scale temporal patterns\u2014including short-term fluctuations, seasonal cycles, and long-term trends; and (3) a hierarchical conditional diffusion model that performs denoising generation under multi-scale guidance, reducing stochasticity through coarse-to-fine constraints."
+    },
+    {
+      "heading": "7.acknowledgment",
+      "text": "This research was funded by Science and Technology Project of State Grid Hunan Electric Power Company Limited, titled \u201dResearch on Key Technologies and Complete Equipment of Diffusion Super-Resolution Data Augmentation for Power Grid Model Identification and Situation Deduction\u201d, grant number 5216A5250009."
+    },
+    {
+      "heading": "A.1.First Ablation Study",
+      "text": "To validate the effectiveness of key components in MR-CDM, we conduct ablation studies on the LUFL univariate forecasting task. We evaluate three variants:\n(1) Baseline-NoDecomposition , which removes the multi-scale trend decomposition;\n(2) UnconditionalDiffusion , which disables historical conditioning in the diffusion process; and\n(3) NoImageFusion , which replaces our smart fusion module with simple feature concatenation.\nThese components are selected because they each play a distinct and essential role: trend decomposition captures multi-resolution temporal patterns, conditional diffusion leverages historical context to guide generation, and image-inspired fusion enables effective integration of decomposed signals. The ablation results help isolate their individual contributions to the model\u2019s performance.\n\nThe first ablation experiment use consistent configurations: sequence length of 96 time steps for both input and prediction, batch size of 16, learning rate of 0.001 with Adam optimizer, and training for 50 epochs. The models are evaluated using MSE, MAE, and RMSE metrics on an 80/20 train-test split. This experimental design allows us to quantify the individual contribution of each component while maintaining computational efficiency for rapid iteration."
+    },
+    {
+      "heading": "A.2.Second Ablation Study",
+      "text": "To systematically evaluate the structural effectiveness of the proposed MR-CDM in multi-scale time-series modeling, we conduct an ablation study on the trend decomposition module. The experiments are performed on the LUFL variable of the ETTh1 dataset under a unified setting of prediction length, with MSE, MAE, and RMSE adopted as evaluation metrics. Specifically, three configurations are compared: the full MR-CDM model, MR-CDM w/o Trend1 (removing the low-frequency trend component), and MR-CDM w/o Trend3 (removing the high-frequency component). The reason for not removing Trend2 is that it is not the \u201dhighest frequency\u201d nor the \u201dsmoothest\u201d, but somewhere in between, mainly carrying medium-term structural information.\n\nThe results Table\u00a05 show that the full model achieves the best performance across all three metrics. Removing either trend component leads to a noticeable degradation in prediction accuracy, with a larger drop observed when Trend3 is removed. This indicates that the high-frequency component is critical for short-term fluctuation modeling, while the low-frequency component remains indispensable for preserving global trend dynamics. Overall, the proposed multi-scale trend decomposition mechanism enables collaborative modeling of short-term disturbances and long-term evolution within a unified framework, thereby improving model robustness and generalization in practical forecasting scenarios."
+    },
+    {
+      "heading": "A.3.Input Length Sensitivity Analysis",
+      "text": "To further investigate the effect of historical input length on the forecasting performance of MR-CDM, we conduct an input length sensitivity analysis on the LUFL variable of the ETTh1 dataset. The prediction length is fixed at 96, while the input sequence length Seq_Len is varied across 48, 96, and 192. As shown in the Table\u00a06 , all three error metrics decrease monotonically as the input length increases, indicating that longer historical sequences provide richer temporal context for the model.Longer input sequences contain more complete periodic structures and trend dynamics, enabling the multi-scale decomposition module to extract each frequency component more accurately and reducing decomposition errors caused by insufficient historical context. This enables the multi-scale trend decomposition module to extract more complete periodic and trend features, thereby improving prediction accuracy. These results confirm that MR-CDM is adaptive to varying input lengths, and suggest that increasing the historical window size in practical deployment can further enhance forecasting performance."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1. Multi-Resolution Time Series Example",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28253/assets/x1.png"
+    },
+    {
+      "caption": "Figure 2. MR-CDM Model Architecture",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28253/assets/x2.png"
+    },
+    {
+      "caption": "Figure 3. The Prediction Result Based on Our MR-CDM Model",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28253/assets/x3.png"
+    },
+    {
+      "caption": "Figure 4. The Prediction Result Based on CSDI Model",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28253/assets/x4.png"
+    },
+    {
+      "caption": "Figure 5. Multi-Step Prediction Performance Comparison",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28253/assets/x5.png"
+    },
+    {
+      "caption": "Figure 6. Prediction Result Based on MR- CDM model without conditional information",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28253/assets/x6.png"
+    }
+  ],
+  "ar5iv_success": true
+}

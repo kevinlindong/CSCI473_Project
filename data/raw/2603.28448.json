@@ -1,0 +1,320 @@
+{
+  "paper_id": "2603.28448",
+  "title": "Yau's Affine Normal Descent: Algorithmic Framework and Convergence Analysis",
+  "abstract": "We propose Yau's Affine Normal Descent (YAND), a geometric framework for smooth unconstrained optimization in which search directions are defined by the equi-affine normal of level-set hypersurfaces. The resulting directions are invariant under volume-preserving affine transformations and intrinsically adapt to anisotropic curvature. Using the analytic representation of the affine normal from affine differential geometry, we establish its equivalence with the classical slice-centroid construction under convexity. For strictly convex quadratic objectives, affine-normal directions are collinear with Newton directions, implying one-step convergence under exact line search. For general smooth (possibly nonconvex) objectives, we characterize precisely when affine-normal directions yield strict descent and develop a line-search-based YAND. We establish global convergence under standard smoothness assumptions, linear convergence under strong convexity and Polyak-Lojasiewicz conditions, and quadratic local convergence near nondegenerate minimizers. We further show that affine-normal directions are robust under affine scalings, remaining insensitive to arbitrarily ill-conditioned transformations. Numerical experiments illustrate the geometric behavior of the method and its robustness under strong anisotropic scaling.",
+  "authors": [
+    "Yi-Shuai Niu",
+    "Artan Sheshmani",
+    "Shing-Tung Yau"
+  ],
+  "date": "2026-03-30T13:55:11+00:00",
+  "url": "http://arxiv.org/abs/2603.28448v2",
+  "categories": [
+    "math.OC",
+    "cs.LG",
+    "math.DG",
+    "math.NA"
+  ],
+  "primary_category": "math.OC",
+  "sections": [
+    {
+      "heading": "1.Introduction",
+      "text": "Designing optimization algorithms that are robust to scaling, conditioning,\nand coordinate transformations remains a central challenge in mathematical programming.\nA fundamental difficulty lies in the mismatch between the geometry of the objective\nfunction and the geometry implicitly imposed by the algorithm.\nClassical methods such as gradient descent and Newton\u2019s method rely on\nEuclidean or locally quadratic models, whose performance can degrade severely\nunder affine transformations of the variables.\nEven for simple convex problems, affine scalings can arbitrarily distort\nthe geometry of level sets, leading to ill-conditioning and poor algorithmic behavior.\n\nA recurring geometric principle is that optimization performance is governed\nby the shape of level sets.\nGradient descent performs well when level sets are nearly spherical,\nwhile Newton\u2019s method is exact for strictly convex quadratic functions\nwith ellipsoidal level sets.\nHowever, these methods do not derive their search directions from the intrinsic\ngeometry of level sets themselves.\nThis raises a fundamental question:\n\nCan one design optimization methods whose search directions are determined\ndirectly by the intrinsic geometry of level sets, and are therefore inherently\naffine invariant?\n\nAffine invariance is widely regarded as a desirable structural property\nfor mitigating sensitivity to scaling and reparameterization.\nExisting approaches achieve invariance by prescribing\na geometry on the ambient space, such as through\nbarrier functions, norm-based structures, or Minkowski gauges [ 12 , 11 , 6 , 7 ] .\nIn contrast, we derive invariance directly from the intrinsic\ngeometry of level sets, without relying on any externally prescribed metric.\n\nSpecifically, we consider the smooth unconstrained problem min x \u2208 \u211d n + 1 \u2061 f \u200b ( x ) , \\min_{x\\in\\mathbb{R}^{n+1}}f(x), where f f is sufficiently smooth.\nAt a current iterate x k x_{k} , we examine the level-set hypersurface \u2112 k := { x : f \u200b ( x ) = f \u200b ( x k ) } , \\mathcal{L}_{k}:=\\{x:f(x)=f(x_{k})\\}, and extract a search direction from its equi\u2013affine geometry.\n\nThe geometric object underlying our construction is the affine normal ,\na classical notion in affine differential geometry, defined as a canonical transversal direction\ndetermined solely by the local shape of a hypersurface,\nindependent of parametrization,\nand invariant under unimodular (volume-preserving) affine transformations.\nUnlike the Euclidean normal (the gradient),\nthe affine normal encodes higher-order geometric information\nin a coordinate-free manner. For quadratic functions with ellipsoidal level sets,\nthe affine normal at every point points directly toward the unique critical point.\nConsequently, affine normal directions coincide with Newton directions\nin the quadratic case,\nalthough the affine normal itself is defined independently of\nsecond-order Taylor expansions.\nThis geometric exactness motivates its use\nas a descent direction beyond quadratic models.\n\nThe use of affine-normal geometry for optimization was initiated by\nCheng\u2013Cheng\u2013Yau [ 5 ] ,\nwho proposed deriving search directions from equi\u2013affine normal directions\nof level sets.\nThis work reveals a fundamental geometric principle:\noptimization directions can be defined intrinsically from level-set geometry,\nrather than from local Taylor expansions.\nFor convenience, we refer to methods that follow this principle as Yau-type (or Yau-like ) methods.\nTo date, however, no general algorithmic framework or convergence theory\nbased on this principle has been established.\n\nWe develop a complete optimization framework\nbased on affine-normal geometry.\nWe introduce the Yau\u2019s affine normal descent (YAND) algorithm\nfor smooth unconstrained optimization and establish its fundamental\nalgorithmic properties.\nOur analysis shows that the affine-normal direction provides a\ncurvature-aware search direction derived from the intrinsic geometry\nof level sets, leading to strong invariance properties and favorable\nlocal convergence behavior.\n\nAt each iteration, the search direction is given by the affine normal\nto the current level set, followed by a line search.\nSince the affine normal is defined only up to scale,\nstep sizes are determined independently using standard rules\n(e.g., exact line search, Armijo, or strong Wolfe conditions).\nBy construction, the resulting direction is invariant under\nunimodular affine transformations of variables. Conceptually, YAND provides a geometric interpretation of\ncurvature-aware optimization directions that depend only on\nthe intrinsic structure of level sets rather than on a particular\ncoordinate representation.\n\nA central subtlety is that the affine normal is not automatically\na descent direction.\nWe show that strict descent holds precisely at elliptic points ,\nwhere the Hessian restricted to the tangent space of the level set\nis positive definite.\nAt non-elliptic points,\nthe affine normal may fail to point inward,\nwhich necessitates a computable ellipticity test\nand a principled orientation correction.\nThis yields a well-defined algorithm applicable to general smooth (possibly nonconvex) objectives.\n\nWe establish global and local convergence guarantees for YAND.\nGlobally, under standard smoothness assumptions and appropriate line-search rules,\nthe method admits convergence guarantees comparable to first-order methods;\nin particular, we obtain linear convergence under strong convexity\nand Polyak\u2013\u0141ojasiewicz conditions,\nand gradient convergence under strong Wolfe conditions\nfor general nonconvex objectives.\nLocally, near a nondegenerate minimizer,\nthe affine normal direction coincides with the Newton direction\nup to second-order terms,\nwhich implies local quadratic convergence under standard assumptions. This relationship provides a geometric interpretation of\nNewton\u2019s method: in the quadratic case the affine normal\nexactly recovers the Newton direction,\nwhile beyond the quadratic setting it yields a curvature-aware\nsearch direction derived directly from level-set geometry.\nImportantly, affine-normal directions are defined intrinsically\nfrom level-set geometry and do not rely on explicit Hessian inversion or quadratic models.\nThus, YAND combines robust global behavior with high local efficiency, while being intrinsically equi\u2013affine invariant.\n\nIn addition, we study the behavior of affine-normal directions\nunder affine-scaled quadratic models and show that the resulting\nsearch directions are unaffected by arbitrarily ill-conditioned\nlinear scalings. This provides a geometric explanation of the\nrobustness of affine-normal descent with respect to anisotropic\naffine transformations.\n\nThe main contributions of this paper are as follows:\n\n\u2022 We establish the YAND framework, which defines\noptimization directions intrinsically from the equi\u2013affine geometry\nof level sets. \u2022 We characterize precisely when affine-normal directions yield strict descent,\nleading to a well-defined algorithm for general smooth (possibly nonconvex) objectives. \u2022 We establish global convergence under standard line-search rules,\nlinear convergence under strong convexity and Polyak\u2013\u0141ojasiewicz conditions,\nand quadratic local convergence near nondegenerate minimizers. \u2022 We prove that affine-normal directions are inherently robust under\narbitrarily ill-conditioned affine scalings.\n\nFinally, we present a series of numerical experiments that illustrate\nthe geometric behavior of the proposed method.\nRather than performing large-scale benchmarking,\nthe experiments are designed to highlight characteristic phenomena,\nincluding robustness under affine scalings,\nbehavior on ill-conditioned quadratic models,\nand representative convex/nonconvex test problems.\nComparisons with classical methods such as gradient descent and\nNewton\u2019s method further illustrate the distinct convergence behavior\nof affine-normal descent predicted by the theory. Large-scale implementation and benchmarking are deferred to future work.\n\nTable 1 positions YAND relative to representative\ngeometry-aware optimization paradigms,\nhighlighting the geometric object defining each direction,\nthe required information,\nand key structural properties.\n\nThe remainder of the paper is organized as follows.\nSection 2 reviews the affine normal construction\nand its analytic representation for level sets.\nSection 3 establishes the correspondence between affine normal directions\nand Newton steps for strictly convex quadratic objectives.\nSection 4 characterizes descent and ellipticity conditions.\nSection 5 provides illustrative examples for computing the affine normal.\nSection 6 introduces the YAND algorithm together with\nline-search strategies.\nSection 7 establishes global and local convergence results.\nSection 8 discusses the potential for beyond-quadratic convergence rates,\nhighlighting the interplay between local order and global geometry.\nSection 9 analyzes affine-scaling models and explains the robustness of\naffine-normal directions with respect to condition numbers.\nNumerical experiments are reported in Section 10 ,\nfollowed by concluding remarks."
+    },
+    {
+      "heading": "2.Affine normal direction",
+      "text": "The concept of the affine normal emerged from affine differential geometry in the early 20th century through the work of Blaschke, Berwald, and others; see, e.g., [ 14 , 10 ] . Unlike Euclidean geometry, which privileges orthogonal transformations, affine geometry studies properties invariant under the larger group of volume-preserving affine transformations. The affine normal represents the natural \u201cnormal direction\u201d from this affine-invariant perspective."
+    },
+    {
+      "heading": "2.2.Equivalence of the analytical and slice-centroid formulas under convexity",
+      "text": "The slice-centroid formula captures the affine normal direction only when the level hypersurface is locally strictly convex. In general nonconvex situations, tangential drift may occur and the slice-centroid direction may fail to agree with the analytical affine-normal direction; see Subsection 1.3 for discussion.\n\nThe following Lemma is used in Step 5 to compute the first variation of the centroid."
+    },
+    {
+      "heading": "2.3.Role of convexity",
+      "text": "Convexity plays a fundamental role in the agreement of the two affine-normal constructions and in ensuring that the affine normal serves as a descent direction for f f . We summarize these relationships below.\n\nEquivalence of the two constructions. The analytic affine normal agrees (up to a positive scalar) with the slice-centroid construction precisely at elliptic points of the level set, i.e., points where the tangent-tangent Hessian is positive definite and the level set is locally strictly convex. At such points, small slices are convex bodies, their moments are well defined, and the centroid trajectories reproduce the analytic affine normal in the limit. Thus the equivalence of the derivative formula and slice formula holds exactly on elliptic patches of the hypersurface.\n\nFailure at non-elliptic points. At hyperbolic points, the tangent-tangent Hessian is indefinite: the level set bends in opposite directions, slices become nonconvex or multi-component, and their centroids no longer reflect the analytic affine normal. At parabolic points, the tangent-tangent Hessian is singular and the affine metric degenerates, so neither the analytic affine normal nor the moment-based construction yield a meaningful normal direction. The counterexample in Example 4.3 illustrates that the slice-centroid direction may even become an ascent direction in the nonconvex case.\n\nImplications for descent directions in optimization. The analytic affine normal remains formally well defined at any nondegenerate point of the hypersurface, but it represents an inward geometric direction only at elliptic points. Consequently, the affine normal is a guaranteed strict descent direction for f f if each iterate x k x_{k} lies on a locally strictly convex patch of the level set. Within such a neighborhood, the interior sublevel set { f \u2264 f \u200b ( x k ) } \\{f\\leq f(x_{k})\\} lies on the inward side of the hypersurface, and the affine normal points strictly into this region. Moreover, in the same elliptic neighborhood, the slice-centroid and cap-centroid constructions provide consistent approximations of the analytic affine normal, since all three directions coincide up to scaling."
+    },
+    {
+      "heading": "2.4.Geometric illustration",
+      "text": "To close this section, we include a simple two-dimensional picture (Figure 1) that visualizes the difference between the Euclidean normal and the affine normal defined by the slice-centroid formula. On a convex curve (an ellipse is shown), at a point p p , the Euclidean normal (red arrow) is given by the gradient \u2207 f \u200b ( p ) \\nabla f(p) , usually pointing outward, whereas the affine normal (blue arrow) can be obtained via the slice-centroid construction: shifting the tangent line inward and taking the centroid of the chord segment inside the ellipse. As C \u2192 0 C\\to 0 , the tangent direction of the centroid trajectory at p p gives the affine normal direction. For ellipses (affine spheres), the affine normals always point toward the center, showing the geometric distinction\u2013Euclidean normal reflects local orthogonality, while affine normal encodes the global centroidal trend rather than merely local orthogonality."
+    },
+    {
+      "heading": "2.5.Computational complexity",
+      "text": "The analytic expression of the affine-normal direction\ninvolves first-, second-, and third-order derivatives of\nthe objective function. In particular, evaluating the\nanalytic formula requires computing derivatives of the\nHessian, which may be computationally expensive in\nhigh-dimensional settings.\n\nIn the present work our primary focus is on the geometric\nstructure and convergence properties of affine-normal\ndescent. The development of efficient techniques for\ncomputing or approximating the affine-normal direction\nin large-scale problems is an important topic for future\nresearch."
+    },
+    {
+      "heading": "3.Equivalence of affine normal and Newton directions for strictly convex quadratics",
+      "text": "Proof 1 (Geometric Argument). When A \u227b 0 A\\succ 0 , the level sets of f f are concentric ellipsoids centered at x \u22c6 = \u2212 A \u2212 1 \u200b b x^{\\star}=-A^{-1}b . By affine differential geometry, the affine normals of an ellipsoid point toward its center. Hence for any x \u2260 x \u22c6 x\\neq x^{\\star} , the affine normal direction is along x \u22c6 \u2212 x x^{\\star}-x . Meanwhile, d N \u200b ( x ) = \u2212 A \u2212 1 \u200b \u2207 f \u200b ( x ) = \u2212 A \u2212 1 \u200b ( A \u200b x + b ) = x \u22c6 \u2212 x , d_{\\mathrm{N}}(x)=-A^{-1}\\nabla f(x)=-A^{-1}(Ax+b)=x^{\\star}-x, hence they are parallel. \u220e\n\nProof 2 (Analytical Argument via Block Matrix and Schur Complement). Step 1 (Change of basis and notation). At x x , choose an orthonormal basis so that the last axis e n + 1 e_{n+1} is parallel to \u2207 f \u200b ( x ) \\nabla f(x) and the first n n axes are tangent to the level set. Write the Hessian \u2207 2 f \u200b ( x ) = A \\nabla^{2}f(x)=A in block form A = ( B c c \u22a4 d ) , A=\\begin{pmatrix}B&c\\\\\nc^{\\top}&d\\end{pmatrix}, where B \u2208 \u211d n \u00d7 n B\\in\\mathbb{R}^{n\\times n} (the tangent\u2013tangent block [ f i \u200b j ] [f_{ij}] ), c \u2208 \u211d n c\\in\\mathbb{R}^{n} (the mixed normal\u2013tangent block [ f n + 1 , i ] [f_{n+1,i}] ), and d = f n + 1 , n + 1 d=f_{n+1,n+1} .\n\nStep 2 (Explicit affine-normal direction in this basis). In the normal-aligned coordinates, the affine normal reads d AN \u200b ( x ) \u221d ( f i \u200b j \u200b ( \u2212 1 n + 2 \u200b | \u2207 f | \u200b f p \u200b q \u200b f p \u200b q \u200b i + f n + 1 , i ) \u2212 1 ) , d_{\\mathrm{AN}}(x)\\propto\\begin{pmatrix}f^{ij}\\big(-\\tfrac{1}{n+2}\\,|\\nabla f|\\,f^{pq}f_{pqi}+f_{n+1,i}\\big)\\\\[2.0pt]\n-1\\end{pmatrix}, where [ f i \u200b j ] = [ f i \u200b j ] \u2212 1 [f^{ij}]=[f_{ij}]^{-1} is the inverse of the tangent\u2013tangent block. For a quadratic form, all third derivatives vanish, hence f p \u200b q \u200b i \u2261 0 f_{pqi}\\equiv 0 , and we get d AN ( x ) \u221d ( B \u2212 1 \u200b c \u2212 1 ) . \\boxed{\\quad d_{\\mathrm{AN}}(x)\\propto\\begin{pmatrix}B^{-1}c\\\\[2.0pt]\n-1\\end{pmatrix}.\\quad}\n\nStep 3 (Parallelism with the Newton direction). In the same basis, \u2207 f = \u2016 \u2207 f \u2016 \u200b e n + 1 \\nabla f=\\|\\nabla f\\|\\,e_{n+1} . Therefore d N \u200b ( x ) = \u2212 A \u2212 1 \u200b \u2207 f \u200b ( x ) = \u2212 \u2016 \u2207 f \u200b ( x ) \u2016 \u22c5 ( last column of \u200b A \u2212 1 ) . d_{\\mathrm{N}}(x)\\;=\\;-A^{-1}\\nabla f(x)\\;=\\;-\\|\\nabla f(x)\\|\\cdot\\big(\\text{last column of }A^{-1}\\big). Let S := d \u2212 c \u22a4 \u200b B \u2212 1 \u200b c > 0 S:=d-c^{\\top}B^{-1}c>0 be the Schur complement (since A \u227b 0 A\\succ 0 ). Then A \u2212 1 = ( B \u2212 1 + B \u2212 1 \u200b c \u200b S \u2212 1 \u200b c \u22a4 \u200b B \u2212 1 \u2212 B \u2212 1 \u200b c \u200b S \u2212 1 \u2212 S \u2212 1 \u200b c \u22a4 \u200b B \u2212 1 S \u2212 1 ) , A^{-1}=\\begin{pmatrix}B^{-1}+B^{-1}c\\,S^{-1}c^{\\top}B^{-1}&-\\,B^{-1}c\\,S^{-1}\\\\[2.0pt]\n-\\,S^{-1}c^{\\top}B^{-1}&\\ \\ S^{-1}\\end{pmatrix}, so the last column is ( \u2212 B \u2212 1 \u200b c \u200b S \u2212 1 , S \u2212 1 ) \u22a4 \\big(-B^{-1}c\\,S^{-1},\\ S^{-1}\\big)^{\\top} . Hence d N \u200b ( x ) = \u2016 \u2207 f \u200b ( x ) \u2016 \u200b S \u2212 1 \u200b ( B \u2212 1 \u200b c \u2212 1 ) , d_{\\mathrm{N}}(x)=\\|\\nabla f(x)\\|\\,S^{-1}\\begin{pmatrix}B^{-1}c\\\\[2.0pt]\n-1\\end{pmatrix}, which shows d N \u2225 d AN \\boxed{\\,d_{\\mathrm{N}}\\ \\parallel\\ d_{\\mathrm{AN}}\\,} and they differ only by the positive scalar \u2016 \u2207 f \u2016 \u200b S \u2212 1 \\|\\nabla f\\|\\,S^{-1} . \u220e\n\nThis shows that, on strictly convex quadratic objectives,\nthe affine normal direction coincides with the Newton direction\n(up to a positive scalar multiple).\nIn particular, with exact line search,\nthe resulting one-step update reaches the minimizer.\nHence, in the quadratic setting,\nNewton direction appears as a special case\nof the affine-normal direction framework."
+    },
+    {
+      "heading": "4.When is the affine normal a descent direction?",
+      "text": "The affine normal direction is always well-defined when the\ntangent\u2013tangent block of the Hessian is invertible.\nHowever, its descent property depends crucially on the\nlocal convexity of the level set.\nIn this section we characterize precisely when the affine normal is a\nstrict descent direction, and explain why moment-based constructions\n(slice\u2013centroid and cap\u2013centroid) require convexity."
+    },
+    {
+      "heading": "4.2.Moment-based constructions require convexity",
+      "text": "The analytic affine normal exists without convexity,\nbut its moment-based approximations require it.\nIndeed, the slice\u2013centroid formulation assumes that\nthe intersection of the level set with a nearby plane is\na convex body with a well-behaved centroid trajectory.\nThis fails when the level set is nonconvex."
+    },
+    {
+      "heading": "5.Examples for computing the affine normal",
+      "text": "Although the affine normal originates from affine differential geometry,\nits computation can be made completely explicit in standard optimization\nsettings. To facilitate understanding for readers in optimization,\nwe begin with a few low\u2013dimensional examples in which the affine normal\ncan be computed analytically and directly compared with classical\ndirections such as the gradient and the Newton."
+    },
+    {
+      "heading": "5.1.Quadratic convex function in two Variables",
+      "text": "Let f \u200b ( x , y ) = 1 2 \u200b ( x 2 + 4 \u200b y 2 ) \u2212 x \u2212 4 \u200b y , f(x,y)=\\tfrac{1}{2}\\,(x^{2}+4y^{2})\\;-\\;x\\;-\\;4y, with A = diag \u200b ( 1 , 4 ) \u227b 0 , b = ( \u2212 1 , \u2212 4 ) A=\\mathrm{diag}(1,4)\\succ 0,\\ b=(-1,-4) , minimizing at x \u22c6 = ( 1 , 1 ) x^{\\star}=(1,1) .\nPick p = ( 2 , 0 ) p=(2,0) .\n\nGradient and Hessian. \u2207 f \u200b ( x , y ) = ( x \u2212 1 , 4 \u200b y \u2212 4 ) , \u2207 f \u200b ( p ) = ( 1 , \u2212 4 ) , H = \u2207 2 f = A = ( 1 0 0 4 ) . \\nabla f(x,y)=(x-1,\\ 4y-4),\\qquad\\nabla f(p)=(1,-4),\\qquad H=\\nabla^{2}f=A=\\begin{pmatrix}1&0\\\\\n0&4\\end{pmatrix}.\n\nUnit normal/tangent ( n = 1 n=1 ). \u2016 \u2207 f \u200b ( p ) \u2016 = 17 , \ud835\udc8f ^ = \u2207 f \u200b ( p ) \u2016 \u2207 f \u200b ( p ) \u2016 = ( 1 17 , \u2212 4 17 ) , \ud835\udc95 ^ = ( 4 17 , 1 17 ) . \\|\\nabla f(p)\\|=\\sqrt{17},\\quad\\hat{\\boldsymbol{n}}=\\frac{\\nabla f(p)}{\\|\\nabla f(p)\\|}=\\Big(\\tfrac{1}{\\sqrt{17}},-\\tfrac{4}{\\sqrt{17}}\\Big),\\quad\\hat{\\boldsymbol{t}}=\\Big(\\tfrac{4}{\\sqrt{17}},\\tfrac{1}{\\sqrt{17}}\\Big).\n\nRecall ( n = 1 n=1 ). In the orthonormal frame ( \ud835\udc95 ^ , \ud835\udc8f ^ ) (\\hat{\\boldsymbol{t}},\\hat{\\boldsymbol{n}}) , \ud835\udc85 AN \u221d ( \u03c4 , \u2212 1 ) , \u03c4 = f 21 f 11 \u2212 \u2016 \u2207 f \u2016 3 f 111 f 11 2 \\boxed{\\quad\\boldsymbol{d}_{\\rm AN}\\ \\propto\\ (\\tau,\\,-1),\\qquad\\tau=\\frac{f_{21}}{f_{11}}-\\frac{\\|\\nabla f\\|}{3}\\,\\frac{f_{111}}{f_{11}^{2}}\\quad} with f 11 = D 2 \u200b f \u200b [ \ud835\udc95 ^ , \ud835\udc95 ^ ] , f 21 = D 2 \u200b f \u200b [ \ud835\udc8f ^ , \ud835\udc95 ^ ] , f 111 = D 3 \u200b f \u200b [ \ud835\udc95 ^ , \ud835\udc95 ^ , \ud835\udc95 ^ ] . f_{11}=D^{2}f[\\hat{\\boldsymbol{t}},\\hat{\\boldsymbol{t}}],\\quad f_{21}=D^{2}f[\\hat{\\boldsymbol{n}},\\hat{\\boldsymbol{t}}],\\quad f_{111}=D^{3}f[\\hat{\\boldsymbol{t}},\\hat{\\boldsymbol{t}},\\hat{\\boldsymbol{t}}].\n\nDirectional derivatives (quadratic case). Here f 111 = 0 f_{111}=0 , so \u03c4 = f 21 / f 11 \\tau={f_{21}}/{f_{11}} with f 11 = \ud835\udc95 ^ \u22a4 \u200b H \u200b \ud835\udc95 ^ = 20 17 , f 21 = \ud835\udc8f ^ \u22a4 \u200b H \u200b \ud835\udc95 ^ = \u2212 12 17 , \u03c4 = \u2212 3 5 . f_{11}=\\hat{\\boldsymbol{t}}^{\\!\\top}H\\hat{\\boldsymbol{t}}=\\tfrac{20}{17},\\quad f_{21}=\\hat{\\boldsymbol{n}}^{\\!\\top}H\\hat{\\boldsymbol{t}}=-\\tfrac{12}{17},\\quad\\tau=-\\tfrac{3}{5}.\n\nAffine-normal direction. \ud835\udc85 AN \u221d \u03c4 \u200b \ud835\udc95 ^ \u2212 \ud835\udc8f ^ = 1 17 \u200b ( \u2212 3.4 , 3.4 ) \u2225 ( \u2212 1 , 1 ) . \\boldsymbol{d}_{\\mathrm{AN}}\\ \\propto\\ \\tau\\,\\hat{\\boldsymbol{t}}-\\hat{\\boldsymbol{n}}=\\frac{1}{\\sqrt{17}}(-3.4,\\,3.4)\\ \\parallel\\ (-1,\\,1).\n\nNewton direction. \ud835\udc85 N = \u2212 H \u2212 1 \u200b \u2207 f \u200b ( p ) = ( \u2212 1 , 1 ) . \\boldsymbol{d}_{N}=-H^{-1}\\nabla f(p)=(-1,\\,1). Thus \ud835\udc85 AN \u2225 \ud835\udc85 N \\boldsymbol{d}_{\\mathrm{AN}}\\parallel\\boldsymbol{d}_{\\mathrm{N}} ."
+    },
+    {
+      "heading": "5.2.Quadratic convex function in three variables",
+      "text": "Let f \u200b ( x , y , z ) = 1 2 \u200b ( x 2 + 4 \u200b y 2 + 9 \u200b z 2 ) + ( \u2212 1 , 0 , 0 ) \u22c5 ( x , y , z ) , f(x,y,z)=\\tfrac{1}{2}\\,(x^{2}+4y^{2}+9z^{2})\\;+\\;(-1,\\,0,\\,0)\\!\\cdot\\!(x,y,z), so A = diag \u200b ( 1 , 4 , 9 ) \u227b 0 , b = ( \u2212 1 , 0 , 0 ) A=\\mathrm{diag}(1,4,9)\\succ 0,\\ b=(-1,0,0) and x \u22c6 = ( 1 , 0 , 0 ) x^{\\star}=(1,0,0) .\nTake p = ( 2 , 0 , 0 ) p=(2,0,0) .\n\nGradient and Hessian. \u2207 f \u200b ( x , y , z ) = ( x \u2212 1 , 4 \u200b y , 9 \u200b z ) , \u2207 f \u200b ( p ) = ( 1 , 0 , 0 ) , H = diag \u200b ( 1 , 4 , 9 ) . \\nabla f(x,y,z)=(x-1,\\;4y,\\;9z),\\qquad\\nabla f(p)=(1,0,0),\\qquad H=\\mathrm{diag}(1,4,9).\n\nNormal alignment and tangents ( n = 2 n=2 ). \ud835\udc8f ^ = ( 1 , 0 , 0 ) , \ud835\udc95 ^ 1 = ( 0 , 1 , 0 ) , \ud835\udc95 ^ 2 = ( 0 , 0 , 1 ) . \\hat{\\boldsymbol{n}}=(1,0,0),\\qquad\\hat{\\boldsymbol{t}}_{1}=(0,1,0),\\quad\\hat{\\boldsymbol{t}}_{2}=(0,0,1).\n\nBlocks. B = diag \u200b ( 4 , 9 ) , c = ( 0 , 0 ) . B=\\mathrm{diag}(4,9),\\quad c=(0,0).\n\nAffine-normal direction ( n = 2 n=2 ). For quadratics (no third derivatives), \ud835\udc85 AN \u221d \u2211 i = 1 2 ( B \u2212 1 \u200b c ) i \u200b \ud835\udc95 ^ i \u2212 \ud835\udc8f ^ = \u2212 \ud835\udc8f ^ = ( \u2212 1 , 0 , 0 ) . \\boldsymbol{d}_{\\rm AN}\\ \\propto\\ \\sum_{i=1}^{2}(B^{-1}c)_{i}\\,\\hat{\\boldsymbol{t}}_{i}\\ -\\ \\hat{\\boldsymbol{n}}=-\\,\\hat{\\boldsymbol{n}}=(-1,0,0).\n\nNewton direction. \ud835\udc85 N = \u2212 H \u2212 1 \u200b \u2207 f \u200b ( p ) = ( \u2212 1 , 0 , 0 ) . \\boldsymbol{d}_{N}=-H^{-1}\\nabla f(p)=(-1,0,0). Thus \ud835\udc85 AN \u2225 \ud835\udc85 N \\boldsymbol{d}_{\\rm AN}\\parallel\\boldsymbol{d}_{\\mathrm{N}} ."
+    },
+    {
+      "heading": "5.3.Strictly convex non-quadratic example",
+      "text": "Consider n = 1 n=1 and f \u200b ( x , y ) = 1 2 \u200b x 2 + 2 \u200b y 2 + 1 12 \u200b x 4 . f(x,y)=\\frac{1}{2}\\,x^{2}+2y^{2}+\\frac{1}{12}x^{4}. Then \u2207 2 f \u200b ( x , y ) = ( 1 + x 2 0 0 4 ) \u227b 0 , \\nabla^{2}f(x,y)=\\begin{pmatrix}1+x^{2}&0\\\\\n0&4\\end{pmatrix}\\succ 0, so f f is strictly convex. At p = ( 1 , 1 ) p=(1,1) , in the orthonormal frame ( \ud835\udc95 ^ , \ud835\udc8f ^ ) (\\hat{\\boldsymbol{t}},\\hat{\\boldsymbol{n}}) the affine normal direction is \ud835\udc85 AN \u221d ( \u03c4 , \u2212 1 ) , \u03c4 = f 21 f 11 \u2212 \u2016 \u2207 f \u2016 3 f 111 f 11 2 \\boxed{\\quad\\boldsymbol{d}_{\\rm AN}\\ \\propto\\ (\\tau,\\,-1),\\qquad\\tau=\\frac{f_{21}}{f_{11}}-\\frac{\\|\\nabla f\\|}{3}\\,\\frac{f_{111}}{f_{11}^{2}}\\quad} with the ingredients computed in the text; numerically one finds \u03c4 \u2248 0.7687 \\tau\\approx 0.7687 and \ud835\udc85 AN \u221d ( \u2212 1.0454 , \u2212 0.7056 ) , \u2207 f \u200b ( 1 , 1 ) \u22c5 \ud835\udc85 AN \u2248 \u2212 4.2164 < 0 , \\boldsymbol{d}_{\\rm AN}\\ \\propto\\ (-1.0454,\\,-0.7056),\\qquad\\nabla f(1,1)\\cdot\\boldsymbol{d}_{\\rm AN}\\approx-4.2164<0, confirming strict descent."
+    },
+    {
+      "heading": "6.YAND",
+      "text": "We now transition from the geometric theory of affine normals to the\noptimization algorithm that uses these directions as search directions.\nSince the analytic affine normal is defined only up to a nonzero scalar\n(and in particular, up to sign), we must ensure that the chosen direction\nis always a descent direction for f f ."
+    },
+    {
+      "heading": "6.1.Affine normal descent direction",
+      "text": "Given an iterate x k x_{k} with \u2207 f \u200b ( x k ) \u2260 0 \\nabla f(x_{k})\\neq 0 , we first compute the affine normal d AN \u200b ( x k ) d_{\\mathrm{AN}}(x_{k}) of the level set { f = f \u200b ( x k ) } \\{f=f(x_{k})\\} and define the search direction by d k := { d AN \u200b ( x k ) , if \u200b \u27e8 \u2207 f \u200b ( x k ) , d AN \u200b ( x k ) \u27e9 < 0 , \u2212 d AN \u200b ( x k ) , if \u200b \u27e8 \u2207 f \u200b ( x k ) , d AN \u200b ( x k ) \u27e9 > 0 , \u2212 \u2207 f \u200b ( x k ) / \u2016 \u2207 f \u200b ( x k ) \u2016 , otherwise . d_{k}:=\\begin{cases}d_{\\mathrm{AN}}(x_{k}),&\\text{if }\\langle\\nabla f(x_{k}),d_{\\mathrm{AN}}(x_{k})\\rangle<0,\\\\[4.2679pt]\n-d_{\\mathrm{AN}}(x_{k}),&\\text{if }\\langle\\nabla f(x_{k}),d_{\\mathrm{AN}}(x_{k})\\rangle>0,\\\\[4.2679pt]\n-\\nabla f(x_{k})/\\|\\nabla f(x_{k})\\|,&\\text{otherwise}.\\end{cases} (6.1) The third case corresponds to an affine-degenerate point where the equi\u2013affine curvature vanishes and the affine normal collapses into the tangent space.\nAt such points, any vector v tan v_{\\mathrm{tan}} in the tangent space satisfies \u27e8 \u2207 f \u200b ( x k ) , v tan \u27e9 = 0 \\langle\\nabla f(x_{k}),v_{\\mathrm{tan}}\\rangle=0 , so the affine normal (even if formally computable) cannot serve as a descent direction.\nSince no representative with a negative normal component exists, we fall back to the steepest\u2013descent direction \u2212 \u2207 f \u200b ( x k ) / \u2016 \u2207 f \u200b ( x k ) \u2016 -\\nabla f(x_{k})/\\|\\nabla f(x_{k})\\| . The sign correction ensures \u27e8 \u2207 f \u200b ( x k ) , d k \u27e9 < 0 , \\langle\\nabla f(x_{k}),d_{k}\\rangle<0, so d k d_{k} is always a strict descent direction of f f at x k x_{k} .\n\nTo analyze the geometry of d k d_{k} , we work in the normal\u2013aligned frame at x k x_{k} .\nLet e n + 1 := \u2207 f \u200b ( x k ) \u2016 \u2207 f \u200b ( x k ) \u2016 , e_{n+1}:=\\frac{\\nabla f(x_{k})}{\\|\\nabla f(x_{k})\\|}, where { e i } i = 1 n \\{e_{i}\\}_{i=1}^{n} is an orthonormal basis for the tangent space of the level set { f = f \u200b ( x k ) } \\{f=f(x_{k})\\} .\nIn this frame, every descent direction d k d_{k} constructed from ( 6.1 )\ncan be expressed as d k = \u2211 i = 1 n ( \u03c4 k ) i \u200b e i \u2212 e n + 1 , \u03c4 k \u2208 \u211d n , d_{k}=\\sum_{i=1}^{n}(\\tau_{k})_{i}\\,e_{i}\\;-\\;e_{n+1},\\qquad\\tau_{k}\\in\\mathbb{R}^{n}, as illustrated in Figure 2 .\nLet T k := \u2016 \u03c4 k \u2016 T_{k}:=\\|\\tau_{k}\\| .\nThen \u2016 d k \u2016 2 = 1 + T k 2 , \\|d_{k}\\|^{2}=1+T_{k}^{2}, so the scalar T k T_{k} measures the tangential magnitude of the affine\u2013normal direction.\nIts boundedness plays a central role in the convergence analysis developed in Section 7 ."
+    },
+    {
+      "heading": "6.2.YAND algorithm",
+      "text": "We now summarize the proposed YAND algorithm as follows: (1) Initialize x 0 x_{0} , tolerance \u03b5 > 0 \\varepsilon>0 , and a step strategy (exact line search / strong Wolfe / Armijo). (2) For k = 0 , 1 , 2 , \u2026 k=0,1,2,\\dots : (a) If \u2016 \u2207 f \u200b ( x k ) \u2016 \u2264 \u03b5 \\|\\nabla f(x_{k})\\|\\leq\\varepsilon , stop. (b) Compute the descent direction d k d_{k} at x k x_{k} according to ( 6.1 ). (c) Line search: take \u03b1 k > 0 \\alpha_{k}>0 satisfying one of \u2022 Exact: \u03b1 k \u2208 arg \u2061 min \u03b1 \u2265 0 \u2061 f \u200b ( x k + \u03b1 \u200b d k ) \\alpha_{k}\\in\\arg\\min_{\\alpha\\geq 0}f(x_{k}+\\alpha d_{k}) . \u2022 Armijo [ 3 ] : f \u200b ( x k + \u03b1 k \u200b d k ) \u2264 f \u200b ( x k ) + \u03c3 \u200b \u03b1 k \u200b \u2207 f \u200b ( x k ) \u22a4 \u200b d k , ( 0 < \u03c3 < 1 ) . f(x_{k}+\\alpha_{k}d_{k})\\leq f(x_{k})+\\sigma\\alpha_{k}\\,\\nabla f(x_{k})^{\\top}d_{k},\\quad(0<\\sigma<1). \u2022 Strong Wolfe [ 16 ] : { f \u200b ( x k + \u03b1 k \u200b d k ) \u2264 f \u200b ( x k ) + c 1 \u200b \u03b1 k \u200b \u2207 f \u200b ( x k ) \u22a4 \u200b d k , | \u2207 f \u200b ( x k + \u03b1 k \u200b d k ) \u22a4 \u200b d k | \u2264 c 2 \u200b | \u2207 f \u200b ( x k ) \u22a4 \u200b d k | ( 0 < c 1 < c 2 < 1 ) . \\begin{cases}f(x_{k}+\\alpha_{k}d_{k})\\leq f(x_{k})+c_{1}\\alpha_{k}\\,\\nabla f(x_{k})^{\\top}d_{k},\\\\\n|\\nabla f(x_{k}+\\alpha_{k}d_{k})^{\\top}d_{k}|\\leq c_{2}|\\nabla f(x_{k})^{\\top}d_{k}|\\end{cases}\\quad(0<c_{1}<c_{2}<1). (d) Update x k + 1 = x k + \u03b1 k \u200b d k x_{k+1}=x_{k}+\\alpha_{k}d_{k} ."
+    },
+    {
+      "heading": "7.Convergence analysis of YAND",
+      "text": "In this section we develop a full convergence theory for YAND algorithm.\nWe proceed in a hierarchy of assumptions, starting from the most restrictive\n(strongly convex and smooth), and gradually relaxing to nonconvex settings,\nand finally establishing local quadratic convergence under classical nondegeneracy conditions."
+    },
+    {
+      "heading": "7.1.Preliminaries",
+      "text": "Throughout this section, L L \u2013smoothness refers to \u2016 \u2207 f \u200b ( x ) \u2212 \u2207 f \u200b ( y ) \u2016 \u2264 L \u200b \u2016 x \u2212 y \u2016 , \u2200 x , y . \\|\\nabla f(x)-\\nabla f(y)\\|\\leq L\\|x-y\\|,\\qquad\\forall x,y. We impose the following mild geometric assumption on the affine normal direction."
+    },
+    {
+      "heading": "7.3.Nonconvex setting: global linear convergence with PL inequality",
+      "text": "In the proof of Theorem 7.6 , the key ingredient\nlinking the gradient norm to the function suboptimality was the inequality \u2016 \u2207 f \u200b ( x k ) \u2016 2 \u2265 2 \u200b \u03bc \u200b ( f \u200b ( x k ) \u2212 f \u22c6 ) , \\|\\nabla f(x_{k})\\|^{2}\\;\\geq\\;2\\mu\\,(f(x_{k})-f^{\\star}), which follows from strong convexity.\nMore generally, the same structural bound is provided by the\nPolyak\u2013\u0141ojasiewicz (PL) inequality [ 15 , 17 , 9 ] 1 2 \u200b \u2016 \u2207 f \u200b ( x ) \u2016 2 \u2265 \u03bc PL \u200b ( f \u200b ( x ) \u2212 f \u22c6 ) , \\frac{1}{2}\\|\\nabla f(x)\\|^{2}\\;\\geq\\;\\mu_{\\mathrm{PL}}\\,(f(x)-f^{\\star}), (7.6) which does not require convexity.\nThis condition is known to hold for a broad class of nonconvex objectives\n(including many over-parameterized models, gradient-dominated landscapes, and functions\nwith benign geometry).\n\nReplacing Step\u00a03 in the proof of\nTheorem 7.6 with\n( 7.6 ) immediately yields the following result.\n\nThus, even in the absence of convexity, the PL property guarantees\nglobal Q Q \u2013linear convergence of YAND, with a contraction factor governed\nby the geometry of the affine\u2013normal direction via ( 1 + T 2 ) \u2212 1 (1+T^{2})^{-1} ."
+    },
+    {
+      "heading": "7.4.Nonconvex setting: strong Wolfe and gradient convergence",
+      "text": "We now consider fully nonconvex objectives under strong Wolfe line search."
+    },
+    {
+      "heading": "7.5.Exact line search: factor\u2013two improvement",
+      "text": "Exact line search plays a special role in affine\u2013normal descent.\nSince d k d_{k} is always a descent direction, minimizing f \u200b ( x k + \u03b1 \u200b d k ) f(x_{k}+\\alpha d_{k}) along \u03b1 \u2265 0 \\alpha\\geq 0 yields the maximal decrease allowed by the L L \u2013smooth\nquadratic upper bound.\nAs shown below, this leads to a factor\u2013two improvement in the linear\nconvergence constant under the PL condition, compared with Armijo\nbacktracking.\n\nWe now compare the linear convergence factors obtained under Armijo\nbacktracking and exact line search. Under the optimal Armijo choice \u03c3 = 1 2 \\sigma=\\tfrac{1}{2} , the contraction factor is \u03c1 Armijo = 1 2 \u22c5 \u03bc PL L \u200b ( 1 + T 2 ) . \\rho_{\\mathrm{Armijo}}=\\frac{1}{2}\\cdot\\frac{\\mu_{\\mathrm{PL}}}{L(1+T^{2})}. Exact line search improves this constant by a factor of two: \u03c1 exact = 2 \u200b \u03c1 Armijo . \\rho_{\\mathrm{exact}}=2\\,\\rho_{\\mathrm{Armijo}}."
+    },
+    {
+      "heading": "7.6.Local quadratic convergence",
+      "text": "We now show that affine\u2013normal descent enjoys local quadratic convergence near a nondegenerate minimizer. The key point is that, in a sufficiently small\nneighborhood of x \u22c6 x^{\\star} , the affine normal direction becomes a second\u2013order\naccurate approximation of the Newton direction.\n\nThe perturbation term \u0394 k := d AN \u200b ( x k ) \u2212 d N \u200b ( x k ) \\Delta_{k}:=d_{\\mathrm{AN}}(x_{k})-d_{\\mathrm{N}}(x_{k}) comes entirely from higher-order\ncurvature terms of the level set.\nUnder Assumption 7.14 , the Weingarten map and all third-order\nderivatives of f f vary smoothly near x \u22c6 x^{\\star} . As a consequence, the affine\nnormal direction and the Newton direction coincide to first order near the\nminimizer: \u2016 \u0394 k \u2016 = O \u200b ( \u2016 x k \u2212 x \u22c6 \u2016 2 ) . \\|\\Delta_{k}\\|=O\\bigl(\\|x_{k}-x^{\\star}\\|^{2}\\bigr). This follows from expanding the affine normal formula in\nlocal coordinates,\nwhere the tangential correction terms are governed by second- and third-order\ncurvatures. Hence, we have the following lemma:\n\nThen, the local quadratic convergence of YAND follows from nondegeneracy of the Hessian and the smoothness of third derivatives."
+    },
+    {
+      "heading": "7.7.Summary of convergence regimes",
+      "text": "\u2022 Strong convexity \u21d2 \\Rightarrow global linear convergence (Armijo or exact). \u2022 PL inequality (possibly nonconvex) \u21d2 \\Rightarrow global linear convergence. \u2022 Nonconvex with strong Wolfe \u21d2 \\Rightarrow \u2016 \u2207 f \u200b ( x k ) \u2016 \u2192 0 \\|\\nabla f(x_{k})\\|\\to 0 with O \u200b ( k \u2212 1 / 2 ) O(k^{-1/2}) sublinear rate. \u2022 Exact line search (strongly convex or PL settings) \u21d2 \\Rightarrow same global linear rate but with a factor\u2013two improvement in the contraction constant. \u2022 Local neighborhood of a nondegenerate minimizer \u21d2 \\Rightarrow quadratic convergence. These results jointly show that YAND behaves as a robust first-order method globally,\nwhile attaining quadratic local convergence. This is a consequence of the fact that the affine normal direction\nis a second-order accurate approximation of the Newton direction.\nMoreover, exact line search improves the global contraction constant\nby a factor of two."
+    },
+    {
+      "heading": "8.Beyond quadratic rates?\u2014local order vs global geometry",
+      "text": "The convergence results in the previous section establish\nglobal linear convergence and local quadratic convergence of YAND.\nA natural question is whether higher\u2013order convergence rates\ncan be achieved by further exploiting affine normal geometry."
+    },
+    {
+      "heading": "9.Affine-scaling models and condition-number robustness",
+      "text": "In practice, optimization algorithms may behave poorly when the objective\nfunction becomes strongly anisotropic due to affine scalings of the variables.\nSuch transformations may severely distort the geometry of level sets and\nartificially worsen the condition number seen by classical methods.\n\nIn this section we analyze a fundamental model class in which\nill-conditioning is induced purely by anisotropic affine scaling.\nMore precisely, we study objectives of the form f \u200b ( x ) = \u03d5 \u200b ( B \u200b x ) , f(x)=\\phi(Bx), where B B is invertible and \u03d5 \\phi is a fixed base function.\nOur goal is to show that affine-normal directions transform covariantly\nunder such scalings, so that the induced search directions and, under\nstandard line-search rules, the mapped iterates in the transformed\ncoordinates follow the same dynamics as those of the unscaled objective \u03d5 \\phi .\n\nWe first establish exact iterate-level equivalence under exact line search\nfor orientation-preserving scalings ( det B > 0 \\det B>0 ), then extend the result\nto Armijo and strong Wolfe line searches, and finally derive a regime-wise\ntransfer principle together with illustrative examples."
+    },
+    {
+      "heading": "9.1.Affine-scaling model",
+      "text": "Let \u03d5 : \u211d n + 1 \u2192 \u211d \\phi:\\mathbb{R}^{n+1}\\to\\mathbb{R} be C 3 C^{3} and define f \u200b ( x ) := \u03d5 \u200b ( B \u200b x ) , f(x):=\\phi(Bx), (9.1) where B \u2208 \u211d ( n + 1 ) \u00d7 ( n + 1 ) B\\in\\mathbb{R}^{(n+1)\\times(n+1)} is invertible.\nEven if \u03d5 \\phi is well-conditioned, f f may become severely ill-conditioned due solely to anisotropy in B B .\nIndeed, by the chain rule, \u2207 f \u200b ( x ) = B \u22a4 \u200b \u2207 \u03d5 \u200b ( B \u200b x ) , \u2207 2 f \u200b ( x ) = B \u22a4 \u200b \u2207 2 \u03d5 \u200b ( B \u200b x ) \u200b B , \\nabla f(x)=B^{\\top}\\nabla\\phi(Bx),\\qquad\\nabla^{2}f(x)=B^{\\top}\\nabla^{2}\\phi(Bx)B, so that, in general, \u03ba \u200b ( \u2207 2 f \u200b ( x ) ) = \u03ba \u200b ( B \u22a4 \u200b \u2207 2 \u03d5 \u200b ( B \u200b x ) \u200b B ) \u2264 \u03ba \u200b ( B ) 2 \u22c5 \u03ba \u200b ( \u2207 2 \u03d5 \u200b ( B \u200b x ) ) , \\kappa\\bigl(\\nabla^{2}f(x)\\bigr)=\\kappa\\!\\left(B^{\\top}\\nabla^{2}\\phi(Bx)B\\right)\\leq\\kappa(B)^{2}\\cdot\\kappa\\!\\left(\\nabla^{2}\\phi(Bx)\\right), where \u03ba \u200b ( \u22c5 ) \\kappa(\\cdot) denotes the 2 2 -norm condition number, and for typical anisotropic scalings B B one may have \u03ba \u200b ( \u2207 2 f ) \\kappa(\\nabla^{2}f) as large as \u03ba \u200b ( B ) 2 \\kappa(B)^{2} .\nOur main message is that, for this model class, YAND behaves essentially as if the scaling were absent."
+    },
+    {
+      "heading": "9.2.Three basic invariances: unimodular covariance, isotropic scaling, and step-size absorption",
+      "text": "We start with three basic facts:\n(i) the affine normal is covariant under unimodular affine changes of variables,\n(ii) the affine normal is collinear under isotropic scaling of the ambient space,\nand (iii) exact line search absorbs any positive rescaling of the direction.\n\nThe preceding lemma expresses a fundamental structural principle:\nthe affine\u2013normal direction is covariant under volume-preserving affine\nchanges of variables. Since YAND is defined entirely in terms of this direction,\nits behavior is intrinsically tied to the geometry of level sets rather than\nto the ambient coordinate representation.\n\nConsequently, the affine\u2013normal direction field is covariant (up to a positive scaling of representatives)\nunder all affine transformations with positive determinant. To turn this directional covariance into an iterate-level equivalence (and hence into condition-number robustness),\nwe also need the following elementary fact: exact line search absorbs any positive rescaling of the search direction."
+    },
+    {
+      "heading": "9.3.Exact invariance under general affine scaling",
+      "text": "We now prove the main invariance property for the affine-scaling model ( 9.1 ).\nThe key is to reduce general B B to a unimodular map times an isotropic scaling,\nand then use Lemma 9.1 , Corollary 9.3 and Lemma 9.4 .\n\nTheorem 9.5 formalizes this invariance: the\nchange of variables y = B \u200b x y=Bx removes the spurious conditioning induced by B B ,\nso the resulting convergence guarantees and constants are inherited from \u03d5 \\phi and do not depend on \u03ba \u200b ( B ) \\kappa(B) . The analysis shows that affine-normal directions transform covariantly under affine scalings of the coordinates. As a consequence, the geometric search direction is intrinsically insensitive to anisotropic affine distortions of the objective landscape."
+    },
+    {
+      "heading": "9.4.Extension to Armijo line search",
+      "text": "We now extend the invariance principle from exact line search to the standard inexact line search\nbased on Armijo (sufficient decrease) conditions.\nLet d k := d AN f \u200b ( x k ) , d_{k}:=d_{\\mathrm{AN}}^{f}(x_{k}), and assume the direction is chosen with the descent orientation , i.e., \u2207 f \u200b ( x k ) \u22a4 \u200b d k < 0 . \\nabla f(x_{k})^{\\top}d_{k}<0. (9.9) Let \u03b1 k > 0 \\alpha_{k}>0 satisfy the Armijo condition f \u200b ( x k + \u03b1 k \u200b d k ) \u2264 f \u200b ( x k ) + c 1 \u200b \u03b1 k \u200b \u2207 f \u200b ( x k ) \u22a4 \u200b d k , 0 < c 1 < 1 . f(x_{k}+\\alpha_{k}d_{k})\\leq f(x_{k})+c_{1}\\alpha_{k}\\nabla f(x_{k})^{\\top}d_{k},\\qquad 0<c_{1}<1. (9.10)"
+    },
+    {
+      "heading": "9.5.Extension to strong Wolfe line search",
+      "text": "We now strengthen Theorem 9.7 by incorporating the curvature condition, i.e., strong Wolfe conditions.\nLet d k := d AN f \u200b ( x k ) , d_{k}:=d_{\\mathrm{AN}}^{f}(x_{k}), and assume ( 9.9 ).\nLet \u03b1 k > 0 \\alpha_{k}>0 satisfy the strong Wolfe conditions f \u200b ( x k + \u03b1 k \u200b d k ) \\displaystyle f(x_{k}+\\alpha_{k}d_{k}) \u2264 f \u200b ( x k ) + c 1 \u200b \u03b1 k \u200b \u2207 f \u200b ( x k ) \u22a4 \u200b d k , \\displaystyle\\leq f(x_{k})+c_{1}\\alpha_{k}\\nabla f(x_{k})^{\\top}d_{k}, (9.11) | \u2207 f \u200b ( x k + \u03b1 k \u200b d k ) \u22a4 \u200b d k | \\displaystyle\\bigl|\\nabla f(x_{k}+\\alpha_{k}d_{k})^{\\top}d_{k}\\bigr| \u2264 c 2 \u200b | \u2207 f \u200b ( x k ) \u22a4 \u200b d k | , \\displaystyle\\leq c_{2}\\bigl|\\nabla f(x_{k})^{\\top}d_{k}\\bigr|, (9.12) with 0 < c 1 < c 2 < 1 0<c_{1}<c_{2}<1 ."
+    },
+    {
+      "heading": "9.6.Unified affine invariance of monotone line-search rules",
+      "text": "The previous results show that both Armijo and strong Wolfe conditions are preserved under affine scaling.\nWe now state a unified formulation."
+    },
+    {
+      "heading": "9.7.Regime-wise transfer and explicit rates",
+      "text": "The affine covariance established above implies a transfer principle:\nany convergence property of YAND proved for a base objective \u03d5 \\phi is inherited verbatim by all anisotropically scaled objectives f \u200b ( x ) = \u03d5 \u200b ( B \u200b x ) f(x)=\\phi(Bx) .\nCrucially, the rate constants depend only on the intrinsic geometry\nof \u03d5 \\phi and not on the conditioning of B B . The following transfer principle should be understood under the same\nline-search regime and local regularity assumptions under which the\ncorresponding convergence result is established for the base objective \u03d5 \\phi .\n\nAs a concrete instantiation of Corollary 9.12 ,\nwe record an explicit linear-rate bound (and thus an iteration-complexity bound)\nby invoking the exact-line-search rate established in Section 7 .\n\nThis shows that, within the affine-scaling model f \u200b ( x ) = \u03d5 \u200b ( B \u200b x ) f(x)=\\phi(Bx) ,\nill-conditioning arising purely from anisotropic affine scaling does not\naffect the mapped YAND dynamics: the relevant convergence constants are\ninherited from the base function \u03d5 \\phi (e.g., through \u03bc \\mu , L L ,\nand the geometric bound T T in the exact-line-search analysis) rather\nthan from \u03ba \u200b ( B ) \\kappa(B) ."
+    },
+    {
+      "heading": "10.Numerical experiments",
+      "text": "In this section we present a series of numerical experiments designed to\nillustrate the geometric behavior of the proposed YAND. The goal is not large-scale benchmarking, but rather to\nverify the main theoretical predictions of the paper and to examine how\nthe method behaves across representative geometric regimes.\n\nThe experiments are organized in three stages. We first study convex\nquadratic problems, where the theory predicts that the affine-normal\ndirection coincides with the Newton direction and exhibits affine-scaling\nrobustness. We then turn to smooth nonquadratic convex objectives to show\nthat the favorable behavior of YAND is not restricted to the quadratic\nsetting. Finally, we consider smooth nonconvex problems with curved\nvalleys, saddle regions, and multi-well landscapes in order to assess the\nstability of the method beyond convexity. The following subsections examine these behaviors on representative\nexamples of increasing geometric complexity."
+    },
+    {
+      "heading": "10.1.Experimental setup",
+      "text": "All experiments were conducted on a Windows\u200911 laptop,\nMATLAB\u00a0R2025b with an Intel(R)\u00a0Core(TM)\u00a0Ultra\u20099\u2009275HX CPU. The implementation is in MATLAB and uses analytic derivatives (via automatic differentiation). No external optimization libraries were used. Unless otherwise specified, the following default parameters are used."
+    },
+    {
+      "heading": "10.2.Convex quadratic problems",
+      "text": "We begin with convex quadratic objectives, for which the theory predicts\nthat the affine-normal direction coincides with the Newton direction.\nThese examples serve as a baseline and provide the cleanest setting in\nwhich to visualize both quadratic exactness and affine-scaling robustness."
+    },
+    {
+      "heading": "10.3.Smooth nonquadratic convex problems",
+      "text": "We next consider smooth convex functions that are not quadratic.\nIn this regime the affine-normal direction no longer coincides with\neither the gradient direction or the Newton direction.\nThese experiments therefore probe the genuine behavior of YAND beyond\nthe quadratic setting and test whether its geometry-adaptive character\npersists for nonlinear convex objectives with strongly varying curvature."
+    },
+    {
+      "heading": "10.4.Smooth nonconvex problems",
+      "text": "We finally turn to smooth nonconvex objectives, where the geometry may\ninclude curved valleys, saddle regions, and multiple basins of attraction.\nThese experiments investigate whether the favorable geometric behavior\nobserved in the convex setting persists beyond convexity, and whether the\nempirical performance of YAND remains consistent with the convergence\ntheory developed earlier under standard line-search conditions."
+    },
+    {
+      "heading": "10.5.Summary of numerical results",
+      "text": "To summarize the behavior of the considered methods across the different\ngeometric regimes, Table 3 reports a qualitative\ncomparison of the representative experiments."
+    },
+    {
+      "heading": "11.Conclusion",
+      "text": "We have introduced Yau\u2019s affine normal descent (YAND), a geometric\nframework for smooth unconstrained optimization in which search directions\nare defined intrinsically by the equi\u2013affine normal of level-set hypersurfaces.\nThis perspective departs from classical approaches based on Euclidean or\nquadratic models, and instead derives optimization directions directly from\nthe intrinsic geometry of level sets.\n\nWe established several fundamental properties of affine-normal directions.\nIn particular, we connected their analytic representation with the classical\nslice\u2013centroid construction, thereby linking computational formulas with\ntheir geometric origin. We characterized precisely when affine-normal directions\nyield strict descent and showed that, for strictly convex quadratic objectives,\nYAND recovers Newton\u2019s method under exact line search.\nWe further developed a convergence theory establishing global convergence\nunder standard smoothness assumptions, linear convergence under strong convexity\nor the Polyak\u2013\u0141ojasiewicz condition, and quadratic local convergence near\nnondegenerate minimizers.\n\nWe also analyzed the behavior of affine-normal directions under affine scalings,\nshowing that the method is inherently robust to arbitrarily ill-conditioned\ntransformations. This provides a geometric explanation for the stability of YAND\nunder severe anisotropic distortions of the objective.\n\nNumerical experiments illustrate the geometric behavior of the method and its\nrobustness across a range of convex and nonconvex problems. Together, these\nresults suggest that affine differential geometry provides a natural and\npowerful framework for designing curvature-aware optimization algorithms.\n\nSeveral directions remain for future investigation. A central challenge is the\nefficient computation or approximation of affine-normal directions in\nhigh-dimensional settings, where analytic formulas involve higher-order\nderivatives. Geometric constructions based on local moment information of\nlevel sets, such as slice\u2013centroid formulations, suggest a promising route\ntoward scalable implementations without explicit higher-order derivatives.\nExtensions to constrained and stochastic optimization settings also constitute\nnatural directions for further development."
+    },
+    {
+      "heading": "Acknowledgements",
+      "text": "Y.-S. N. was supported by the National Natural Science Foundation of China\n(Grant No. 42450242) and the Beijing Overseas High-Level Talent Program.\nA. S. would like to acknowledge support from the Beijing Natural Science\nFoundation (Grant No. BJNSF\u2013IS24005) and the NSFC\u2013RFIS Program\n(Grant No. W2432008).\nHe also thanks the NSF AI Institute for Artificial Intelligence and Fundamental\nInteractions at the Massachusetts Institute of Technology (MIT), funded by the\nU.S. National Science Foundation under Cooperative Agreement PHY\u20132019786,\nas well as China\u2019s National Program of Overseas High-Level Talent for generous\nsupport.\nAll three authors gratefully acknowledge institutional support from the Beijing\nInstitute of Mathematical Sciences and Applications (BIMSA). The authors would also like to thank Prof. Liping Zhang of Tsinghua University\nfor helpful discussions."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1 . Geometric comparison between the Euclidean and affine normals",
+      "image_path": ""
+    },
+    {
+      "caption": "Figure 2 . Normal\u2013aligned frame at x k x_{k} illustrating three typical constructions of d k d_{k} .\nThe analytic affine normal d AN \u200b ( x k ) d_{\\mathrm{AN}}(x_{k}) is represented in the frame { e 1 , \u2026 , e n , e n + 1 } \\{e_{1},\\dots,e_{n},e_{n+1}\\} with its ( n + 1 ) (n+1) -st component normalized to \u2212 1 -1 .\nCase\u00a01: the affine normal is already a descent direction\n( \u27e8 \u2207 f \u200b ( x k ) , d AN \u200b ( x k ) \u27e9 < 0 \\langle\\nabla f(x_{k}),d_{\\mathrm{AN}}(x_{k})\\rangle<0 ), hence d k = d AN \u200b ( x k ) d_{k}=d_{\\mathrm{AN}}(x_{k}) .\nCase\u00a02: the affine normal points uphill\n( \u27e8 \u2207 f \u200b ( x k ) , d AN \u200b ( x k ) \u27e9 > 0 \\langle\\nabla f(x_{k}),d_{\\mathrm{AN}}(x_{k})\\rangle>0 ), so we flip the sign and set d k = \u2212 d AN \u200b ( x k ) d_{k}=-d_{\\mathrm{AN}}(x_{k}) .\nCase\u00a03: the affine normal is orthogonal to the gradient\n( \u27e8 \u2207 f \u200b ( x k ) , d AN \u200b ( x k ) \u27e9 = 0 \\langle\\nabla f(x_{k}),d_{\\mathrm{AN}}(x_{k})\\rangle=0 ); in this degenerate case we revert to\nthe steepest\u2013descent direction d k = \u2212 \u2207 f \u200b ( x k ) / \u2016 \u2207 f \u200b ( x k ) \u2016 d_{k}=-\\nabla f(x_{k})/\\|\\nabla f(x_{k})\\| .",
+      "image_path": ""
+    },
+    {
+      "caption": "(a) Exact line search.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x1.png"
+    },
+    {
+      "caption": "(a) Exact line search.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x1.png"
+    },
+    {
+      "caption": "(b) Strong Wolfe line search.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x2.png"
+    },
+    {
+      "caption": "(c) Armijo backtracking.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x3.png"
+    },
+    {
+      "caption": "Figure 4 . Optimization trajectories in the original x x -coordinates for f \u03b3 \u200b ( x ) = 1 2 \u200b ( x 1 2 + \u03b3 2 \u200b x 2 2 ) f_{\\gamma}(x)=\\tfrac{1}{2}(x_{1}^{2}+\\gamma^{2}x_{2}^{2}) with \u03b3 = 1 , 10 2 , 10 4 \\gamma=1,10^{2},10^{4} .\nAs \u03b3 \\gamma increases, the level sets become increasingly elongated.\nYAND-Exact and Newton remain essentially one-step methods, while the\nbehavior of gradient descent depends more strongly on the step-size rule.\nIn particular, GD-Fixed becomes substantially slower as the anisotropy\nincreases, whereas GD-Exact remains convergent on this diagonal quadratic.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x4.png"
+    },
+    {
+      "caption": "Figure 5 . YAND trajectories after normalization y = B \u03b3 \u200b x y=B_{\\gamma}x for \u03b3 = 1 , 10 2 , 10 4 \\gamma=1,10^{2},10^{4} .\nAfter mapping to the intrinsic coordinates of \u03d5 \u200b ( y ) = 1 2 \u200b \u2016 y \u2016 2 \\phi(y)=\\tfrac{1}{2}\\|y\\|^{2} , the trajectories collapse onto nearly\nidentical paths, illustrating the affine invariance predicted by the\ntheory.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x5.png"
+    },
+    {
+      "caption": "(a) Exact line search.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x6.png"
+    },
+    {
+      "caption": "(a) Exact line search.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x6.png"
+    },
+    {
+      "caption": "(b) Strong Wolfe line search.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x7.png"
+    },
+    {
+      "caption": "(c) Armijo backtracking.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x8.png"
+    },
+    {
+      "caption": "(a) Exact line search",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x9.png"
+    },
+    {
+      "caption": "(a) Exact line search",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x9.png"
+    },
+    {
+      "caption": "(b) Strong Wolfe line search",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x10.png"
+    },
+    {
+      "caption": "(c) Armijo backtracking",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x11.png"
+    },
+    {
+      "caption": "(a) Exact line search",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x12.png"
+    },
+    {
+      "caption": "(a) Exact line search",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x12.png"
+    },
+    {
+      "caption": "(b) Strong Wolfe",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x13.png"
+    },
+    {
+      "caption": "(c) Armijo backtracking",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x14.png"
+    },
+    {
+      "caption": "Figure 9 . Gradient descent on the Rosenbrock function\n( 10.4 ) with strong Wolfe line search.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x15.png"
+    },
+    {
+      "caption": "Figure 10 . Damped Newton on the Rosenbrock function\n( 10.4 ) with strong Wolfe line search.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x16.png"
+    },
+    {
+      "caption": "(a) Exact line search",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x17.png"
+    },
+    {
+      "caption": "(a) Exact line search",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x17.png"
+    },
+    {
+      "caption": "(b) Strong Wolfe",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x18.png"
+    },
+    {
+      "caption": "(c) Armijo backtracking",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x19.png"
+    },
+    {
+      "caption": "(a) Exact line search",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x20.png"
+    },
+    {
+      "caption": "(a) Exact line search",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x20.png"
+    },
+    {
+      "caption": "(b) Strong Wolfe",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x21.png"
+    },
+    {
+      "caption": "(c) Armijo backtracking",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x22.png"
+    },
+    {
+      "caption": "(a) Exact line search",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x23.png"
+    },
+    {
+      "caption": "(a) Exact line search",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x23.png"
+    },
+    {
+      "caption": "(b) Strong Wolfe",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x24.png"
+    },
+    {
+      "caption": "(c) Armijo backtracking",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28448/assets/x25.png"
+    }
+  ],
+  "ar5iv_success": true
+}

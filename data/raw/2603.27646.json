@@ -1,0 +1,153 @@
+{
+  "paper_id": "2603.27646",
+  "title": "PRBench: End-to-end Paper Reproduction in Physics Research",
+  "abstract": "AI agents powered by large language models exhibit strong reasoning and problem-solving capabilities, enabling them to assist scientific research tasks such as formula derivation and code generation. However, whether these agents can reliably perform end-to-end reproduction from real scientific papers remains an open question. We introduce PRBench, a benchmark of 30 expert-curated tasks spanning 11 subfields of physics. Each task requires an agent to comprehend the methodology of a published paper, implement the corresponding algorithms from scratch, and produce quantitative results matching the original publication. Agents are provided only with the task instruction and paper content, and operate in a sandboxed execution environment. All tasks are contributed by domain experts from over 20 research groups at the School of Physics, Peking University, each grounded in a real published paper and validated through end-to-end reproduction with verified ground-truth results and detailed scoring rubrics. Using an agentified assessment pipeline, we evaluate a set of coding agents on PRBench and analyze their capabilities across key dimensions of scientific reasoning and execution. The best-performing agent, OpenAI Codex powered by GPT-5.3-Codex, achieves a mean overall score of 34%. All agents exhibit a zero end-to-end callback success rate, with particularly poor performance in data accuracy and code correctness. We further identify systematic failure modes, including errors in formula implementation, inability to debug numerical simulations, and fabrication of output data. Overall, PRBench provides a rigorous benchmark for evaluating progress toward autonomous scientific research.",
+  "authors": [
+    "Shi Qiu",
+    "Junyi Deng",
+    "Yiwei Deng",
+    "Haoran Dong",
+    "Jieyu Fu",
+    "Mao Li",
+    "Zeyu Li",
+    "Zhaolong Zhang",
+    "Huiwen Zheng",
+    "Leidong Bao",
+    "Anqi Lv",
+    "Zihan Mo",
+    "Yadi Niu",
+    "Yiyang Peng",
+    "Yu Tian",
+    "Yili Wang",
+    "Ziyu Wang",
+    "Zi-Yu Wang",
+    "Jiashen Wei",
+    "Liuheng Wu",
+    "Aoran Xue",
+    "Leyi Yang",
+    "Guanglu Yuan",
+    "Xiarui Zhan",
+    "Jingjun Zhang",
+    "Zifan Zheng",
+    "Pengfei Liu",
+    "Linrui Zhen",
+    "Kaiyang Li",
+    "Qichang Li",
+    "Ziheng Zhou",
+    "Guo-En Nian",
+    "Yunwei Xiao",
+    "Qing-Hong Cao",
+    "Linjie Dai",
+    "Xu Feng",
+    "Peng Gao",
+    "Ying Gu",
+    "Chang Liu",
+    "Jia Liu",
+    "Ming-xing Luo",
+    "Yan-Qing Ma",
+    "Liang-You Peng",
+    "Huichao Song",
+    "Shufeng Wang",
+    "Chenxu Wang",
+    "Tao Wang",
+    "Yi-Nan Wang",
+    "Chengyin Wu",
+    "Pengwei Zhao",
+    "Hua Xing Zhu"
+  ],
+  "date": "2026-03-29T11:44:57+00:00",
+  "url": "http://arxiv.org/abs/2603.27646v1",
+  "categories": [
+    "cs.CL",
+    "hep-lat",
+    "hep-ph",
+    "physics.comp-ph",
+    "physics.optics"
+  ],
+  "primary_category": "cs.CL",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "Recent advances in large language models (LLMs) have enabled AI agents with strong reasoning and systematic problem-solving capabilities, making them increasingly useful for assisting scientific research.\nAgents can now derive mathematical formulas [ 18 , 6 ] , generate and debug scientific code [ 4 , 15 ] , propose experimental designs [ 3 ] , and support discovery across scientific domains [ 14 , 11 ] .\n\nHowever, it remains unclear whether AI agents can reliably perform end-to-end reproduction starting from a scientific paper alone.\nIn physics, reproducing computational results from a published paper is a comprehensive and demanding task.\nIt requires the agent to extract the underlying methodology from the original paper, implement the corresponding algorithms from scratch, and execute the full pipeline to obtain results consistent with the original work.\nSuch a process demands the coordinated integration of multiple capabilities, including long-context comprehension, scientific reasoning, complex problem solving, systematic code generation and execution, and iterative refinement.\n\nExisting benchmarks capture only partial aspects of this process.\nPrior work evaluates isolated capabilities such as code generation, bug fixing, or scientific reasoning [ 19 , 5 , 7 , 17 , 12 ] , but does not assess whether agents can carry out the full end-to-end workflow.\nMoreover, these benchmarks provide limited support for diagnosing failure modes across different stages of the reproduction process.\nAs a result, current evaluations fail to distinguish between agents that merely interpret a paper and those that can faithfully execute it to obtain verifiable results.\n\nWe introduce PRBench ( P aper R eproduction Bench mark) to address these limitations.\nPRBench consists of 30 expert-curated tasks derived from published physics papers spanning 11 subfields, including lattice gauge theory, quantum optics, nuclear physics, plasma physics, and condensed matter physics.\nAll tasks are sourced from over 20 research groups at the School of Physics, Peking University.\nEach task is manually validated by domain experts, who perform end-to-end reproduction of the original results and provide comprehensive metadata, including core methodology, reference implementations, verified ground-truth results, and detailed scoring rubrics.\n\nOur evaluation framework follows the Agentified Agent Assessment (AAA) paradigm [ 2 ] , and is implemented within a sandboxed execution environment.\nUsing an automated grading agent with human-provided metadata, we evaluate agent performance across four dimensions: methodology understanding, code implementation correctness, data reproduction accuracy, and task completion.\n\nWe evaluate a diverse set of AI agents on PRBench.\nThe best-performing agent, OpenAI Codex powered by GPT-5.3-Codex , achieves an overall score of 34%.\nMost notably, the end-to-end callback rate remains zero , indicating that none of the evaluated agents can reliably reproduce correct results from a given paper.\nWe further identify several systematic failure modes, including incorrect formula implementation, inability to debug numerical simulations, and fabrication of output data to satisfy output-format requirements.\n\nOur contributions are as follows: \u2022 A high-quality, expert-validated benchmark. PRBench consists of end-to-end paper reproduction tasks sourced from real research projects.\nAll tasks are validated by domain experts, who perform rigorous reproduction and provide comprehensive metadata, including core methodology, reference implementations, verified ground-truth results, and detailed scoring rubrics. \u2022 An agentified evaluation framework. We introduce a fully agentified evaluation pipeline within a sandboxed execution environment, where agents are required to autonomously complete the full workflow from paper understanding to code generation and numerical result generation.\nThis design ensures secure and controlled execution, enabling rigorous, reliable, and scalable evaluation of end-to-end scientific workflows. \u2022 A comprehensive analytical taxonomy. We propose a unified taxonomy for both evaluation and failure analysis.\nOn the evaluation side, it decomposes agent performance into methodology understanding, code correctness, data reproduction accuracy, and task completion.\nOn the analysis side, it categorizes failure modes based on agent execution behavior, including data fabrication and errors in translating methodology into correct implementations."
+    },
+    {
+      "heading": "3.1Overview",
+      "text": "PRBench is designed to evaluate AI agents on the end-to-end reproduction of computational results from scientific papers in physics.\nThe benchmark focuses on papers where the main results rely on non-trivial computational modeling or numerical simulation, rather than purely analytical derivations.\nEach task requires an agent to read a real scientific paper, understand the underlying methodology, implement the described algorithms, execute the computation, and generate quantitative outputs that reproduce the results reported in the original publication.\n\nOverall, PRBench contains 30 tasks spanning 11 subfields of physics, including quantum chromodynamics (QCD), quantum optics, nuclear physics, plasma physics, and condensed matter physics, as detailed in Table 1 .\n\nAll tasks are contributed by research groups affiliated with the School of Physics at Peking University, representing more than 20 active research groups.\nEach task is curated and validated by domain experts who ensure that the underlying research problems are scientifically meaningful, computationally reproducible, and representative of real frontier research workflows."
+    },
+    {
+      "heading": "3.2Task Curation Process",
+      "text": "The task curation follows a multi-stage process, as illustrated in Figure 2 , to ensure both scientific validity and evaluation rigor:\n\n1. Paper Selection .\nResearch groups nominate candidate papers through internal discussion.\nSelected papers must contain reproducible and scientifically meaningful computational results, supported by a sufficient number of figures or tables that serve as evaluation targets.\nWe focus on problems involving non-trivial numerical computation, such as simulations, parameter sweeps, or data-driven analysis, rather than purely analytical derivations. To ensure reliable reproduction, the selected papers must provide a sufficiently detailed and self-contained description of the computational methodology, without relying heavily on external references for key implementation steps.\nAll tasks are additionally screened for computational feasibility, ensuring that they can be executed within a few hours in a sandboxed execution environment.\nFurther details are provided in Appendix C . 2. Reference Implementation .\nFor each selected paper, domain experts perform end-to-end reproduction and develop a reference implementation, including executable code and corresponding numerical outputs.\nThese implementations reproduce the key figures and tables from the original publication and serve as the ground-truth reference for evaluation.\nWhile ensuring correctness, the reference outputs may include higher-resolution data to support more precise comparison. 3. Task Specification .\nEach task is formalized into a structured specification (Section 3.3 ).\nOutputs from the reference implementation are converted into standardized CSV files (Appendix A.2 ), enabling quantitative comparison between agent-generated results and ground truth. The task specification includes the agent-visible instruction and a set of evaluation metadata, including methodological descriptions, expected outputs, and scoring criteria.\nThis metadata encodes both the numerical targets and the underlying physical and methodological constraints, allowing the evaluation to assess not only correctness of results but also consistency with the intended scientific procedure. 4. Verification .\nEach task is independently verified by a domain expert.\nThe verifier checks that the reproduced outputs are consistent with the original publication and conform to the expected physical behavior.\nThey also validate that the extracted methodology and reference implementation faithfully reflect the procedures described in the paper. During this stage, the evaluation metadata and scoring criteria are refined to ensure that the assessment captures methodological correctness, numerical accuracy, and physical plausibility."
+    },
+    {
+      "heading": "3.3Task Format",
+      "text": "Each task in PRBench is defined by a set of expert-generated metadata that together specify both the task setup and the evaluation procedure.\nThis metadata consists of the following components:\n\n\u2022 Task Instruction and Source Paper. This component contains the task description with the full content of the referenced research paper.\nThe instruction specifies the target outputs, required formats, input parameters, and any constraints on the computational environment.\nThe source paper is provided as the only information accessible to the task-solving agent. \u2022 Reference Implementation. Domain experts perform end-to-end reproduction of each task and provide a reference implementation, including executable code and generated outputs.\nThis component represents the human-validated reproduction of the original work and is used by the grading agent as the ground-truth reference for evaluation. \u2022 Detailed Scoring Rubric. The scoring rubric specifies fine-grained evaluation criteria, including methodological checkpoints, expected numerical outputs, and weighting of different aspects of the implementation.\nThis design assigns higher importance to critical implementation details, improving the physical reliability and domain-specific rigor of the evaluation.\n\nAll components are provided, with strict separation between agent-visible inputs and evaluation resources.\nThis ensures that agents must interpret and implement the scientific methodology, rather than relying on access to ground-truth solutions. The task format design thus aligns well with the agentified evaluation framework. Additional details of the task format are provided in Appendix A ."
+    },
+    {
+      "heading": "3.4Evaluation Framework",
+      "text": "PRBench is evaluated using an agentified assessment framework based on the Agent-to-Agent (A2A) communication protocol and the Agentified Agent Assessment (AAA) paradigm [ 2 ] .\nThe framework employs two coordinated agents: a white agent responsible for task solving and execution, and a green agent responsible for orchestration and evaluation, as detailed in Figure 3\n\nFor each task, the white agent receives the task instruction together with the full paper content, analyzes the methodology, generates the required code, and executes the computation inside a sandboxed execution environment implemented via Docker.\nThe green agent manages the evaluation process, dispatching instructions to the white agent, monitoring execution through periodic polling, and triggering evaluation once the task is completed.\n\nAll executions are performed within sandboxed environments with strict isolation, ensuring reproducibility and preventing information leakage.\nAfter execution, the green agent invokes grading within the same environment, comparing the generated outputs against ground-truth metadata provided by domain experts.\n\nThe containerized architecture ensures strict isolation between task execution and evaluation, guaranteeing fairness and consistency of the assessment.\nIn addition, the framework supports parallel execution across tasks through independent container instantiation, enabling scalable and efficient benchmarking. Additional implementation details are provided in Appendix B ."
+    },
+    {
+      "heading": "4.2Main Results",
+      "text": "Table 2 summarizes the aggregate performance of the evaluated agents across the main dimensions.\n\nAmong all evaluated agents, OpenAI Codex powered by GPT-5.3-Codex achieves the best overall performance, reaching a score of 34% . In contrast, all OpenCode-based agents exhibit substantially lower overall performance. In particular, it demonstrates strong capability in methodology understanding and instruction following, indicating that current frontier models can effectively parse scientific texts and follow complex task specifications.\n\nAll agents show significantly weaker results in code correctness and, most critically, data reproduction accuracy(mostly below 20), highlighting a fundamental bottleneck in faithfully reproducing numerical results from scientific papers.\n\nMost notably, the End-to-End Callback Rate is 0% for all evaluated agents, meaning that none of the systems can successfully complete the full pipeline from paper understanding to correct numerical reproduction on any task. This stark result underscores the gap between partial capabilities (e.g., superficial understanding and seemingly plausible code generation) and reliable end-to-end scientific execution."
+    },
+    {
+      "heading": "5.1Necessity of End-to-end Evaluation",
+      "text": "A central finding of our benchmark is that high apparent task completion does not imply correct scientific reproduction .\nAcross all 30 tasks, agents perform relatively strongly on surface-level comprehension of the paper, such as completeness and methodology-understanding.\nHowever, this apparent success does not translate into correct executable results.\nPerformance drops sharply in code correctness and data accuracy, revealing a substantial gap between recognizing the relevant equations and implementing them faithfully.\n\nIn multiple tasks, agents correctly identify the core methodology and produce code that appears complete and well structured, yet small errors in core formulas or numerical routines lead to incorrect outputs.\nFor example, in a condensed-matter susceptibility task, the overall implementation is structurally correct, but a single missing factor of i i in one diagrammatic channel causes the computed susceptibility array to become entirely NaN , rendering the target figure unreproducible.\n\nEnd-to-end evaluation therefore measures a qualitatively different capability from surface-level task completion.\nIt assesses whether an agent can handle the workflow from paper interpretation to numerically correct results, rather than merely generating responses that appear plausible."
+    },
+    {
+      "heading": "5.2Failure Analysis",
+      "text": "As shown in Table 2 , there is a substantial gap between paper-level comprehension and accurate execution.\nWhile the agent often demonstrates strong understanding of the methodology and produces structurally complete code, this does not translate into quantitatively correct results.\nBased on task-level performance, we identify the following recurring failure mechanisms:\n(i) data fabrication , where the agent outputs non-computed but plausible-looking results, and\n(ii) failures in translation to implementation , where the agent nominally follows the scientific procedure but makes decisive conceptual, numerical, or architectural mistakes.\n\nIn practice, these failure modes often co-occur within a single task, reflecting intertwined issues across methodology interpretation, implementation, and numerical execution.\nTo provide concrete illustrations, we present task-specific evaluation focuses together with representative combinations of agent failures in Appendix D ."
+    },
+    {
+      "heading": "6Conclusion",
+      "text": "We introduce PRBench, a benchmark for evaluating AI agents on the end-to-end reproduction of computational results from published physics papers.\nPRBench comprises 30 expert-curated tasks spanning 11 subfields of physics, sourced from more than 20 research groups at the School of Physics, Peking University.\nBuilding on an agentified evaluation paradigm, we design a multi-agent evaluation pipeline in which all executions are conducted within a sandboxed environment.\n\nOur evaluation reveals a substantial gap between scientific comprehension and accurate execution across all tested agents.\nWhile several agents achieve moderate performance in instruction following and methodology understanding, they consistently fail on data reproduction accuracy, leading to low overall scores, with the best-performing system reaching only 34% and a zero end-to-end callback rate across all agents.\n\nOur analysis shows that current agents often fail when converting methodological understanding into reliable implementations, exhibiting a range of issues including incorrect or inconsistent algorithm realization, mismatched methodological conventions, violations of computational constraints, and in some cases the generation of plausible-looking but non-computed outputs.\nThese findings suggest that, although modern AI agents can assist with literature review, methodology interpretation, and code scaffolding, they do not yet demonstrate the consistency and reliability required for trustworthy end-to-end scientific reproduction.\n\nPRBench provides a rigorous and systematic platform for evaluating end-to-end scientific paper reproduction.\nBy combining expert-curated tasks, a controlled execution environment, and a structured evaluation framework, it enables precise diagnosis of agent capabilities and limitations in realistic scientific settings.\nWe will continue to expand PRBench by incorporating additional papers and tasks across a broader range of domains, with the goal of establishing a more comprehensive and scalable evaluation platform for autonomous scientific research."
+    },
+    {
+      "heading": "Acknowledgments",
+      "text": "We thank the faculty and researchers at the School of Physics, Peking University, who contributed candidate papers and validated the benchmark tasks.\nThis work was supported in part by the National Natural Science Foundation of China under contract Nos. 12425505, 12325503, 12235001, 12234002,\n12474486, 12422514.\n\nWe additionally thank Zhuo-Yang Song at the School of Physics, Peking University to help with pipeline figure drawing and content coordination."
+    },
+    {
+      "heading": "A.1task.yaml Fields",
+      "text": "The task.yaml file is the central configuration that drives the evaluation pipeline. Key fields include:\n\n\u2022 task_id : Unique identifier matching the directory name. \u2022 paper : Metadata including title, author, DOI, year, and paper file path. \u2022 instruction_file : Path to the agent-visible instruction document. \u2022 evaluation_file : Path to the grader-only evaluation metadata document. \u2022 expected_outputs : Lists of expected analysis, code, and data files. \u2022 docker : Sandbox environment configuration (image, memory limit, timeout, dependencies). \u2022 grading : Multi-dimensional scoring rubric with per-dimension weights and descriptions."
+    },
+    {
+      "heading": "A.2Ground Truth Format and Evaluation Tolerance",
+      "text": "Ground truth results are stored as CSV files rather than figures. This avoids reliance on multimodal evaluation, which is prone to systematic errors such as misread axis scales, coordinate misalignment, and rendering artifacts that can introduce significant evaluation bias.\nEach CSV file follows a consistent format: the first non-comment line contains column headers, numerical values use 6\u20138 significant digits, and missing values are represented as nan .\nEvaluation tolerances are task-dependent and specified in scoring rubrics. Stochastic simulations such as Monte Carlo methods are evaluated with a more relaxed tolerance, while deterministic computations use stricter criteria."
+    },
+    {
+      "heading": "B.1Docker Configuration",
+      "text": "Each task specifies its sandboxed execution environment in task.yaml .\nThe framework instantiates an isolated Docker container per evaluation, with task-specific resource constraints: \u2022 Base image : python:3.11-slim \u2022 Memory limit : 2\u20138\u2009GB (task-dependent) \u2022 Timeout : 800\u201321600 seconds \u2022 Dependencies : NumPy, SciPy, Matplotlib, with additional packages as specified per task\n\nThe selected agent CLI (Claude Code, OpenAI Codex, or OpenCode) is installed inside the container at runtime.\nAll executions are performed within this sandboxed execution environment, ensuring strict isolation, controlled dependencies, and reproducibility across tasks.\n\nFor each evaluation, a fresh workspace is created inside the container, containing only agent-visible inputs (instruction, paper content, images, and input files), while ground-truth data and reference implementations remain inaccessible during execution."
+    },
+    {
+      "heading": "B.2Green\u2013White Agent Communication",
+      "text": "The framework adopts a two-agent architecture based on the A2A protocol, consisting of a green agent (orchestration and grading) and a white agent (task execution).\n\n1. Two free TCP ports are dynamically allocated for the green and white agents. 2. Both agents are launched as independent A2A servers. 3. The green agent sends the task configuration and instruction to the white agent. 4. The white agent executes the task by invoking the agent CLI inside the Docker container, generating code and running simulations within the sandboxed environment. 5. The green agent polls the white agent periodically for execution status until completion. 6. After completion, the green agent triggers model-based grading inside the same container.\n\nThis design decouples task execution from evaluation while maintaining controlled communication and synchronized lifecycle management."
+    },
+    {
+      "heading": "B.3Execution Lifecycle and Isolation",
+      "text": "Each evaluation follows a strict lifecycle to ensure reproducibility and prevent interference:\n\n1. A dedicated Docker container is created with task-specific configuration. 2. A clean workspace is initialized, and only agent-visible resources (instruction, paper, images, and input files) are copied into it. 3. The white agent performs end-to-end execution entirely within the sandboxed environment. 4. Only after the white agent completes execution , ground-truth data and reference implementations are copied into a protected directory for grading. 5. The green agent runs model-judge evaluation inside the same container and produces a structured report ( eval_report.json ). 6. Execution traces, logs, and intermediate artifacts are exported for analysis. 7. All processes are terminated, and the container is removed to ensure no residual state persists across runs.\n\nThis lifecycle enforces strict temporal separation between execution and evaluation, preventing leakage of ground-truth information."
+    },
+    {
+      "heading": "B.4Anti-Cheating Measures",
+      "text": "To ensure fair evaluation and prevent shortcut solutions, the framework enforces multiple safeguards:\n\n\u2022 The agent operates in a sandboxed execution environment with access only to instruction, paper content, and allowed input files. \u2022 Ground-truth data and reference implementations are not accessible during execution and are injected only after completion. \u2022 The workspace is isolated from the original task directory, preventing direct access to hidden evaluation resources. \u2022 The evaluation agent checks for disallowed behaviors, including use of banned libraries and fabrication of outputs without actual computation.\n\nTogether, these mechanisms ensure that agents must genuinely interpret and implement the scientific methodology rather than relying on access to ground-truth answers."
+    },
+    {
+      "heading": "D.1Example: DMRG for Quantum Lattice Models",
+      "text": "The Density Matrix Renormalization Group (DMRG) task provides a representative example of a complex many-body simulation problem in PRBench.\nIt evaluates whether an agent can translate a published condensed-matter method into an executable and quantitatively correct implementation under realistic computational constraints."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1 : Overview of paper reproduction. As stated, reproducing computational results from a published paper is a comprehensive and demanding task.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27646/assets/overview_fig1.png"
+    },
+    {
+      "caption": "Figure 2 : Overview of the PRBench task curation pipeline. The process consists of four stages: paper selection, expert reference reproduction, task specification, and independent verification, ensuring that each task is executable, scientifically grounded, and suitable for rigorous evaluation.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27646/assets/fig2.png"
+    },
+    {
+      "caption": "Figure 3 : Overview of the PRBench evaluation pipeline. A green agent orchestrates the process and performs grading, while a white agent executes the task inside a sandboxed Docker environment.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27646/assets/fig1-4.png"
+    }
+  ],
+  "ar5iv_success": true
+}

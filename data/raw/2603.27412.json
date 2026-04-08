@@ -1,0 +1,297 @@
+{
+  "paper_id": "2603.27412",
+  "title": "The Geometry of Harmful Intent: Training-Free Anomaly Detection via Angular Deviation in LLM Residual Streams",
+  "abstract": "We present LatentBiopsy, a training-free method for detecting harmful prompts by analysing the geometry of residual-stream activations in large language models. Given 200 safe normative prompts, LatentBiopsy computes the leading principal component of their activations at a target layer and characterises new prompts by their radial deviation angle $\u03b8$ from this reference direction. The anomaly score is the negative log-likelihood of $\u03b8$ under a Gaussian fit to the normative distribution, flagging deviations symmetrically regardless of orientation. No harmful examples are required for training.\n  We evaluate two complete model triplets from the Qwen3.5-0.8B and Qwen2.5-0.5B families: base, instruction-tuned, and \\emph{abliterated} (refusal direction surgically removed via orthogonalisation). Across all six variants, LatentBiopsy achieves AUROC $\\geq$0.937 for harmful-vs-normative detection and AUROC = 1.000 for discriminating harmful from benign-aggressive prompts (XSTest), with sub-millisecond per-query overhead.\n  Three empirical findings emerge. First, geometry survives refusal ablation: both abliterated variants achieve AUROC at most 0.015 below their instruction-tuned counterparts, establishing a geometric dissociation between harmful-intent representation and the downstream generative refusal mechanism. Second, harmful prompts exhibit a near-degenerate angular distribution ($\u03c3_\u03b8\\approx 0.03$ rad), an order of magnitude tighter than the normative distribution ($\u03c3_\u03b8\\approx 0.27$ rad), preserved across all alignment stages including abliteration. Third, the two families exhibit opposite ring orientations at the same depth: harmful prompts occupy the outer ring in Qwen3.5-0.8B but the inner ring in Qwen2.5-0.5B, directly motivating the direction-agnostic scoring rule.",
+  "authors": [
+    "Isaac Llorente-Saguer"
+  ],
+  "date": "2026-03-28T21:19:58+00:00",
+  "url": "http://arxiv.org/abs/2603.27412v1",
+  "categories": [
+    "cs.LG",
+    "cs.AI",
+    "cs.CL"
+  ],
+  "primary_category": "cs.LG",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "Detecting harmful prompts before model response generation is a prerequisite\nfor safe deployment of large language models.\nExisting methods divide into two broad families.\nInput-space filters based on perplexity (Jain et al. , 2023 ; Alon and Kamfonas, 2023 ) are effective against adversarial suffix attacks but fail on semantically fluent\njailbreaks.\nSupervised safety classifiers such as Llama Guard (Inan et al. , 2023 ) achieve\nstrong performance but require large curated datasets of harmful and harmless\npairs, and per-model retraining whenever the target model changes.\n\nA parallel body of work in representation engineering has established that\nresidual streams encode semantic content as geometric\nstructure (Zou et al. , 2023a ) .\nLinear directions for safety concepts have been extracted from contrastive\nsafe/harmful pairs (Zou et al. , 2023a ; Li et al. , 2023 ) , and PCA of\nhidden states has been shown to separate harmful from harmless queries when\nsafety-prompt manipulations define the reference (Zheng et al. , 2024 ) .\nCrucially, Arditi et al. ( 2024 ) demonstrated that refusal behaviour in\naligned models is mediated by a single linear direction in the residual stream,\nand that orthogonalising this direction renders the model unable to refuse.\n\nThese methods share a common dependency: they require harmful examples or\ndeliberate safety-prompt manipulations to define the reference geometry.\nWe ask whether the safe distribution alone defines a reference geometry from\nwhich harmful prompts deviate detectably.\n\nWe answer affirmatively, and report a finding that sharpens the safety\nimplications: LatentBiopsy detects harmful intent even in abliterated models that\nare constitutionally incapable of producing refusals.\nThe model\u2019s internal encoding of harmful semantic intent is geometrically\ndistinct from the circuits that generate refusal text. Harm recognition and\nrefusal generation are separable mechanisms.\nThe practical consequence is direct: stripping a model\u2019s refusal behaviour does\nnot erase the latent signal available to an external detector.\n\nA secondary finding concerns the structure of the deviation itself.\nThe two tested model families exhibit opposite ring orientations at the same\nresidual-stream depth; harmful prompts are more angular from PC1 in Qwen3.5-0.8B\nand more aligned with PC1 in Qwen2.5-0.5B.\nThis family-level reversal, together with known layer-level reversal within\neach model, establishes that a fixed directional threshold on \u03b8 \\theta is\narchitecturally unreliable and motivates the symmetric anomaly score."
+    },
+    {
+      "heading": "3Preliminaries: Geometry of the Residual Stream",
+      "text": "Modern causal language models process tokens through a sequence of transformer\nblocks communicating via a central residual stream.\nLet f \u2113 \u200b ( x ) \u2208 \u211d D f_{\\ell}(x)\\in\\mathbb{R}^{D} denote the activation vector of the residual stream\nat layer \u2113 \\ell for the final token of an input prompt x x .\n\nThe Linear Representation Hypothesis (Park et al. , 2023 ) posits that neural\nnetworks encode high-level concepts as spatial directions within this D D -dimensional space.\nUnder this view, semantic identity is defined by orientation, while concept\nintensity correlates with magnitude along that direction.\n\nEuclidean distance conflates semantic identity with concept intensity.\nFurthermore, in standard Pre-LayerNorm transformer architectures, the residual\nstream accumulates un-normalised outputs from consecutive layers, causing the \u2113 2 \\ell_{2} norm to grow monotonically with depth (Xiong et al. , 2020 ) .\nAngular distance isolates semantic direction from both intensity and architectural\nnorm growth, providing a more faithful measure of semantic divergence, and is\nthe foundation of the LatentBiopsy scoring function."
+    },
+    {
+      "heading": "4Method",
+      "text": "LatentBiopsy is a training-free, zero-shot anomaly detector that identifies harmful\nprompts by measuring the directional deviation of the last-token residual-stream\nactivation from a reference subspace constructed exclusively from safe data."
+    },
+    {
+      "heading": "4.1Notation and activation extraction",
+      "text": "Let f \u2113 \u200b ( x ) \u2208 \u211d D f_{\\ell}(x)\\in\\mathbb{R}^{D} denote the last-token residual-stream activation at\ntransformer layer \u2113 \\ell for prompt x x , extracted from a pretrained causal\nlanguage model.\nAll subsequent computations are performed independently at each layer \u2113 \\ell ."
+    },
+    {
+      "heading": "4.2Normative reference direction (PC1)",
+      "text": "Given a normative fit set \ud835\udcb3 0 = { x 1 , \u2026 , x N } \\mathcal{X}_{0}=\\{x_{1},\\ldots,x_{N}\\} of N N safe prompts, we compute the leading principal component of the corresponding\nactivations: \ud835\udc1c = PC 1 \u200b [ f \u2113 \u200b ( x i ) ] i = 1 N \u2208 \u211d D , \u2016 \ud835\udc1c \u2016 = 1 . \\mathbf{c}=\\mathrm{PC}_{1}\\bigl[f_{\\ell}(x_{i})\\bigr]_{i=1}^{N}\\in\\mathbb{R}^{D},\\quad\\|\\mathbf{c}\\|=1. (1) The vector \ud835\udc1c \\mathbf{c} defines the direction of maximum variance within the\nsafe distribution and serves as the sole reference direction for K = 1 K{=}1 .\nFor completeness we also examine K = 2 , 3 , 4 K{=}2,3,4 by taking the top- K K principal\ncomponents, but the primary detector uses K = 1 K{=}1 ."
+    },
+    {
+      "heading": "4.3Angular deviation theta",
+      "text": "The directional deviation of a test activation f \u2113 \u200b ( x ) f_{\\ell}(x) from the reference\nis the angle \u03b8 \u200b ( x ) = arccos \u2061 ( f \u2113 \u200b ( x ) \u22c5 \ud835\udc1c \u2016 f \u2113 \u200b ( x ) \u2016 ) \u2208 [ 0 , \u03c0 ] . \\theta(x)=\\arccos\\!\\left(\\frac{f_{\\ell}(x)\\cdot\\mathbf{c}}{\\|f_{\\ell}(x)\\|}\\right)\\in[0,\\pi]. (2) This purely angular metric isolates semantic orientation from both concept\nintensity and the monotonic norm growth induced by Pre-LayerNorm accumulation.\nA value \u03b8 \u2248 0 \\theta\\approx 0 indicates strong alignment with the normative reference; \u03b8 \u2248 \u03c0 \\theta\\approx\\pi indicates near-antiparallel orientation."
+    },
+    {
+      "heading": "4.4Anomaly scoring",
+      "text": "We fit a univariate Gaussian \ud835\udca9 \u200b ( \u03bc 0 , \u03c3 0 2 ) \\mathcal{N}(\\mu_{0},\\sigma_{0}^{2}) to the empirical\ndistribution { \u03b8 \u200b ( x i ) } i = 1 N \\{\\theta(x_{i})\\}_{i=1}^{N} from the normative fit set.\nThe anomaly score for any prompt x x is the negative log-likelihood under this\ndistribution: s ( x ) = \u2212 log p ( \u03b8 ( x ) | \u03bc 0 , \u03c3 0 2 ) . s(x)=-\\log p\\!\\left(\\theta(x)\\,\\middle|\\,\\mu_{0},\\sigma_{0}^{2}\\right). (3) Because s \u200b ( x ) s(x) is symmetric around \u03bc 0 \\mu_{0} , it flags deviations in either\ndirection without prior knowledge of whether harmful prompts lie inside or\noutside the normative ring ( section \u02dc 6.1 ).\nThe score is monotonically equivalent to the squared z z -score of \u03b8 \\theta up\nto additive constants, yielding values suitable for cross-layer and cross-model\ncomparison.\n\nAlthough a multivariate Gaussian Mixture Model can be fit to the stacked vector\nof angles to the top- K K principal components for K > 1 K{>}1 , the primary\nLatentBiopsy detector employs the univariate K = 1 K{=}1 formulation."
+    },
+    {
+      "heading": "4.5Phi: azimuthal visualisation coordinate",
+      "text": "To enable geometric visualisation we project the component of f \u2113 \u200b ( x ) f_{\\ell}(x) orthogonal to \ud835\udc1c \\mathbf{c} : f \u27c2 \u200b ( x ) = f \u2113 \u200b ( x ) \u2212 ( f \u2113 \u200b ( x ) \u22c5 \ud835\udc1c ) \u200b \ud835\udc1c . f^{\\perp}(x)=f_{\\ell}(x)-\\bigl(f_{\\ell}(x)\\cdot\\mathbf{c}\\bigr)\\,\\mathbf{c}. A 2-D PCA basis ( \ud835\udc2f 1 , \ud835\udc2f 2 ) (\\mathbf{v}_{1},\\mathbf{v}_{2}) is fit exclusively on { f \u27c2 \u200b ( x i ) } i = 1 N \\{f^{\\perp}(x_{i})\\}_{i=1}^{N} from the normative fit set.\nThe azimuthal coordinate is then \u03d5 \u200b ( x ) = atan2 \u200b ( f \u27c2 \u200b ( x ) \u22c5 \ud835\udc2f 2 , f \u27c2 \u200b ( x ) \u22c5 \ud835\udc2f 1 ) \u2208 [ \u2212 \u03c0 , \u03c0 ] . \\phi(x)=\\mathrm{atan2}\\!\\bigl(f^{\\perp}(x)\\cdot\\mathbf{v}_{2},\\;f^{\\perp}(x)\\cdot\\mathbf{v}_{1}\\bigr)\\in[-\\pi,\\pi]. Each prompt maps to the polar point ( \u03b8 \u200b ( x ) \u200b cos \u2061 \u03d5 \u200b ( x ) , \u03b8 \u200b ( x ) \u200b sin \u2061 \u03d5 \u200b ( x ) ) (\\theta(x)\\cos\\phi(x),\\,\\theta(x)\\sin\\phi(x)) in the theta-phi projection.\nThe coordinate \u03d5 \\phi is used solely for visualisation; detection relies\non s \u200b ( x ) s(x) ."
+    },
+    {
+      "heading": "4.6Baselines",
+      "text": "For comparison, we include four additional scorers:\n(1)\u00a0absolute deviation | \u03b8 \u200b ( x ) \u2212 \u03bc 0 | |\\theta(x)-\\mu_{0}| (monotonically equivalent to s \u200b ( x ) s(x) for K = 1 K{=}1 );\n(2)\u00a0bivariate Gaussian negative log-likelihood under a 2-D fit to the joint ( \u03b8 , \u03d5 ) (\\theta,\\phi) distribution;\n(3)\u00a0cosine-to-centroid s cos \u200b ( x ) = 1 \u2212 f \u2113 \u200b ( x ) \u22c5 f \u00af 0 / \u2016 f \u2113 \u200b ( x ) \u2016 \u200b \u2016 f \u00af 0 \u2016 s_{\\mathrm{cos}}(x)=1-{f_{\\ell}(x)\\cdot\\bar{f}_{0}}/{\\|f_{\\ell}(x)\\|\\|\\bar{f}_{0}\\|} ;\nand (4)\u00a0Euclidean deviation \u2016 f \u2113 \u200b ( x ) \u2212 f \u00af 0 \u2016 2 \\|f_{\\ell}(x)-\\bar{f}_{0}\\|_{2} ."
+    },
+    {
+      "heading": "5.1Models",
+      "text": "We evaluate six model variants comprising two complete triplets."
+    },
+    {
+      "heading": "5.2Detection performance",
+      "text": "Table \u02dc 1 summarises detection performance across all six variants.\nThree findings hold without exception.\nHarmful intent and benign-aggressive phrasing (XSTest) are perfectly separable\nacross all six models, including the abliterated variants: AUROC h/b = 1.000 =1.000 universally.\nThe h/n task is strongly solved as well, with AUROC ranging from 0.9374\n(Qwen2.5-0.5B-Abliterated) to 0.9642 (Qwen3.5-0.8B-Base) and AUPRC h/n \u2265 \\geq 0.898 throughout.\nMost importantly for our central claim, the abliterated models are essentially\nindistinguishable from their instruction-tuned counterparts in detection\nperformance: the abliterated variant falls within 0.002 AUROC h/n of the\nChat model for Qwen3.5-0.8B and within 0.005 for Qwen2.5-0.5B.\nThese margins are smaller than the gap between base and instruction-tuned\nvariants within either family. All pairwise comparisons achieve p < 10 \u2212 45 p<10^{-45} under the Mann\u2013Whitney U U test (harmful vs. normative/rest); normative-vs-benign-agg p p -values range\nfrom 10 \u2212 5 10^{-5} to 10 \u2212 22 10^{-22} .\n\nBenign-aggressive placement is family-dependent but never a problem for\ndiscrimination.\nIn Qwen3.5-0.8B, XSTest prompts score significantly below normative\n( r b / n \u2248 \u2212 0.43 r_{\\mathrm{b/n}}\\approx-0.43 for Chat and Abliterated, \u2212 0.38 -0.38 for Base),\noccupying the innermost region of the normative ring.\nIn Qwen2.5-0.5B-Base and Instruct, they sit slightly above normative\n( r b / n = + 0.15 r_{\\mathrm{b/n}}=+0.15 and + 0.22 +0.22 ); in Qwen2.5-0.5B-Abliterated, they\nshift back below ( r b / n = \u2212 0.18 r_{\\mathrm{b/n}}=-0.18 ).\nIn every configuration, harmful prompts are far more anomalous than\nbenign-aggressive ones, achieving AUROC h/b = 1.000 =1.000 throughout.\nThe full precision-recall profiles are shown in fig. \u02dc 1 for the\nbase variants and in fig. \u02dc 9 for all six models."
+    },
+    {
+      "heading": "5.3Comparison across model variants",
+      "text": "Within each family, base models match or slightly exceed their instruction-tuned\ncounterparts in harmful detection: the gap is 0.015 AUROC h/n for Qwen3.5-0.8B\nand 0.017 for Qwen2.5-0.5B, with base scoring higher in both cases.\nThis is a consistent if modest observation, and points to safety geometry being\npresent before alignment fine-tuning.\n\nThe abliterated models tell the more striking story.\nIn Qwen3.5-0.8B, the abliterated model (AUROC h/n = 0.9517 =0.9517 ) lies 0.002 above\nthe chat model ( 0.9497 0.9497 ), well within any plausible noise floor.\nIn Qwen2.5-0.5B, the gap is 0.005 (best layer 10 vs. 20), a margin smaller\nthan the base-to-instruct difference within the same family.\nA model that cannot refuse harmful requests is, by this measure, an equally\ncapable harm detector."
+    },
+    {
+      "heading": "5.4Computational cost",
+      "text": "We evaluated the latency overhead of LatentBiopsy on an NVIDIA GeForce\nRTX\u00a03070 Laptop GPU (8\u2009GB VRAM), reporting mean and standard deviation\nover 100 trials after GPU warm-up, using Alpaca prompts to reflect realistic\nsequence lengths. We report mean (standard deviation):\nA baseline Qwen2.5-0.5B forward pass takes 20.7\u00a0(2.7)\u2009ms; residual-stream\nextraction adds negligible overhead (0.0\u2009ms); and anomaly scoring (dot product\nplus scalar Gaussian NLL) executes in 0.43\u00a0(0.08)\u2009ms.\nEnd-to-end, the pipeline completes in 22.6\u00a0(2.1)\u2009ms per query.\nNormative reference fitting is performed once offline: for N = 200 N{=}200 prompts,\nactivation extraction takes < < 3\u2009s and PCA completes in < < 0.2\u2009s on CPU.\nLatentBiopsy therefore adds less than 0.5\u2009ms of method-specific overhead\n(anomaly scoring) relative to a standard forward pass."
+    },
+    {
+      "heading": "6.1Opposite ring orientations across families",
+      "text": "Figure \u02dc 4 plots the theta-phi projection for all six variants at\ntheir respective operating layers.\nA concentric two-ring structure separating harmful and normative activations is\npresent in every panel, and the two families occupy opposite positions.\n\nIn all three Qwen3.5-0.8B variants, harmful prompts occupy the outer ring\n( \u03b8 \u00af harm \u2248 1.80 \\bar{\\theta}_{\\mathrm{harm}}\\approx 1.80 rad vs. \u03bc 0 \u2248 1.17 \\mu_{0}\\approx 1.17 rad; table \u02dc 2 ): they deviate more strongly from PC1 than normative\nprompts.\nIn all three Qwen2.5-0.5B variants, harmful prompts occupy the inner ring\n( \u03b8 \u00af harm \u2248 1.32 \\bar{\\theta}_{\\mathrm{harm}}\\approx 1.32 \u2013 1.36 1.36 rad vs. \u03bc 0 \u2248 1.76 \\mu_{0}\\approx 1.76 \u2013 1.90 1.90 rad): they are more tightly aligned with PC1\nthan normative prompts.\n\nThis family-level reversal cannot be reconciled by any fixed directional\nthreshold on \u03b8 \\theta .\nThe anomaly score s \u200b ( x ) s(x) resolves it correctly in all cases: both \u03b8 = \u03bc 0 + k \u200b \u03c3 0 \\theta=\\mu_{0}+k\\sigma_{0} and \u03b8 = \u03bc 0 \u2212 k \u200b \u03c3 0 \\theta=\\mu_{0}-k\\sigma_{0} receive the\nsame score for any k k , regardless of ring direction.\nThe same argument applies to layer-level reversals within each model, visible\nin figs. \u02dc 2 and 3 through the\nchanging sign of the L2-norm baseline across layers."
+    },
+    {
+      "heading": "6.2Benign-aggressive placement",
+      "text": "The XSTest prompts occupy a consistent position relative to the harmful cluster\nin each family, reinforcing the interpretation of the two-ring geometry.\nIn all three Qwen3.5-0.8B variants, they cluster at the smallest radii, below the\nnormative mean ( r b / n \u2248 \u2212 0.43 r_{\\mathrm{b/n}}\\approx-0.43 ), and are geometrically\nseparated from harmful prompts in the opposite direction.\nIn Qwen2.5-0.5B-Base and Instruct, they sit near or slightly above normative\n( r b / n = + 0.15 r_{\\mathrm{b/n}}=+0.15 , + 0.22 +0.22 ), while in Qwen2.5-0.5B-Abliterated they\nshift slightly below ( r b / n = \u2212 0.18 r_{\\mathrm{b/n}}=-0.18 ).\nIn every case, perfect harmful-vs-benign-aggressive separation (AUROC h/b = 1.000 =1.000 ) holds, confirming that the theta score cleanly discriminates harmful\nintent from aggressive but benign phrasing regardless of where benign-aggressive\nprompts sit relative to the normative mean."
+    },
+    {
+      "heading": "6.3Angular deviation statistics",
+      "text": "Table \u02dc 2 reports the raw angular deviation statistics at the\noperating layer for each model, and fig. \u02dc 5 shows the\ncorresponding anomaly score distributions.\nThree patterns hold universally.\n\nThe harmful cluster is extraordinarily compact. \u03c3 \u03b8 harm \\sigma_{\\theta}^{\\mathrm{harm}} is 0.030\u20130.052\u00a0rad: one order of magnitude\nsmaller than \u03c3 \u03b8 norm \\sigma_{\\theta}^{\\mathrm{norm}} (0.183\u20130.272\u00a0rad), and this\nnear-degeneracy is preserved across base, instruction-tuned, and abliterated\nvariants alike.\nNormative train and test are statistically indistinguishable\n( | \u03b8 \u00af norm , train \u2212 \u03b8 \u00af norm , test | \u2264 0.01 |\\bar{\\theta}_{\\mathrm{norm,train}}-\\bar{\\theta}_{\\mathrm{norm,test}}|\\leq 0.01 rad\nin every model), confirming that N = 200 N{=}200 defines a stable reference\ndistribution.\nFinally, benign-aggressive prompts cluster near the normative mean in all\nQwen3.5-0.8B variants (smaller \u03b8 \\theta than normative, tighter alignment with\nPC1), while in Qwen2.5-0.5B their \u03b8 \\theta nearly coincides with the normative \u03bc 0 \\mu_{0} , leaving harmful as the angular outlier in both cases."
+    },
+    {
+      "heading": "7.1Safety signal dimensionality (KK-ablation)",
+      "text": "The per-layer AUROC plots already show that K = 1 K{=}1 strictly outperforms\nmulti-directional baselines at every layer and model. Table \u02dc 3 quantifies this at the operating layer.\nIncreasing from K = 1 K{=}1 to the best K > 1 K{>}1 reduces AUROC by 0.033\u20130.063\nacross models, a consistent and meaningful penalty for adding directions.\nThe cosine-centroid baseline matches or slightly exceeds K = 1 K{=}1 for the two\nQwen2.5-0.5B non-abliterated variants ( \u0394 cos = + 0.009 \\Delta_{\\mathrm{cos}}=+0.009 and + 0.004 +0.004 ), suggesting that for this family the mean normative activation is a\ngood proxy for PC1.\nThe PC1 formulation is nonetheless preferred on theoretical grounds: it\nmaximises captured normative variance, remains interpretable through the\ntheta-phi projection, and performs at least as well as the centroid in four of\nsix models."
+    },
+    {
+      "heading": "7.2Safety signal sparsity (dimension ablation)",
+      "text": "Figure \u02dc 6 shows AUROC as a function of the number of principal\ndimensions retained (by descending normative variance), for K = 2 K{=}2 at the\noperating layer, for the two base variants.\nThe full six-model ablation is in fig. \u02dc 10 .\nIn every model, retaining just the top-10 dimensions ( \u2248 1 % {\\approx}1\\% of D = 1024 D{=}1024 or 1.1 % 1.1\\% of D = 896 D{=}896 ) simultaneously maximises both h/n and h/b\nAUROC; additional dimensions monotonically dilute performance.\nThe safety signal is thus concentrated in a compact subspace. This result\nis consistent with the near-one-dimensional geometry reported by Arditi et al. ( 2024 ) and reinforced here across six model variants."
+    },
+    {
+      "heading": "7.3Normative set stability",
+      "text": "Figure \u02dc 7 and fig. \u02dc 8 plot AUROC as a function of normative fit-set size N N for all variants of the Qwen3.5-0.8B and Qwen2.5-0.5B families, respectively.\n\nPerformance saturates remarkably early. Across all models and nearly all layers, AUROC h/n {}_{\\text{h/n}} already exceeds 0.90 once N \u2273 100 N\\gtrsim 100 , with many layers reaching this threshold throughout most layers. Even with extremely small normative sets ( N = 10 N=10 \u201320), late-layer performance remains strong (typically > 0.85 >0.85 ). The harmful-versus-benign-aggressive separation reaches and remains perfectly flat at AUROC = h/b 1.000 {}_{\\text{h/b}}=1.000 from the smallest tested values of N N .\n\nThe right sub-panels confirm near-perfect invariance to the ordering of the normative set: forward (solid) and reverse (dashed) curves overlap almost completely after N \u2248 30 N\\approx 30 . This rules out sample-ordering artefacts and shows that the leading principal component rapidly converges to a stable reference direction.\n\nNotably, the stability profiles are qualitatively consistent across Base, Chat, and Abliterated variants within each family. This provides further evidence that the harmful-intent geometry exploited by LatentBiopsy is formed during pretraining and remains largely unaffected by later instruction tuning or refusal ablation. Several adjacent late layers also show nearly identical curves, indicating that the relevant structure isn\u2019t limited to a single layer but is distributed across a small range of layers.\n\nThe immediate perfect separability of harmful versus benign-aggressive prompts across all N N further suggests that these categories occupy well-separated regions of representation space, independent of the normative reference.\n\nTaken together, these results demonstrate that LatentBiopsy is highly data-efficient: a few dozen safe prompts suffice to construct a high-quality reference direction, and N = 200 N=200 lies comfortably in the saturated regime."
+    },
+    {
+      "heading": "9Conclusion",
+      "text": "LatentBiopsy demonstrates that a direction-agnostic angular anomaly detector,\nbuilt exclusively from 200 safe activations, robustly identifies harmful prompts\nacross base, instruction-tuned, and abliterated variants of two model families.\nThe method achieves harmful versus normative AUROC \u2265 \\geq 0.937 and harmful versus benign-aggressive AUROC = 1.000 =1.000 across all\nsix tested variants, with sub-millisecond per-query overhead and no harmful\ntraining data.\n\nThe central finding is a geometric dissociation : removing the refusal\nmechanism from a model in both a 0.8B and a 0.5B architecture leaves\nharmful-intent geometry intact.\nA model that cannot refuse retains the latent signal exploitable by an external\ndetector, and an adversary who abliterates refusal does not thereby erase the\nevidence.\nCombined with the observation that base models match instruction-tuned ones\non all detection metrics, the evidence is consistent with harmful-intent\ngeometry being established during pretraining, independently of the alignment\nprocess in both its presence and its absence.\n\nAn unexpected empirical pattern (though not extensively tested) is the opposite ring orientation across\nfamilies: harmful prompts are the most angular group in Qwen3.5-0.8B and the most\naligned group in Qwen2.5-0.5B.\nThe anomaly score handles both without modification.\nExplaining this architectural difference mechanistically, and confirming whether\nthe pattern generalises beyond the Qwen family, is the natural next step of this\nresearch programme."
+    },
+    {
+      "heading": "10Ethical Considerations and Broader Impact",
+      "text": "LatentBiopsy provides a diagnostic capability to identify harmful instructions at inference time. While the primary objective is to enhance safety, we acknowledge the inherent dual-use potential of interpretability tools."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "(a) Qwen3.5-0.8B-Base",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B-Base/precision_recall.png"
+    },
+    {
+      "caption": "(a) Qwen3.5-0.8B-Base",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B-Base/precision_recall.png"
+    },
+    {
+      "caption": "(b) Qwen2.5-0.5B-Base",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen2.5-0.5B/precision_recall.png"
+    },
+    {
+      "caption": "(a) Qwen3.5-0.8B-Base",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B-Base/auroc_by_layer.png"
+    },
+    {
+      "caption": "(a) Qwen3.5-0.8B-Base",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B-Base/auroc_by_layer.png"
+    },
+    {
+      "caption": "(b) Qwen3.5-0.8B-Chat",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B/auroc_by_layer.png"
+    },
+    {
+      "caption": "(c) Qwen3.5-0.8B-Abliterated",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B-Abl/auroc_by_layer.png"
+    },
+    {
+      "caption": "(a) Qwen2.5-0.5B-Base",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen2.5-0.5B/auroc_by_layer.png"
+    },
+    {
+      "caption": "(a) Qwen2.5-0.5B-Base",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen2.5-0.5B/auroc_by_layer.png"
+    },
+    {
+      "caption": "(b) Qwen2.5-0.5B-Instruct",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen2.5-0.5B-Instruct/auroc_by_layer.png"
+    },
+    {
+      "caption": "(c) Qwen2.5-0.5B-Abliterated",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen2.5-0.5B-Abl/auroc_by_layer.png"
+    },
+    {
+      "caption": "(a) Qwen3.5-0.8B-Base (L20)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B-Base/theta_phi_normative_ref_layer20.png"
+    },
+    {
+      "caption": "(a) Qwen3.5-0.8B-Base (L20)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B-Base/theta_phi_normative_ref_layer20.png"
+    },
+    {
+      "caption": "(b) Qwen2.5-0.5B-Base (L20)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen2.5-0.5B/theta_phi_normative_ref_layer20.png"
+    },
+    {
+      "caption": "(c) Qwen3.5-0.8B-Chat (L20)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B/theta_phi_normative_ref_layer20.png"
+    },
+    {
+      "caption": "(d) Qwen2.5-0.5B-Instruct (L20)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen2.5-0.5B-Instruct/theta_phi_normative_ref_layer20.png"
+    },
+    {
+      "caption": "(e) Qwen3.5-0.8B-Abliterated (L20)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B-Abl/theta_phi_normative_ref_layer20.png"
+    },
+    {
+      "caption": "(f) Qwen2.5-0.5B-Abliterated (L10)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen2.5-0.5B-Abl/theta_phi_normative_ref_layer10.png"
+    },
+    {
+      "caption": "(a) Qwen3.5-0.8B-Base",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B-Base/score_distributions.png"
+    },
+    {
+      "caption": "(a) Qwen3.5-0.8B-Base",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B-Base/score_distributions.png"
+    },
+    {
+      "caption": "(b) Qwen2.5-0.5B-Base",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen2.5-0.5B/score_distributions.png"
+    },
+    {
+      "caption": "(c) Qwen3.5-0.8B-Chat",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B/score_distributions.png"
+    },
+    {
+      "caption": "(d) Qwen2.5-0.5B-Instruct",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen2.5-0.5B-Instruct/score_distributions.png"
+    },
+    {
+      "caption": "(e) Qwen3.5-0.8B-Abliterated",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B-Abl/score_distributions.png"
+    },
+    {
+      "caption": "(f) Qwen2.5-0.5B-Abliterated",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen2.5-0.5B-Abl/score_distributions.png"
+    },
+    {
+      "caption": "(a) Qwen3.5-0.8B-Base",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B-Base/auroc_ablation_dim.png"
+    },
+    {
+      "caption": "(a) Qwen3.5-0.8B-Base",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B-Base/auroc_ablation_dim.png"
+    },
+    {
+      "caption": "(b) Qwen2.5-0.5B-Base",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen2.5-0.5B/auroc_ablation_dim.png"
+    },
+    {
+      "caption": "(a) Qwen3.5-0.8B-Base",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B-Base/stability_auroc.png"
+    },
+    {
+      "caption": "(a) Qwen3.5-0.8B-Base",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B-Base/stability_auroc.png"
+    },
+    {
+      "caption": "(b) Qwen3.5-0.8B-Chat",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B/stability_auroc.png"
+    },
+    {
+      "caption": "(c) Qwen3.5-0.8B-Abliterated",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B-Abl/stability_auroc.png"
+    },
+    {
+      "caption": "(a) Qwen2.5-0.5B-Base",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen2.5-0.5B/stability_auroc.png"
+    },
+    {
+      "caption": "(a) Qwen2.5-0.5B-Base",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen2.5-0.5B/stability_auroc.png"
+    },
+    {
+      "caption": "(b) Qwen2.5-0.5B-Instruct",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen2.5-0.5B-Instruct/stability_auroc.png"
+    },
+    {
+      "caption": "(c) Qwen2.5-0.5B-Abliterated",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen2.5-0.5B-Abl/stability_auroc.png"
+    },
+    {
+      "caption": "(a) Qwen3.5-0.8B-Chat",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B/precision_recall.png"
+    },
+    {
+      "caption": "(a) Qwen3.5-0.8B-Chat",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B/precision_recall.png"
+    },
+    {
+      "caption": "(b) Qwen2.5-0.5B-Instruct",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen2.5-0.5B-Instruct/precision_recall.png"
+    },
+    {
+      "caption": "(c) Qwen3.5-0.8B-Abliterated",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B-Abl/precision_recall.png"
+    },
+    {
+      "caption": "(d) Qwen2.5-0.5B-Abliterated",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen2.5-0.5B-Abl/precision_recall.png"
+    },
+    {
+      "caption": "(a) Qwen3.5-0.8B-Base",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B-Base/auroc_ablation_dim.png"
+    },
+    {
+      "caption": "(a) Qwen3.5-0.8B-Base",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B-Base/auroc_ablation_dim.png"
+    },
+    {
+      "caption": "(b) Qwen2.5-0.5B-Base",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen2.5-0.5B/auroc_ablation_dim.png"
+    },
+    {
+      "caption": "(c) Qwen3.5-0.8B-Chat",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B/auroc_ablation_dim.png"
+    },
+    {
+      "caption": "(d) Qwen2.5-0.5B-Instruct",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen2.5-0.5B-Instruct/auroc_ablation_dim.png"
+    },
+    {
+      "caption": "(e) Qwen3.5-0.8B-Abliterated",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen3.5-0.8B-Abl/auroc_ablation_dim.png"
+    },
+    {
+      "caption": "(f) Qwen2.5-0.5B-Abliterated",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27412/assets/figures/Qwen2.5-0.5B-Abl/auroc_ablation_dim.png"
+    }
+  ],
+  "ar5iv_success": true
+}

@@ -1,0 +1,179 @@
+{
+  "paper_id": "2603.27955",
+  "title": "Symbolic Density Estimation: A Decompositional Approach",
+  "abstract": "We introduce AI-Kolmogorov, a novel framework for Symbolic Density Estimation (SymDE). Symbolic regression (SR) has been effectively used to produce interpretable models in standard regression settings but its applicability to density estimation tasks has largely been unexplored. To address the SymDE task we introduce a multi-stage pipeline: (i) problem decomposition through clustering and/or probabilistic graphical model structure learning; (ii) nonparametric density estimation; (iii) support estimation; and finally (iv) SR on the density estimate. We demonstrate the efficacy of AI-Kolmogorov on synthetic mixture models, multivariate normal distributions, and three exotic distributions, two of which are motivated by applications in high-energy physics. We show that AI-Kolmogorov can discover underlying distributions or otherwise provide valuable insight into the mathematical expressions describing them.",
+  "authors": [
+    "Angelo Rajendram",
+    "Xieting Chu",
+    "Vijay Ganesh",
+    "Max Fieg",
+    "Aishik Ghosh"
+  ],
+  "date": "2026-03-30T02:03:45+00:00",
+  "url": "http://arxiv.org/abs/2603.27955v1",
+  "categories": [
+    "cs.LG"
+  ],
+  "primary_category": "cs.LG",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "Data-driven approaches are widely used to model complex nonlinear relationships between predictive features and target variables. Popular approaches tend to be black-box and do not easily yield insight into underlying patterns in the data. Symbolic Regression (SR) is a family of methods that offer an interpretable alternative by searching the space of mathematical expressions and parameters to produce models that reveal useful insights into the structure underlying the data. While SR has seen success in supervised learning tasks such as regression and differential equation discovery, extending SR to the unsupervised task of density estimation introduces unique challenges and remains largely unexplored.\n\nClassical methods for density estimation typically fall into one of two categories; parametric density estimation assumes a model for the distribution and finds the best-fitting parameters, and nonparametric density estimation avoids model assumptions but sacrifices interpretability. This work addresses the problem of Symbolic Density Estimation (SymDE) using symbolic regression to discover mathematical expressions that accurately describe continuous probability distributions. Searching the space of closed-form expressions avoids the restrictive model assumptions of parametric density estimation while retaining interpretability unlike nonparametric density estimation.\n\nThe SymDE problem faces three primary challenges: (i) ensuring validity constraints on probability distributions, namely non-negativity and normalization over the support of the distribution; (ii) the curse of dimensionality; and (iii) the difficulty of discovering complex symbolic expressions from a vast search space."
+    },
+    {
+      "heading": "3.1The AI-Kolmogorov framework",
+      "text": "The framework is illustrated in Figure 1 . To discover the underlying continuous probability density function, we employ optional preprocessing stages to decompose the problem. Then non-parameteric density estimation produces a black-box model of the distribution that can be evaluated at any query point to provide a density estimate. This is followed by symbolic regression to obtain candidate symbolic expressions for the underlying probability density function. The nonparametric density estimate acts as a surrogate target for symbolic regression imposing non-negativity and normalization as soft constraints via the mean squared error (MSE) loss computed over a regular grid of evaluation points in the distribution\u2019s support."
+    },
+    {
+      "heading": "4Results",
+      "text": "We evaluate AI-Kolmogorov to demonstrate its merits and weaknesses on various datasets. For all datasets, we assume sample sizes are sufficiently large."
+    },
+    {
+      "heading": "4.1Additive and Multiplicative Decomposition",
+      "text": "Clustering and structure learning provide two complementary strategies for decomposing complex distributions into simpler sub-problems. Clustering assumes an additive factorization and reduces the complexity of the symbolic expressions to be discovered per component, while structure learning assumes multiplicative factorization and reduces both target expression complexity and the dimensionality per component.\n\nTo demonstrate clustering, we consider \ud835\udc17 \u2208 \u211d 2 \\mathbf{X}\\in\\mathbb{R}^{2} drawn from a two-component Gaussian mixture: f \ud835\udc17 \u200b ( \ud835\udc31 ) = 1 2 \u200b \ud835\udca9 \u200b ( \ud835\udc31 \u2223 \ud835\udf41 \ud835\udfcf , \ud835\udeba ) + 1 2 \u200b \ud835\udca9 \u200b ( \ud835\udc31 \u2223 \ud835\udf41 \ud835\udfd0 , \ud835\udeba ) , f_{\\mathbf{X}}(\\mathbf{x})=\\tfrac{1}{2}\\,\\mathcal{N}(\\mathbf{x}\\mid\\bm{\\mu_{1}},\\bm{\\Sigma})+\\tfrac{1}{2}\\,\\mathcal{N}(\\mathbf{x}\\mid\\bm{\\mu_{2}},\\bm{\\Sigma}), with \ud835\udf41 \ud835\udfcf = ( \u2212 4.0 4.0 ) , \ud835\udf41 \ud835\udfd0 = ( 4.0 \u2212 4.0 ) , \ud835\udeba = ( 1 0.8 0.8 1 ) . \\bm{\\mu_{1}}=\\begin{pmatrix}-4.0\\\\\n4.0\\end{pmatrix},\\quad\\bm{\\mu_{2}}=\\begin{pmatrix}4.0\\\\\n-4.0\\end{pmatrix},\\quad\\bm{\\Sigma}=\\begin{pmatrix}1&0.8\\\\\n0.8&1\\end{pmatrix}. This distribution can be decomposed the sum of two Gaussian components. We denote \ud835\udc31 = ( x 1 , x 2 ) T \\mathbf{x}=(x_{1},x_{2})^{T} .\n\nFigure 2(a) is an ablation study of AI-Kolmogorov with and without augmentation by clustering. The left two panels show the prediction and residuals of the most accurate expression recovered by AI-Kolmogorov ; the right two panels show the prediction and residuals of clustering augmented AI-Kolmogorov . The maximimum predicted density and absolute residual are 0.129 and 0.005 respectively (left two panels in Figure 2(a) ), and 0.129 and 0.004 respectively (right two panels Figure 2(a) ). The residuals of both approaches are similar in magnitude (Table 1 ), but the factored models yield more interpretable symbolic forms since the addition of the two component distributions is explicitly captured and the true symbolic expressions per component are simpler. The pareto fronts and recovered expressions for the Gaussian mixture dataset can be found in Appendix C.1 .\n\nWe next demonstrate structure learning using independent random vectors \ud835\udc17 \ud835\udfcf , \ud835\udc17 \ud835\udfd0 \u2208 \u211d 2 \\mathbf{X_{1}},\\mathbf{X_{2}}\\in\\mathbb{R}^{2} , concatenated as \ud835\udc17 \u2208 \u211d 4 \\mathbf{X}\\in\\mathbb{R}^{4} . The joint distribution is f \ud835\udc17 \u200b ( \ud835\udc31 ) = \ud835\udca9 \u200b ( \ud835\udc31 \ud835\udfcf \u2223 \ud835\udf41 \ud835\udfcf , \ud835\udeba ) \u22c5 \ud835\udca9 \u200b ( \ud835\udc31 \ud835\udfd0 \u2223 \ud835\udf41 \ud835\udfd0 , \ud835\udeba ) , f_{\\mathbf{X}}(\\mathbf{x})=\\mathcal{N}(\\mathbf{x_{1}}\\mid\\bm{\\mu_{1}},\\bm{\\Sigma})\\cdot\\mathcal{N}(\\mathbf{x_{2}}\\mid\\bm{\\mu_{2}},\\bm{\\Sigma}), which defines a 4D distribution whose PGM has two connected components corresponding to \ud835\udca9 \u200b ( \ud835\udc31 \ud835\udfcf \u2223 \ud835\udf41 \ud835\udfcf , \ud835\udeba ) \\mathcal{N}(\\mathbf{x_{1}}\\mid\\bm{\\mu_{1}},\\bm{\\Sigma}) and \ud835\udca9 \u200b ( \ud835\udc31 \ud835\udfd0 \u2223 \ud835\udf41 \ud835\udfd0 , \ud835\udeba ) \\mathcal{N}(\\mathbf{x_{2}}\\mid\\bm{\\mu_{2}},\\bm{\\Sigma}) . We denote \ud835\udc31 \ud835\udfcf = ( x 1 , x 2 ) T \\mathbf{x_{1}}=(x_{1},x_{2})^{T} and \ud835\udc31 \ud835\udfd0 = ( x 3 , x 4 ) T \\mathbf{x_{2}}=(x_{3},x_{4})^{T} . The parameters for each component were set identically to those in the previous example.\n\nFigure 2(b) is an ablation of AI-Kolmogorov against AI-Kolmogorov augmented with structure learning. To visualize the result, we only show the results for marginal \ud835\udca9 \u200b ( \ud835\udc31 \ud835\udfd0 \u2223 \ud835\udf41 \ud835\udfd0 , \ud835\udeba ) \\mathcal{N}(\\mathbf{x_{2}}\\mid\\bm{\\mu_{2}},\\bm{\\Sigma}) . For the panels corresponding to direct application of the pipeline to the 4D Gaussian distribution, the 2D marginal was computed by numerically integrating out the remaining variables. Decomposition yields significantly lower error (see Table 1 ) for the most complex models on the pareto front. The maximimum predicted density and absolute residual are 0.630 and 0.506 respectively (left two panels of Figure 2(b) ), and 0.258 and 0.002 respectively (right two panels of Figure 2(b) ). For any given error level the symbolic expressions for each component are more compact and easier to interpret. While the distributions are not recovered exactly, the recovered expressions are still suggestive as they involve exponentials with negative sum of squares in the exponent. The pareto fronts and recovered expressions for the 4D Gaussian dataset can be found in Appendix C.2 ."
+    },
+    {
+      "heading": "4.2Rastrigin Synthetic Dataset",
+      "text": "We use a Rastrigin function as a synthetic exotic probability density function to demonstrate the strengths of the pipeline. The Rastrigin function is a non-convex function commonly used to benchmark optimization algorithms, but it is not typically encountered as a probability distribution.\n\nTo adapt it into a valid distribution, we constrain its support, normalize it, and apply a bias to ensure non-negativity. Samples are drawn from this distribution using rejection sampling over the range x 1 , x 2 \u2208 [ \u2212 2 , 2 ] x_{1},x_{2}\\in[-2,2] ,\n\nf \u200b ( x ) = 1 586.67 \u200b [ 10 + \u2211 i = 1 2 10 \u200b x i 2 \u2212 5 \u200b cos \u2061 ( 3 \u200b \u03c0 \u200b x i \u2212 6.1 ) ] f(x)=\\frac{1}{586.67}\\Bigl[10+\\sum_{i=1}^{2}10x_{i}^{2}-5\\cos(3\\pi x_{i}-6.1)\\Bigr]\n\nFigure 3 illustrates the AI-Kolmogorov prediction and the residual error between the most accurate expression recovered and the ground truth. The residual plot shows that the symbolic expression recovered by AI-Kolmogorov closely matches the true density surface.\n\nExpressions on the simpler end of the pareto front such as 1.5 + x 1 2 + x 2 2 1.5+x_{1}^{2}+x_{2}^{2} which captures the \u201dcoarse\u201d bowl shape, and we recover what resembles the true expression on the more complex end of the pareto front (see Appendix C.3 ) 1.1 \u200b ( x 1 2 + x 2 2 ) \u2212 0.56 \u200b ( cos \u2061 ( 9.4 \u2212 12 ) \u2212 0 \u200b cos \u2061 ( 9.4 \u200b x 2 + 13 ) ) + 1.1 1.1(x_{1}^{2}+x_{2}^{2})-0.56(\\cos(9.4-12)-0\\cos(9.4x_{2}+13))+1.1"
+    },
+    {
+      "heading": "4.3Muon Decay",
+      "text": "The next example is motivated by applications in particle physics. The dataset describes muon decay, where a muon decays into an electron, and electron-antineutrino and a muon-neutrino. The features m 13 2 m_{13}^{2} and m 23 2 m_{23}^{2} are combinations of the momenta and energies of the outgoing particles. More specifically, the invariant mass of two-particle system where 1,2,3 labels the electron-antineutrino, the electron, and the muon-neutrino respectively . The ground-truth density ( i.e. the differential decay width with respect to m 13 , m 23 m_{13},m_{23} ) takes the form\n\n\ud835\udca9 \u00d7 ( m 23 2 \u2212 m \u03bc 2 ) \u200b ( m 23 2 \u2212 m e 2 ) ( m 13 2 + m 23 2 \u2212 m e 2 \u2212 m \u03bc 2 + m W 2 ) 2 {\\cal N}\\times\\frac{(m_{23}^{2}-m_{\\mu}^{2})(m_{23}^{2}-m_{e}^{2})}{(m_{13}^{2}+m_{23}^{2}-m_{e}^{2}-m_{\\mu}^{2}+m_{W}^{2})^{2}}\n\na rational function with a quadratic numerator in m 23 2 m_{23}^{2} and a quadratic denominator in both m 13 2 m_{13}^{2} and m 23 2 m_{23}^{2} with normalization constant \ud835\udca9 {\\cal N} . We simulate samples of these events with the Monte-Carlo event generator Madgraph (Alwall et al. , 2014 ) ; however, note that we have performed the simulation such that the masses of the electron ( m e m_{e} ) and muon ( m \u03bc m_{\\mu} ) are comparable to the mass of the W W -boson ( m W m_{W} ) so that there is a non-trivial dependence on m 13 m_{13} in the density (in nature, m W \u226b m e , m \u03bc m_{W}\\gg m_{e},m_{\\mu} ). Otherwise, the problem would be effectively 1-dimensional. This distribution could arise if there were an exotic W \u2032 W^{\\prime} -boson with a mass comparable to the masses of distinct fermion generations. The masses used for m \u03bc m_{\\mu} , m e m_{e} , and m W m_{W} are 78 GeV, 70 GeV, and 80.4 GeV respectively.\n\nWe apply min\u2013max scaling to normalize the range of both features. This preserves the functional form of the distribution up to an affine transformation on each feature. Figure 4 shows the prediction and the residual error between the recovered symbolic density and the KDE. A convex hull trimming procedure (Appendix B.1 ) was used to estimate the support. No samples lie outside this region as it would violate energy/momentum conservation, but the support is estimated here without this domain knowledge."
+    },
+    {
+      "heading": "4.4Dijet",
+      "text": "To test our framework on a more challenging dataset, we simulate the production of two jets in proton-proton collisions at the Large Hadron Collider. This process depends in part on the content of the proton, the \u201cparton distribution function\u201d (we use NNPDF2.3 (Ball et al. , 2013 ) ) as well as the model of hadronization. The parton distribution cannot be calculated from first principles and must instead be derived from experiment with an assumed model. A variety of models are assumed (Dulat et al. , 2016 ; Ball and others, 2015 ) , and thus can represent a bias that must be considered (Gao and Nadolsky, 2014 ) ; a similar statement could be said of the hadronization model, but we perform our analysis at parton-level. One could thus imagine using our symbolic regression to either gain insight into the underlying truth distribution, or point towards more promising and less-considered functional forms. There are many observables that one could use to gain insight, we choose two high-level observables which are calculated from the simulation: the invariant mass of the jet pair, m j \u200b j m_{jj} , and the scalar sum of the transverse momenta, H T = \u2211 1 , 2 | p T i | H_{T}=\\sum_{1,2}|p_{T}^{i}| . Note that these observables are chosen somewhat arbitrarily and are not optimized for the problem at hand. Our goal is to test our framework on a problem where the understanding of underlying distribution is on less solid footing.\n\nThis dataset set is particularly challenging because of the presence of sharp discontinuities at the boundary of the support and because the distribution is concentrated in a small region. Figure 5 shows the prediction and the residual error between the recovered symbolic density and the NSF density estimate. The residuals reported are large, though this may be attributed to the sharp discontinuity near the distribution peak. The heat map of the prediction is qualitatively similar to the distribution of raw samples."
+    },
+    {
+      "heading": "5Future Work and Conclusion",
+      "text": "There are several possible extensions to AI-Kolmogorov for SymDE that warrant further investigation. The current approach provides a solid foundation by demonstrating the feasibility of combining decomposition strategies with state-of-the-art symbolic regression techniques. Future work could explore more sophisticated decomposition strategies.The incorporation of the likelihood, computed on the raw input samples, directly into the loss has shown promise. With sufficient complexity, it outperforms the neural density estimator. However, labels from the neural density estimator helps stabilize the search algorithm. Future work could incorporate the normalization requirement of densities though a Monte-Carlo integration into the loss. Agentic AI frameworks for SymDE are also a promising avenue for future work.\n\nEqually important is the development of principled diagnostics to assess goodness-of-fit, especially for heavy-tailed distributions and small-sample settings. Real-world distributions may have heavy tails and understanding the performance and understanding the limitations of our tool in small sample regime would be necessary. Applying AI-Kolmogorov to real-world problems in physics, finance, and other domains would provide valuable insights with practical utility, and help the development of domain-specific and interpretable statistical models."
+    },
+    {
+      "heading": "Impact Statement",
+      "text": "This paper presents a work whose goal is to advance the field of Machine Learning. There are many potential societal consequences of our work, none which we feel must be specifically highlighted here."
+    },
+    {
+      "heading": "A.1Probabilistic Graphical Models",
+      "text": "Any probability distribution can be represented as a directed acyclic graph (DAG) where nodes represent random variables and links represent probabilistic relationships. The joint distribution factorizes as p \u200b ( x 1 , \u2026 , x n ) = p \u200b ( x n | x 1 , \u2026 , x n \u2212 1 ) \u200b \u2026 \u200b p \u200b ( x 2 | x 1 ) \u200b p \u200b ( x 1 ) p(x_{1},...,x_{n})=p(x_{n}|x_{1},...,x_{n-1})...p(x_{2}|x_{1})p(x_{1}) ."
+    },
+    {
+      "heading": "B.1Support Estimation",
+      "text": "The support of a probability distribution is supp \u2061 ( f \ud835\udc17 ) = { \ud835\udc31 \u2208 \u211d d | f \ud835\udc17 \u200b ( \ud835\udc31 ) > 0 } \\operatorname{supp}(f_{\\mathbf{X}})=\\{\\mathbf{x}\\in\\mathbb{R}^{d}|f_{\\mathbf{X}}(\\mathbf{x})>0\\} . Convex hull estimates improve boundary handling for bounded distributions.\n\nTo correct bias of non-parametric density estimates at known boundaries of a distribution we can employ the reflection trick as illustrated in Figure 9 ."
+    },
+    {
+      "heading": "B.2Clustering and Structure Learning",
+      "text": "DBSCAN clustering automatically infers cluster count and handles non-parametric cluster shapes. Structure learning discovers independent variable subsets, enabling problem decomposition via the product rule."
+    },
+    {
+      "heading": "B.3Kernel Density Estimation",
+      "text": "KDE estimates density as f ^ n \u200b ( x ) = 1 n \u200b h d \u200b \u2211 i = 1 n K \u200b ( x \u2212 X i h ) \\hat{f}_{n}(x)=\\frac{1}{nh^{d}}\\sum_{i=1}^{n}K\\left(\\frac{x-X_{i}}{h}\\right) where h h is bandwidth and K K is kernel function. The reflection trick improves boundary estimates by reflecting samples across boundaries."
+    },
+    {
+      "heading": "C.4Muon Decay Dataset",
+      "text": "For consistency with other examples we denote m 13 2 m_{13}^{2} as x 1 x_{1} and m 23 2 m_{23}^{2} as x 2 x_{2} ."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1 : The AI-Kolmogorov pipeline: decomposition (clustering/structure learning), density estimation, support estimation, symbolic regression, and warm-start refinement. Optional workflows are indicated by dashed arrows.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27955/assets/figures/SDES_pipeline.png"
+    },
+    {
+      "caption": "(a) Additive decompositon: Results on the Gaussian mixture dataset. Prediction (left) and residuals (center left) by AI-Kolmogorov . Prediction (center right) and residuals (right) by clustering augmented AI-Kolmogorov.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27955/assets/figures/compare_clustering.png"
+    },
+    {
+      "caption": "(a) Additive decompositon: Results on the Gaussian mixture dataset. Prediction (left) and residuals (center left) by AI-Kolmogorov . Prediction (center right) and residuals (right) by clustering augmented AI-Kolmogorov.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27955/assets/figures/compare_clustering.png"
+    },
+    {
+      "caption": "(b) Multiplicative decomposition: Results on the the 4-dimensional Gaussian dataset. Prediction (left) and residuals (center left) by AI-Kolmogorov. Prediction (center right) and residuals (right) by structure learning augmented AI-Kolmogorov. Only the marginal \ud835\udca9 \u200b ( \ud835\udc31 \ud835\udfd0 \u2223 \ud835\udf41 \ud835\udfd0 , \ud835\udeba ) \\mathcal{N}(\\mathbf{x_{2}}\\mid\\bm{\\mu_{2}},\\bm{\\Sigma}) is shown.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27955/assets/figures/compare_structure_learning.png"
+    },
+    {
+      "caption": "Figure 3 : Prediction (left) and residuals with respect to the ground truth (right) of the lowest loss expression. The maximum predicted density and absolute residual are 0.140 and 0.003 respectively.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27955/assets/figures/rastrigin_plot.png"
+    },
+    {
+      "caption": "Figure 4 : Prediction and regions for local probability mass validation indicated as A & B (left). Residuals with respect to KDE (right) of the lowest loss expression. The maximum predicted density is 3.677, and the maximum absolute residual is 0.640.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27955/assets/figures/md_plot.png"
+    },
+    {
+      "caption": "Figure 5 : Prediction and regions for local probability mass validation indicated as A & B (left). Residuals with respect to NSF (right) of the lowest loss expression. The maximum predicted density is 4555.25 and the maximum absolute residual is 1789.14.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27955/assets/figures/dijet_plot.png"
+    },
+    {
+      "caption": "Figure 6 : Mean log-likelihood scores against expression complexity for SR using only MSE loss and SR using MSE, mean negative log-likelihood (NLL), and penalties for negative density predictions (NP) in the loss function. Triangles indicate expressions that made negative predictions on test samples.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27955/assets/figures/compare_likelihood.png"
+    },
+    {
+      "caption": "Figure 7 : Example PGM for distribution p \u200b ( x 1 , \u2026 , x 7 ) = p \u200b ( x 1 ) \u200b p \u200b ( x 2 ) \u200b p \u200b ( x 3 ) \u200b p \u200b ( x 4 | x 1 , x 2 , x 3 ) p(x_{1},...,x_{7})=p(x_{1})p(x_{2})p(x_{3})p(x_{4}|x_{1},x_{2},x_{3}) \u22c5 p \u200b ( x 5 | x 1 , x 3 ) \u200b p \u200b ( x 6 | x 4 ) \u200b p \u200b ( x 7 | x 4 , x 5 ) \\cdot\\;p(x_{5}|x_{1},x_{3})p(x_{6}|x_{4})p(x_{7}|x_{4},x_{5}) (Bishop and Bishop, 2023 ) .",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27955/assets/figures/BGM.png"
+    },
+    {
+      "caption": "Figure 8 : Convex hull support estimates. Left: true support. Right: convex hull estimate (Cui, 2021 ) .",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27955/assets/figures/cvx_hull_support.png"
+    },
+    {
+      "caption": "Figure 9 : Reflection trick in one dimension.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27955/assets/figures/reflectKDE.png"
+    },
+    {
+      "caption": "Figure 10 : DBSCAN on a 2D Gaussian mixture. Core points have \u03f5 \\epsilon -neighborhoods with at least minPts samples (Jang and Jiang, 2019 ) .",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27955/assets/figures/dbscan.png"
+    },
+    {
+      "caption": "Figure 11 : Kernel Density Estimation in 1D (Chen, 2017 )",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27955/assets/figures/kde.png"
+    },
+    {
+      "caption": "Figure 12 : Pareto front of recovered expressions for the Gaussian mixture dataset.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27955/assets/figures/gm_pareto.png"
+    },
+    {
+      "caption": "Figure 13 : Pareto front of recovered expressions for the Gaussian cluster 1 dataset.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27955/assets/figures/gcl1_pareto.png"
+    },
+    {
+      "caption": "Figure 14 : Pareto front of recovered expressions for the Gaussian cluster 2 dataset.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27955/assets/figures/gcl2_pareto.png"
+    },
+    {
+      "caption": "Figure 15 : Pareto front of recovered expressions for the 4 dimensional Gaussian dataset.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27955/assets/figures/g4d_pareto.png"
+    },
+    {
+      "caption": "Figure 16 : Pareto front of recovered expressions for the 4 dimensional Gaussian marginal ( x 1 x_{1} , x 2 x_{2} ) dataset.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27955/assets/figures/g4d12_pareto.png"
+    },
+    {
+      "caption": "Figure 17 : Pareto front of recovered expressions for the 4 dimensional Gaussian marginal ( x 3 x_{3} , x 4 x_{4} ) dataset.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27955/assets/figures/g4d34_pareto.png"
+    },
+    {
+      "caption": "Figure 18 : Pareto front of recovered expressions for the Rastrigin dataset.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27955/assets/figures/rastrigin_pareto.png"
+    },
+    {
+      "caption": "Figure 19 : Pareto front of recovered expressions for the muon decay dataset.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27955/assets/figures/md_pareto.png"
+    },
+    {
+      "caption": "Figure 20 : Pareto front of recovered expressions for the dijet dataset (SR MSE + NLL + NP).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27955/assets/figures/dijet_mse_nll_np_hard.png"
+    },
+    {
+      "caption": "Figure 21 : Pareto front of recovered expressions for the dijet dataset (SR MSE + NP).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27955/assets/figures/dijet_mse_np.png"
+    },
+    {
+      "caption": "Figure 22 : Pareto front of recovered expressions for the dijet dataset (SR MSE).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27955/assets/figures/dijet_mse.png"
+    },
+    {
+      "caption": "Figure 23 : Pareto front of recovered expressions for the dijet dataset (SR NLL + NP).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27955/assets/figures/dijet_nll_np.png"
+    }
+  ],
+  "ar5iv_success": true
+}

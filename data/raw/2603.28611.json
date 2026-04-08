@@ -1,0 +1,159 @@
+{
+  "paper_id": "2603.28611",
+  "title": "LACE: Loss-Adaptive Capacity Expansion for Continual Learning",
+  "abstract": "Fixed representational capacity is a fundamental constraint in continual learning: practitioners must guess an appropriate model width before training, without knowing how many distinct concepts the data contains. We propose LACE (Loss-Adaptive Capacity Expansion), a simple online mechanism that expands a model's representational capacity during training by monitoring its own loss signal. When sustained loss deviation exceeds a threshold - indicating that the current capacity is insufficient for newly encountered data - LACE adds new dimensions to the projection layer and trains them jointly with existing parameters. Across synthetic and real-data experiments, LACE triggers expansions exclusively at domain boundaries (100% boundary precision, zero false positives), matches the accuracy of a large fixed-capacity model while starting from a fraction of its dimensions, and produces adapter dimensions that are collectively critical to performance (3% accuracy drop when all adapters removed). We further demonstrate unsupervised domain separation in GPT-2 activations via layer-wise clustering, showing a U-shaped separability curve across layers that motivates adaptive capacity allocation in deep networks. LACE requires no labels, no replay buffers, and no external controllers, making it suitable for on-device continual learning under resource constraints.",
+  "authors": [
+    "Shivnath Tathe"
+  ],
+  "date": "2026-03-30T15:58:33+00:00",
+  "url": "http://arxiv.org/abs/2603.28611v1",
+  "categories": [
+    "cs.LG"
+  ],
+  "primary_category": "cs.LG",
+  "sections": [
+    {
+      "heading": "IIntroduction",
+      "text": "Neural network architectures require practitioners to fix model width \u2014 the number of dimensions in each layer \u2014 before training begins. This decision is made without knowledge of the true complexity of the data distribution, the number of distinct concepts to be learned, or how that complexity may change over time. In continual learning settings, where data arrives sequentially from shifting distributions, this constraint becomes especially problematic: a model sized for early tasks may lack capacity for later ones, while a model sized for the full task sequence wastes capacity during early training.\n\nExisting approaches to dynamic capacity \u2014 progressive neural networks [ 1 ] , neural architecture search [ 2 ] , and mixture-of-experts [ 3 ] \u2014 either require expensive search procedures, external controllers, or architectural assumptions that limit deployment on constrained hardware. Adapter-based methods [ 4 , 5 ] add capacity at fine-tuning time but do not address online capacity allocation during continual pretraining.\n\nWe ask a simpler question: can a model detect when its current capacity is insufficient and expand automatically, using only its own loss as a signal?\n\nThe intuition is straightforward. When a model encounters a new distribution it cannot represent with existing capacity, training loss rises sharply and remains elevated. This sustained deviation from the recent loss baseline is a direct, label-free signal that additional representational capacity is needed. We formalize this as a spike detection mechanism and couple it with a lightweight expansion operation that adds new dimensions to the projection matrix.\n\nContributions: 1. A loss-spike-driven expansion mechanism with EMA baseline, ratio threshold, confirmation window, and cooldown \u2014 requiring no labels, no gradient tracking beyond the standard training loop. 2. Empirical validation showing 100% expansion precision across all experiments: every expansion fires at a genuine domain boundary, with zero false positives over 5,000 training steps. 3. Evidence that dynamically added dimensions are collectively critical: removing all adapter dimensions drops accuracy by 3%, while individual dimensions show a distributed representation pattern consistent with superposition [ 10 ] . 4. A capacity efficiency result: LACE matches Fixed-Large accuracy while starting from a Fixed-Small base, demonstrating that adaptive allocation outperforms both under-provisioned and over-provisioned fixed baselines. 5. Layer-wise unsupervised activation clustering on GPT-2 revealing a U-shaped domain separability curve, motivating where in deep networks capacity expansion is most beneficial."
+    },
+    {
+      "heading": "II-AContinual Learning",
+      "text": "Catastrophic forgetting [ 6 ] is the central challenge in continual learning. Regularization-based methods such as EWC [ 7 ] constrain weight updates to preserve prior task performance. Replay-based methods [ 8 ] store or generate examples from prior tasks. Architectural methods [ 1 , 9 ] allocate separate capacity per task. LACE is complementary to all of these: it addresses when to allocate capacity , not how to prevent forgetting after allocation."
+    },
+    {
+      "heading": "II-BDynamic Capacity",
+      "text": "Progressive Neural Networks [ 1 ] add new columns per task but require task identity at training time. PackNet [ 9 ] prunes and reuses weights but requires a fixed total budget. Neural Architecture Search [ 2 ] optimizes architecture globally but is computationally prohibitive for online settings. LACE differs by operating online, requiring no task labels, and using the model\u2019s own loss as the sole expansion trigger."
+    },
+    {
+      "heading": "II-CAdapters and Low-Rank Methods",
+      "text": "LoRA [ 4 ] and adapter modules [ 5 ] add trainable parameters to frozen pretrained models. These methods target fine-tuning efficiency rather than online capacity allocation during training. LACE expands the projection matrix directly during training, which is mechanistically distinct from post-hoc adapter insertion."
+    },
+    {
+      "heading": "II-DActivation-Based Analysis",
+      "text": "Superposition in neural networks [ 10 ] shows that models store multiple features per dimension when capacity is constrained. Our ablation results are consistent with this finding: individually ablating dimensions has small effect, but removing all adapter dimensions collectively causes significant performance degradation."
+    },
+    {
+      "heading": "III-AProblem Setting",
+      "text": "We consider a continual learning setting where a model receives data from a sequence of distributions \ud835\udc9f 1 , \ud835\udc9f 2 , \u2026 , \ud835\udc9f T \\mathcal{D}_{1},\\mathcal{D}_{2},\\ldots,\\mathcal{D}_{T} arriving online. The model has a base capacity d base d_{\\text{base}} and may expand up to a maximum d max d_{\\text{max}} . The expansion budget d adapt = d max \u2212 d base d_{\\text{adapt}}=d_{\\text{max}}-d_{\\text{base}} represents the maximum number of adapter dimensions available."
+    },
+    {
+      "heading": "III-BLoss-Based Novelty Detection",
+      "text": "Let L t L_{t} denote the training loss at step t t and L \u00af t \\bar{L}_{t} denote the exponential moving average of recent losses over a window of W W steps:\n\nL \u00af t = 1 W \u200b \u2211 i = t \u2212 W t \u2212 1 L i \\bar{L}_{t}=\\frac{1}{W}\\sum_{i=t-W}^{t-1}L_{i} (1)\n\nWe define a loss spike at step t t as:\n\nspike \u200b ( t ) = { 1 if \u200b L t > \u03c4 \u22c5 L \u00af t 0 otherwise \\text{spike}(t)=\\begin{cases}1&\\text{if }L_{t}>\\tau\\cdot\\bar{L}_{t}\\\\\n0&\\text{otherwise}\\end{cases} (2)\n\nwhere \u03c4 > 1 \\tau>1 is the spike ratio threshold. To avoid reacting to transient noise, we require K K consecutive spikes before triggering expansion:\n\nexpand \u200b ( t ) = { 1 if \u200b \u2211 i = t \u2212 K t spike \u200b ( i ) \u2265 K 0 otherwise \\text{expand}(t)=\\begin{cases}1&\\text{if }\\sum_{i=t-K}^{t}\\text{spike}(i)\\geq K\\\\\n0&\\text{otherwise}\\end{cases} (3)\n\nAfter expansion, a cooldown of C C steps is enforced before the detector can fire again.\n\nAdditionally, we detect sustained high loss as a secondary signal: if the mean loss over the window exceeds an absolute threshold \u03b8 \\theta for S S consecutive steps, expansion is also triggered. This handles the case where the model starts with very limited capacity and the loss never stabilizes enough to produce clear spikes."
+    },
+    {
+      "heading": "III-CCapacity Expansion",
+      "text": "When expansion is triggered, we extend the projection matrix W \u2208 \u211d d active \u00d7 d in W\\in\\mathbb{R}^{d_{\\text{active}}\\times d_{\\text{in}}} by one dimension:\n\nW \u2190 [ W w new \u22a4 ] , w new \u223c \ud835\udca9 \u200b ( 0 , \u03c3 2 ) W\\leftarrow\\begin{bmatrix}W\\\\\nw_{\\text{new}}^{\\top}\\end{bmatrix},\\quad w_{\\text{new}}\\sim\\mathcal{N}(0,\\sigma^{2}) (4)\n\nThe corresponding output mask is updated to activate the new dimension:\n\nh \u2032 = ReLU \u200b ( W \u200b x ) \u2299 m , m i = { 1 i \u2264 d active 0 otherwise h^{\\prime}=\\text{ReLU}(Wx)\\odot m,\\quad m_{i}=\\begin{cases}1&i\\leq d_{\\text{active}}\\\\\n0&\\text{otherwise}\\end{cases} (5)\n\nNew dimensions are initialized with small random weights ( \u03c3 = 0.01 \\sigma=0.01 ) and trained jointly with existing parameters in subsequent gradient updates. Expansion is bounded by d max d_{\\text{max}} ."
+    },
+    {
+      "heading": "III-DTraining Loop",
+      "text": "Algorithm 1 summarizes the complete LACE training procedure."
+    },
+    {
+      "heading": "III-EUnsupervised Activation Clustering (Analysis)",
+      "text": "To understand where in deep networks domain information is encoded, we apply online K-means clustering to mean-pooled hidden state activations across all 12 layers of GPT-2 [ 14 ] . For each layer l l , we reduce activations to d pca = 32 d_{\\text{pca}}=32 dimensions via PCA and cluster using cosine distance threshold \u03b4 = 0.15 \\delta=0.15 . Cluster purity is computed as:\n\npurity = 1 N \u200b \u2211 c max d \u2061 | C c \u2229 D d | \\text{purity}=\\frac{1}{N}\\sum_{c}\\max_{d}|C_{c}\\cap D_{d}| (6)\n\nwhere C c C_{c} is the set of samples in cluster c c and D d D_{d} is the set of samples from domain d d . This analysis is used as a diagnostic tool, not as an expansion trigger."
+    },
+    {
+      "heading": "IV-ASetup",
+      "text": "All synthetic experiments use character-level tokenization (ASCII, vocab size 128) with sequence length 32. The base model consists of a learned embedding layer, a single projection layer, and a classification head. We use Adam optimizer with learning rate 3 \u00d7 10 \u2212 4 3\\times 10^{-4} and batch size 64. LACE hyperparameters: W = 50 W=50 , \u03c4 = 2.5 \\tau=2.5 , K = 1 K=1 , C = 60 C=60 , warmup = 100 =100 steps.\n\nDomains are generated synthetically from 10 distinct families: scientific text, news, dialog, medical, code, poetry, financial, sports, math, and legal. Each family produces structurally and lexically distinct character sequences, ensuring genuine distributional separation."
+    },
+    {
+      "heading": "IV-BBaselines",
+      "text": "We compare three configurations throughout: \u2022 Dynamic (LACE) : starts at d base d_{\\text{base}} , expands up to d max d_{\\text{max}} . \u2022 Fixed-Large : fixed at d max d_{\\text{max}} from step 0, same maximum budget. \u2022 Fixed-Small : fixed at d base d_{\\text{base}} , same starting budget as LACE."
+    },
+    {
+      "heading": "IV-CExperiment 1: Baseline Comparison (10 Domains)",
+      "text": "We introduce 10 domains sequentially, one every 200 steps, over 2,000 total training steps. d base = 64 d_{\\text{base}}=64 , d max = 84 d_{\\text{max}}=84 .\n\nLACE achieves accuracy matching Fixed-Large while using fewer dimensions on average throughout training (Fig. 1 ). All 9 expansion events fire within one phase window of a domain boundary \u2014 100% boundary precision with zero false positives."
+    },
+    {
+      "heading": "IV-DExperiment 2: Forgetting Measurement",
+      "text": "We track per-domain accuracy throughout training to measure catastrophic forgetting. Fig. 2 shows that once a domain is learned, accuracy on that domain remains stable throughout subsequent training for both LACE and Fixed-Large. No significant forgetting is observed on this classification task.\n\nLimitation: Forgetting is not observed on classification tasks because the output head preserves all class outputs. Generative tasks, where prior knowledge can be overwritten at the token level, represent an important direction for future work."
+    },
+    {
+      "heading": "IV-EExperiment 3: Ablation of Adapter Dimensions",
+      "text": "To verify that dynamically added dimensions are genuinely used, we ablate each adapter dimension individually and collectively after training.\n\nIndividual dimensions show small drops (0.001\u20130.018), while removing all adapter dimensions collectively causes a 3% accuracy drop (Fig. 3 ). This pattern is consistent with distributed representation [ 10 ] : information is spread across dimensions rather than stored in dedicated slots. The result confirms that adapter dimensions are genuinely used, not wasted capacity."
+    },
+    {
+      "heading": "IV-FExperiment 4: Confirmation Window",
+      "text": "We compare K = 1 K=1 (immediate expansion on first spike) vs K = 3 K=3 (expansion after 3 consecutive spikes).\n\nBoth configurations achieve 100% boundary precision. K = 3 K=3 uses the same number of expansions and achieves marginally higher accuracy, suggesting the confirmation window acts as a useful noise filter without sacrificing sensitivity (Fig. 4 )."
+    },
+    {
+      "heading": "IV-GExperiment 5: Capacity Wall (50 Domains)",
+      "text": "To stress-test the system, we scale to 50 domains (10 families \u00d7 \\times 5 variants) with d base = 8 d_{\\text{base}}=8 and d max = 48 d_{\\text{max}}=48 . This configuration forces Fixed-Small into a genuine capacity wall.\n\nFixed-Small plateaus at 0.434 accuracy \u2014 it cannot separate 50 domains with only 8 dimensions (Fig. 5 ). LACE significantly outperforms Fixed-Small (0.676 vs 0.434) by growing from 8 to 38 dimensions. Fixed-Large achieves the highest accuracy by having full capacity throughout, but requires knowing d max d_{\\text{max}} upfront. LACE starts with the same budget as Fixed-Small and closes 73% of the gap to Fixed-Large without prior knowledge of task complexity."
+    },
+    {
+      "heading": "IV-HExperiment 6: Real-World Validation (Wikipedia\u2192\\toCode\u2192\\toChat)",
+      "text": "To address the limitation of synthetic-only evaluation, we conduct a real-world experiment using three sequential domains drawn from HuggingFace datasets: Wikipedia [ 11 ] (encyclopedic text), Python code [ 12 ] (structured programs), and conversational chat [ 13 ] (informal dialogue). These domains represent genuinely distinct real-world text distributions with overlapping vocabulary but fundamentally different structure, syntax, and register.\n\nWe use frozen GPT-2 embeddings [ 14 ] as input representations ( d emb = 768 d_{\\text{emb}}=768 ), with LACE starting at d base = 32 d_{\\text{base}}=32 and growing up to d max = 128 d_{\\text{max}}=128 . Fixed-S uses d = 32 d=32 throughout; Fixed-L uses d = 128 d=128 throughout.\n\nLACE expands exactly twice \u2014 once when code is introduced (step 300) and once when chat is introduced (step 600) \u2014 maintaining 100% boundary precision on real data. Fixed-Small plateaus at 0.667, unable to adapt beyond two domains with only 32 dimensions. LACE outperforms Fixed-Small by 12.9% while using an average of \u223c \\sim 33 dimensions compared to Fixed-Large\u2019s constant 128, achieving 96.9% of Fixed-Large accuracy with 74% fewer average dimensions.\n\nThese results demonstrate that LACE\u2019s loss-spike detection generalizes beyond synthetic domains to real-world text with genuine distributional heterogeneity, directly addressing the concern that 100% boundary precision may be an artifact of synthetic separability."
+    },
+    {
+      "heading": "IV-IGPT-2 Layer Analysis",
+      "text": "To motivate adaptive capacity allocation in pretrained models, we analyze domain separability across all 12 layers of GPT-2 [ 14 ] using unsupervised activation clustering on 600 samples from three domains (scientific, news, dialog).\n\nFig. 8 reveals a U-shaped purity curve: early layers separate domains by surface vocabulary (high purity), middle layers blur domains as the transformer builds contextual representations (purity drops to 0.67), and deep layers recover clean separation at the semantic level. This pattern suggests that capacity pressure varies by layer depth \u2014 middle layers, where domains are least separable, are most likely to benefit from adaptive capacity expansion."
+    },
+    {
+      "heading": "VDiscussion",
+      "text": "What LACE detects. The loss-spike detector identifies distributional shift, not semantic features. When a new domain introduces unfamiliar character patterns, the model\u2019s loss rises because its current weight configuration cannot represent the new distribution. This is a surface-level signal, but it is reliable: across all experiments, 100% of expansions occurred at genuine distribution boundaries.\n\nCapacity efficiency. In the 10-domain setting, LACE matches Fixed-Large accuracy while using 13% fewer average dimensions throughout training. In the 50-domain setting, LACE outperforms Fixed-Small by 57% while using the same starting budget. The cost of adaptive expansion \u2014 detection overhead and occasional wasted expansions \u2014 is negligible compared to the benefit of not requiring foreknowledge of task complexity.\n\nDistributed representation in adapters. The ablation result (small individual drops, large collective drop) indicates that dynamically added dimensions store information in a distributed fashion. This is consistent with superposition theory [ 10 ] and suggests that expansion adds genuinely useful representational capacity rather than redundant dimensions.\n\nLimitations. Three limitations warrant honest discussion. First, LACE does not provide a forgetting advantage on classification tasks, where the output head preserves prior class outputs regardless of capacity. Second, the loss-spike detector can be sensitive to training noise \u2014 the EMA baseline, confirmation window, and cooldown mitigate this, but optimal hyperparameters may vary by task. Third, real-world validation is currently limited to three domains; evaluation on standard continual learning benchmarks such as Split-CIFAR remains future work."
+    },
+    {
+      "heading": "VIConclusion",
+      "text": "We presented LACE, a simple mechanism for adaptive capacity expansion in continual learning. By monitoring the model\u2019s own loss signal, LACE detects when existing capacity is insufficient and expands the projection matrix with new dimensions trained jointly with existing parameters. Across synthetic experiments spanning 10 to 50 sequential domains, LACE achieves 100% expansion precision, outperforms fixed under-provisioned baselines, and produces adapter dimensions that are collectively necessary for learned performance. The method requires no labels, no replay buffers, and no external controllers, making it a practical tool for resource-constrained continual learning.\n\nThe core principle \u2014 allocate capacity only when the data demands it \u2014 is broadly applicable beyond the specific architecture studied here, and we hope it motivates further work on self-supervised capacity management in deep networks."
+    },
+    {
+      "heading": "Acknowledgment",
+      "text": "The author thanks the open-source communities behind PyTorch, Hugging Face Transformers, and the arXiv preprint platform."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1: Exp 1: Training loss and active dimensions for LACE vs fixed baselines over 10 sequential domains. Red dashed lines indicate expansion events.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28611/assets/figures/fig_06_exp1_baseline.png"
+    },
+    {
+      "caption": "Figure 2: Exp 2: Per-domain accuracy over time for LACE (left) and Fixed-Large (right). Both models retain learned domains without forgetting.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28611/assets/figures/fig_07_exp2_forgetting.png"
+    },
+    {
+      "caption": "Figure 3: Exp 3: Per-dimension accuracy drop (left) and collective ablation (right). Red bars indicate dimensions exceeding 1% individual drop threshold.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28611/assets/figures/fig_08_exp3_ablation.png"
+    },
+    {
+      "caption": "Figure 4: Exp 4: Loss curves and metric comparison for K = 1 K=1 vs K = 3 K=3 confirmation windows.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28611/assets/figures/fig_09_exp4_confirmation.png"
+    },
+    {
+      "caption": "Figure 5: Exp 5: Accuracy over time across 50 domains. Fixed-Small plateaus early due to insufficient capacity. LACE grows adaptively and closes the gap to Fixed-Large.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28611/assets/figures/fig_11_capacity_wall_accuracy.png"
+    },
+    {
+      "caption": "Figure 6: Exp 5: Active dimensions over time. LACE grows from d = 8 d=8 to d = 38 d=38 via 30 expansion events, staying well below Fixed-Large\u2019s constant d = 48 d=48 .",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28611/assets/figures/fig_12_capacity_wall_dims.png"
+    },
+    {
+      "caption": "Figure 7: Real-world experiment: Wikipedia \u2192 \\to Code \u2192 \\to Chat. LACE fires precisely at both domain boundaries (orange/purple vertical lines), expands from d = 32 d=32 to d = 34 d=34 , and outperforms Fixed-Small while approaching Fixed-Large accuracy.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28611/assets/figures/fig_13_realworld_experiment.png"
+    },
+    {
+      "caption": "Figure 8: GPT-2 layer-wise domain separability. Purity drops in middle layers (3\u20137) where cross-token attention mixes representations, then recovers in deep layers (8\u201312).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28611/assets/figures/fig_04_gpt2_purity_curve.png"
+    },
+    {
+      "caption": "Figure 9: Toy experiment: Unsupervised K-Means activation clustering on 3-pattern synthetic data. Left: true patterns. Right: discovered clusters.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28611/assets/figures/fig_01_toy_kmeans_clusters.png"
+    },
+    {
+      "caption": "Figure 10: Cluster center similarity matrix for toy K-Means experiment.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28611/assets/figures/fig_02_toy_kmeans_similarity.png"
+    },
+    {
+      "caption": "Figure 11: GPT-2 activation space by layer, colored by true domain. Each subplot shows PCA projection of layer activations with cluster purity (p) and number of clusters (k).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28611/assets/figures/fig_03_gpt2_pca_grid.png"
+    },
+    {
+      "caption": "Figure 12: From-scratch training on 10 sequential domains: loss curve and active dimensions. Loss spikes at each domain boundary trigger expansions.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28611/assets/figures/fig_05_scratch_10domain.png"
+    },
+    {
+      "caption": "Figure 13: Capacity wall experiment: training loss across 50 domains. Fixed-Small loss remains elevated throughout; LACE and Fixed-Large converge.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28611/assets/figures/fig_10_capacity_wall_loss.png"
+    }
+  ],
+  "ar5iv_success": true
+}

@@ -1,0 +1,165 @@
+{
+  "paper_id": "2603.27703",
+  "title": "KAT-Coder-V2 Technical Report",
+  "abstract": "We present KAT-Coder-V2, an agentic coding model developed by the KwaiKAT team at Kuaishou. KAT-Coder-V2 adopts a \"Specialize-then-Unify\" paradigm that decomposes agentic coding into five expert domains - SWE, WebCoding, Terminal, WebSearch, and General - each undergoing independent supervised fine-tuning and reinforcement learning, before being consolidated into a single model via on-policy distillation. We develop KwaiEnv, a modular infrastructure sustaining tens of thousands of concurrent sandbox instances, and scale RL training along task complexity, intent alignment, and scaffold generalization. We further propose MCLA for stabilizing MoE RL training and Tree Training for eliminating redundant computation over tree-structured trajectories with up to 6.2x speedup. KAT-Coder-V2 achieves 79.6% on SWE-bench Verified (vs. Claude Opus 4.6 at 80.8%), 88.7 on PinchBench (surpassing GLM-5 and MiniMax M2.7), ranks first across all three frontend aesthetics scenarios, and maintains strong generalist scores on Terminal-Bench Hard (46.8) and tau^2-Bench (93.9). Our model is publicly available at https://streamlake.com/product/kat-coder.",
+  "authors": [
+    "Fengxiang Li",
+    "Han Zhang",
+    "Haoyang Huang",
+    "Jinghui Wang",
+    "Jinhua Hao",
+    "Kun Yuan",
+    "Mengtong Li",
+    "Minglei Zhang",
+    "Pengcheng Xu",
+    "Wenhao Zhuang",
+    "Yizhen Shao",
+    "Zongxian Feng",
+    "Can Tang",
+    "Chao Wang",
+    "Chengxiao Tong",
+    "Fan Yang",
+    "Gang Xiong",
+    "Haixuan Gao",
+    "Han Gao",
+    "Hao Wang",
+    "Haochen Liu",
+    "Hongliang Sun",
+    "Jiabao Li",
+    "Jingwen Chang",
+    "Jun Du",
+    "Junyi Peng",
+    "Leizhen Cui",
+    "Meimei Jing",
+    "Mingqi Wu",
+    "Shangpeng Yan",
+    "Shaotong Qi",
+    "Suzhe Xu",
+    "Wenxuan Zhao",
+    "Xianda Sun",
+    "Xuan Xie",
+    "Yanbo Wang",
+    "Yao Xia",
+    "Yinghan Cui",
+    "Yingpeng Chen",
+    "Yong Wang",
+    "Yuze Shi",
+    "Zhiwei Shen",
+    "Ziyu Wang",
+    "Ming Sun",
+    "Lin Ye",
+    "Bin Chen"
+  ],
+  "date": "2026-03-29T14:01:35+00:00",
+  "url": "http://arxiv.org/abs/2603.27703v1",
+  "categories": [
+    "cs.CL",
+    "cs.LG"
+  ],
+  "primary_category": "cs.CL",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "Large Language Models (LLMs) are rapidly evolving from single-turn code generation toward Agentic Coding , the ability to autonomously plan, execute, and verify multi-step software engineering tasks within real-world development environments. Recent frontier models [ 1 , 2 , 3 , 4 , 5 , 6 ] have demonstrated impressive progress in this direction, steadily advancing the state of the art on benchmarks including SWE-bench [ 7 ] , Terminal-Bench [ 8 ] , and \u03c4 2 \\tau^{2} -Bench [ 9 ] . Unlike traditional code question-answering or mathematical reasoning, agentic coding requires models to interact with authentic code repositories, manage intricate dependency graphs, orchestrate multi-turn tool invocations, and ground their decisions in execution feedback. This interactive, long-horizon workflow demands that models\u2019 multi-step behaviors be aligned with end-to-end engineering outcomes, rather than merely optimizing for single-turn code correctness.\n\nRealizing this vision presents three fundamental challenges. The first is capability fragmentation . SWE tasks require long-chain code editing grounded in test verification, WebCoding demands aesthetic judgment under sparse colloquial inputs, and Terminal tasks call for persistent environment state tracking. The training signals across these domains are not merely different but often conflicting, making it impractical for a single monolithic training pipeline to reach the optimum in every domain simultaneously. The second challenge is infrastructure coupling . Agentic RL training demands high-throughput sandbox orchestration, heterogeneous benchmark support, and seamless compatibility with a rapidly growing ecosystem of agent scaffolds such as Claude Code, OpenClaw, and OpenCode. Existing systems, however, tightly couple these concerns, making every new scaffold or dataset integration a costly engineering endeavor. The third is scaling agentic RL . Effectively training coding agents requires scaling along multiple dimensions simultaneously\u2014task complexity, prompt diversity, and scaffold generalization\u2014while coping with the MoE instability and computational redundancy introduced by tree-structured, multi-turn trajectories.\n\nWe introduce KAT-Coder-V2 , a comprehensive agentic coding model developed by the KwaiKAT team at Kuaishou. Built upon KAT-Coder-V1 [ 10 ] through continued post-training, the model follows a Specialize-then-Unify paradigm that systematically addresses all three challenges above. We decompose the full capability spectrum into five orthogonal expert domains (SWE, WebCoding, Terminal, WebSearch, and General), each undergoing independent data construction, supervised fine-tuning, and environment-feedback reinforcement learning. The resulting domain experts are then consolidated into a single deployable model through On-Policy Distillation (OPD) , which combines the direct mistake-avoidance of on-policy exploration with dense, step-by-step supervision from the specialized experts, achieving lossless fusion without the exposure bias of offline imitation.\n\nTo tackle infrastructure coupling, we develop KwaiEnv , a modular infrastructure that decouples datasets, sandboxes, scaffolds, and verifiers, sustaining tens of thousands of concurrent sandbox instances. Built on this foundation, we propose an Agentic Scaling paradigm that systematically scales RL training along task complexity, intent alignment, and scaffold generalization, yielding over 100K diverse, high-difficulty training samples across multiple agent frameworks. To stabilize MoE RL training, we propose MCLA (Monte-Carlo Log-probability Averaging) for reducing log-probability variance. We further introduce Tree Training for eliminating redundant computation over tree-structured trajectories, achieving up to 6.2 \u00d7 \\times training speedup.\n\nExtensive evaluation shows that KAT-Coder-V2 closely matches Claude Opus 4.6 across scaffolds and benchmarks: 79.6% on SWE-bench Verified (vs. 80.8%), 88.7 on PinchBench (surpassing GLM-5 at 86.4 and MiniMax M2.7 at 87.1), leading scores across all three frontend aesthetics scenarios (Landing Page 59.8, Slides 57.6, Data Visualization 67.6), and strong generalist performance (Terminal-Bench Hard 46.8, \u03c4 2 \\tau^{2} -Bench 93.9). These results confirm that domain-specialized training, large-scale agentic RL with systematic scaling, and unified on-policy distillation form an effective path to powerful coding agents."
+    },
+    {
+      "heading": "2.1Background and Design Motivation",
+      "text": "As the capabilities of Large Language Models continue to evolve, Agentic Coding has emerged as a critical domain for model evaluation and Reinforcement Learning (RL) training. Unlike traditional Question-Answering (QA) or mathematical reasoning tasks, Agentic Coding\u2014particularly Software Engineering (SWE) tasks\u2014requires models to execute multi-step, long-chain operations within a sandbox environment equipped with authentic code repositories, dependencies, and test suites. The rollout process for these tasks involves several complex stages, including environment initialization, tool calling, state management, and result verification, far exceeding the complexity of single-turn inference scenarios.\nIn engineering practice, this complexity introduces the following challenges:\n\n\u2022 Dataset Heterogeneity: Diverse benchmarks (e.g., SWE-bench, SWE-bench Pro [ 11 ] ) impose varying requirements on sandbox images and evaluation logic. \u2022 Scaffold Proliferation: New scaffolds for Coding Agents are constantly emerging with significant differences in integration protocols; without a unified abstraction, onboarding each new agent requires redundant engineering effort. \u2022 High-Throughput Demands: During the RL training phase, a massive number of rollouts must be executed concurrently, placing stringent performance requirements on sandbox scheduling and trajectory collection.\n\nTo address these challenges, we developed KwaiEnv. The core design objective is to decouple datasets, sandboxes, scaffolds, and verification logic through a modular and configurable architecture. This allows for the flexible combination of components at minimal cost, supporting the entire workflow from model evaluation to RL training."
+    },
+    {
+      "heading": "2.2System Overview",
+      "text": "KwaiEnv provides a unified interface that supports the configurable combination of models, scaffolds, and datasets. This enables a complete closed-loop workflow encompassing model trajectory collection, rollout evaluation, and the delivery of trajectories to the RL engine for training. The system consists of five core modules, each with distinct responsibilities and high degrees of decoupling, allowing for flexible extension as needed.\n\nIn a typical workflow, the user specifies the dataset, target model, and scaffold via a configuration file. KwaiEnv then orchestrates the necessary remote sandboxes, deploys the scaffold onto the corresponding dataset images, and forwards model requests to the target LLM through a unified network proxy layer, recording the entire interaction trajectory. Upon completion, the Verifier scores the results, and the Trajectory Manager formats the trajectories for the RL engine. This entire pipeline operates autonomously without human intervention, significantly reducing the engineering overhead of data collection and model training, as shown in figure 2 ."
+    },
+    {
+      "heading": "2.4Decoupling and Scalability",
+      "text": "KwaiEnv adheres to the principle of Separation of Concerns. The five core modules communicate through standardized interfaces, allowing independent iteration of any module. This design yields several key benefits: \u2022 Data Scalability: Scaling training data requires only the implementation of a unified data interface, without impacting sandboxes or scaffolds. \u2022 Scaffold Scalability: New Coding Agents can be onboarded by simply configuring container commands and API endpoints. \u2022 Evaluation Agility: The evaluation and training pipelines share the same infrastructure, ensuring high consistency and short iteration cycles. \u2022 Algorithmic Adaptability: The formatting logic is decoupled from RL algorithms; new algorithms can be supported by simply registering new trajectory formatting rules."
+    },
+    {
+      "heading": "3.1Training Pipeline Overview",
+      "text": "KAT-Coder-V2 is built upon KAT-Coder-V1 [ 10 ] through continued post-training, following a specialize-then-unify paradigm. We decompose the capability spectrum of agentic coding into five orthogonal expert domains\u2014SWE (software engineering repair and development), WebCoding (frontend generation and aesthetics), Terminal (command-line reasoning), WebSearch (online search and information synthesis), and General (general-purpose code intelligence)\u2014each of which undergoes independent data construction and specialized training.\n\nThe overall pipeline consists of three stages: \u2022 Supervised Fine-Tuning: For each expert domain, we leverage KwaiEnv\u2019s trajectory collection capabilities and domain-specific data synthesis pipelines to construct large-scale, high-quality training data, producing a dedicated expert model per domain. \u2022 Reinforcement Learning: Using the sandbox environments and verifier infrastructure provided by KwaiEnv, we apply environment-feedback-based reinforcement learning to further improve decision quality in multi-turn interactions and long-horizon tasks. \u2022 On-Policy Distillation: The capabilities of multiple domain experts are consolidated into a unified KAT-Coder-V2 through on-policy distillation, achieving single-model deployment while retaining expert-level performance across all domains.\n\nThe following subsections detail the data construction and training methodology for each expert domain."
+    },
+    {
+      "heading": "3.2Supervised Fine-Tuning",
+      "text": "We train five domain experts via supervised fine-tuning, each targeting a distinct capability required for agentic coding. Table 1 summarizes the data sources, scale, and key methodological innovations of each expert. The remainder of this section details the unique technical contributions within each domain."
+    },
+    {
+      "heading": "3.4Expert Fusion via On-Policy Distillation",
+      "text": "After developing highly specialized experts across diverse domains (e.g., coding, reasoning), we face the challenge of amalgamating them into a single omni-capable model. Direct weight averaging causes catastrophic forgetting, while standard RL provides feedback too sparse to pinpoint intermediate reasoning errors. Conversely, off-policy SFT suffers from exposure bias. To bridge this gap, we adopt On-Policy Distillation (OPD) 7 7 7 https://thinkingmachines.ai/blog/on-policy-distillation , which combines the active exploration of RL with the dense supervision of knowledge distillation.\n\nDuring training, the unified Student model actively generates complete trajectories across mixed-domain prompts. Crucially, we jointly optimize the Student using both a standard RL loss and an expert-guided OPD loss. For the RL component, the environment (e.g., execution sandboxes) provides sparse grounding rewards to ensure final task success. Concurrently, for the OPD component, we dynamically select the best-performing expert for each specific task to act as the Teacher. This designated expert evaluates the Student\u2019s on-policy rollouts and provides dense, step-level supervision via its log-probabilities . This approach avoids computationally expensive full-logit distillation while providing unbiased optimization targets.\n\nCondensing diverse, specialized capabilities into a single set of model weights inevitably incurs a slight performance degradation compared to the isolated experts, primarily due to capacity constraints and cross-domain interference. However, our joint optimization effectively mitigates catastrophic forgetting. By aligning the Student\u2019s active reasoning with the best experts\u2019 log-probabilities while grounding it in environmental success, OPD successfully minimizes this performance drop, ultimately yielding a robust and highly capable unified model."
+    },
+    {
+      "heading": "4Evaluation",
+      "text": "To systematically evaluate the capabilities of KAT-Coder-V2, we conducted a comprehensive analysis of its performance across multiple representative benchmarks based on the KwaiEnv evaluation platform. This evaluation covers four core dimensions: multi-scaffold coding capability, agent task execution capability, frontend aesthetics generation capability, and general task processing capability. Overall, the results indicate that KAT-Coder-V2 demonstrates outstanding performance across these dimensions, placing it among the top tier of coding models."
+    },
+    {
+      "heading": "4.1Multi-Scaffold Coding",
+      "text": "In real-world AI coding scenarios, developers often choose different development scaffolds based on personal habits, team norms, or specific business requirements. These scaffolds often exhibit significant differences in prompt construction, Tool Use protocols, and context organization and management mechanisms, thereby posing high demands on the cross-scaffold generalization capabilities of foundation models.\n\nWe evaluated KAT-Coder-V2 across major mainstream scaffolds, using their native interaction protocols and system prompt configurations, on SWE-bench Verified [ 7 ] , SWE-bench Multilingual [ 20 ] , and a subset of Swe-rebench-V2 [ 21 ] . Evaluation results show that the model maintains stable performance across different scaffold environments. Its core metrics on mainstream frameworks such as Claude Code, OpenClaw, and OpenCode are comparable to the most advanced coding model. Thanks to the outstanding framework generalization capability, KAT-Coder-V2 is compatible with over 10 mainstream AI coding scaffolds, providing developers with flexible choices."
+    },
+    {
+      "heading": "4.2Agent Task Execution",
+      "text": "With the rapid rise of new-generation AI Agent frameworks represented by OpenClaw, AI coding tools are further evolving towards the autonomous execution of real-world complex tasks. This trend introduces more complex skill invocation, task orchestration mechanisms, and dynamic scheduling strategies, placing higher-order demands on the model\u2019s interaction and tool use capabilities.\n\nTo evaluate KAT-Coder-V2 under these conditions, we performed systematic testing on the PinchBench and Claw-Eval benchmarks based on the OpenClaw framework. The results indicate that under stress scenarios such as scheduled triggering, high-concurrency request processing, and long-chain task execution, KAT-Coder-V2 demonstrates strong execution efficiency and response stability."
+    },
+    {
+      "heading": "4.3Frontend Aesthetics Generation",
+      "text": "Interface aesthetics are an important component of frontend generation quality, directly affecting users\u2019 visual perception and interactive experience. Targeting this dimension, we constructed a systematic aesthetic evaluation benchmark specifically oriented toward reference-free design scenarios. This benchmark covers three typical application scenarios: Landing Pages, Slides, and Data Visualization. Among them, Landing Pages are further divided into 10 evaluation dimensions, while Slides and Data Visualization are each divided into 5 dimensions. Standardized anchor-based scoring scales were designed for each dimension.\n\nAll queries in the evaluation test set are based on the colloquial expressions of ordinary users, and the assessments are conducted through blind evaluations by a professional UI/UX designer team under standardized experimental conditions.\n\nThe results show that KAT-Coder-V2 achieved leading aesthetic scores across all three scenarios, demonstrating strong user intent understanding and frontend visual generation capabilities."
+    },
+    {
+      "heading": "4.4General Task Processing",
+      "text": "In real-world coding scenarios, a strong model must not only complete basic code generation and optimization but also excel in end-to-end complex tasks, multi-turn interactive reasoning, long-context understanding, and high-precision instruction following.\n\nFocusing on these key capabilities, we systematically evaluated KAT-Coder-V2 on multiple mainstream benchmarks, including Terminal-Bench Hard [ 8 ] , \u03c4 2 \\tau^{2} -Bench Telecom [ 9 , 22 ] , AA-LCR [ 23 ] , and IFBench [ 24 ] . The results show that KAT-Coder-V2 achieved competitive scores across various general scenarios. Its strong foundational capabilities provide strong support for its adaptability, robustness, and stability in complex programming environments, further enhancing its comprehensive performance in real-world development tasks."
+    },
+    {
+      "heading": "5Conclusion",
+      "text": "In this report, we have introduced KAT-Coder-V2, a comprehensive agentic coding model that demonstrates domain-specialized training, large-scale agentic RL, and unified distillation as a principled path toward building powerful coding agents. By decomposing capabilities into orthogonal expert domains and fusing them through on-policy distillation, KAT-Coder-V2 retains expert-level performance across SWE, frontend generation, terminal reasoning, and general tasks within a single model. The accompanying infrastructure (KwaiEnv) and algorithmic innovations (MCLA, Tree Training), together with systematic agentic scaling across task complexity, prompt diversity, and scaffold generalization, collectively enable stable, efficient training at scale. With these strengths, KAT-Coder-V2 closely rivals the strongest proprietary coding models across multiple scaffolds and benchmarks. However, gaps remain on certain agent execution benchmarks such as Claw-Eval, which we aim to narrow through further scaling of agentic RL and richer environment interaction. Future work will also focus on extending the Specialize-then-Unify paradigm to broader agentic domains beyond coding and exploring more efficient expert fusion strategies to fully unlock the potential of domain-specialized training."
+    },
+    {
+      "heading": "6Contribution",
+      "text": "Contributors\u2019 names are listed in alphabetical order by first name.\n\nCore Contributors\n\nFengxiang Li Han Zhang Haoyang Huang Jinghui Wang Jinhua Hao Kun Yuan Mengtong Li Minglei Zhang Pengcheng Xu Wenhao Zhuang Yizhen Shao Zongxian Feng\n\nContributors\n\nCan Tang Chao Wang Chengxiao Tong Fan Yang Gang Xiong Haixuan Gao Han Gao Hao Wang Haochen Liu Hongliang Sun Jiabao Li Jingwen Chang Jun Du Junyi Peng Leizhen Cui Meimei Jing Mingqi Wu Shangpeng Yan Shaotong Qi Suzhe Xu Wenxuan Zhao Xianda Sun Xuan Xie Yanbo Wang Yao Xia Yinghan Cui Yingpeng Chen Yong Wang Yuze Shi Zhiwei Shen Ziyu Wang\n\nTech Leads\n\nMing Sun Lin Ye Bin Chen"
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1 : Results of KAT-Coder-V2 and Claude Opus 4.6 across different scaffolds on various software engineering benchmarks.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27703/assets/x1.png"
+    },
+    {
+      "caption": "Figure 2 : KwaiEnv Workflow for SWE Tasks, Supporting Key Processes Including Data Synthesis, RL, and Evaluation",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27703/assets/x2.png"
+    },
+    {
+      "caption": "Figure 3 : Overview of the Issue-PR data construction pipeline. Merged PRs serve as anchor points for bidirectional Issue\u2013PR mapping and code diff extraction, with merge status providing natural correctness supervision. The reconstructed engineering chains are decomposed into retrieval and editing tasks, then filtered through multi-stage quality control to yield over 2M training samples.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27703/assets/x3.png"
+    },
+    {
+      "caption": "Figure 4 : Overview of the AutoBuilder pipeline for automated SWE task synthesis from open-source repositories.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27703/assets/x4.png"
+    },
+    {
+      "caption": "Figure 5 : Overview of Tree Training in agentic RL.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27703/assets/x5.png"
+    },
+    {
+      "caption": "Figure 6 : Overview of the RL and sandbox framework.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27703/assets/x6.png"
+    },
+    {
+      "caption": "(a) Landing Page 1",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27703/assets/x7.png"
+    },
+    {
+      "caption": "(a) Landing Page 1",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27703/assets/x7.png"
+    },
+    {
+      "caption": "(b) Landing Page 2",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27703/assets/x8.png"
+    },
+    {
+      "caption": "(c) Slides",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27703/assets/x9.png"
+    },
+    {
+      "caption": "(d) Data Visualization",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27703/assets/x10.png"
+    }
+  ],
+  "ar5iv_success": true
+}

@@ -1,0 +1,138 @@
+{
+  "paper_id": "2603.27233",
+  "title": "Structural Stress and Learned Helplessness in Afghanistan: A Multi-Layer Analysis of the AFSTRESS Dari Corpus",
+  "abstract": "We introduce AFSTRESS, the first multi-label corpus of self-reported stress narratives in Dari (Eastern Persian), comprising 737 responses collected from Afghan individuals during an ongoing humanitarian crisis. Participants describe experienced stress and select emotion and stressor labels via Dari checklists.\n  The dataset enables analysis at three levels: computational (multi-label classification), social (structural drivers and gender disparities), and psychological (learned helplessness, chronic stress, and emotional cascade patterns). It includes 12 binary labels (5 emotions, 7 stressors), with high label cardinality (5.54) and density (0.462), reflecting complex, multi-dimensional stress.\n  Structural stressors dominate: uncertain future (62.6 percent) and education closure (60.0 percent) exceed emotional states, indicating stress is primarily structurally driven. The strongest co-occurrence is between hopelessness and uncertain future (J = 0.388).\n  Baseline experiments show that character TF-IDF with Linear SVM achieves Micro-F1 = 0.663 and Macro-F1 = 0.651, outperforming ParsBERT and XLM-RoBERTa, while threshold tuning improves Micro-F1 by 10.3 points.\n  AFSTRESS provides the first Dari resource for computational analysis of stress and well-being in a crisis-affected population.",
+  "authors": [
+    "Jawid Ahmad Baktash",
+    "Mursal Dawodi",
+    "Nadira Ahmadi"
+  ],
+  "date": "2026-03-28T11:04:53+00:00",
+  "url": "http://arxiv.org/abs/2603.27233v1",
+  "categories": [
+    "cs.CL",
+    "cs.SI"
+  ],
+  "primary_category": "cs.CL",
+  "sections": [
+    {
+      "heading": "1\u2002\u2006Introduction",
+      "text": "Afghanistan presents one of the most severe contemporary intersections of population-level psychological distress and computational resource scarcity.\nSince August 2021: a ban on girls\u2019 secondary and higher education\n(1.1+ million students) [ 43 , 44 ] ; poverty exceeding 80% [ 46 ] ; over 3.4 million internally displaced [ 45 ] ;\nand formal psychological support services covering less than 1% of those in need [ 47 ] .\nPre-crisis surveys documented depression prevalence of 72.1% and PTSD of\n20.4%, among the highest globally [ 35 ] , with conditions\ndeteriorating further [ 48 , 8 ] .\n\nDespite this, Afghan voices are virtually absent from computational stress and well-being NLP.\nExisting corpora address English [ 11 , 9 ] ,\nArabic [ 14 ] , Spanish [ 29 ] , and Chinese [ 20 ] ; crisis-affected low-resource communities remain\nunrepresented [ 34 ] .\nThe only prior NLP work on Afghan-specific text [ 23 ] captures public reactions to the education ban, not first-person self-reported stress narratives.\n\nThis study addresses this gap through a three-step research pipeline:\n(1) collecting self-reported stress narratives via a Dari-language survey,\n(2) constructing a multi-label annotated corpus, and\n(3) analyzing the data computationally to investigate the broader social and psychological structure of stress in a crisis-affected population.\nImportantly, this work does not provide clinical diagnosis or medical assessment; rather, it analyzes self-reported experiences through an interdisciplinary computational lens.\n\nWe introduce AfStress , a 737-response multi-label corpus\nof Dari stress narratives.\nUniquely, it integrates psychological constructs [ 26 ] ,\nsocio-structural stressors [ 44 ] , and linguistic\nfeatures enabling NLP classification.\nBeyond dataset construction, the paper uses this resource to examine whether stress in crisis-affected Afghanistan is primarily structurally driven or individually expressed, positioning the work at the intersection of NLP, computational social science, and psychologically grounded analysis.\n\nOur contributions: 1. A novel survey-based corpus (\u00a7 3 ): 737 Dari narratives, 12 labels, mean cardinality 5.54. 2. A computational layer (\u00a7 8 ): six baselines; best Macro-F 1 = 0.651. 3. A social science layer (\u00a7 5 ): evidence of structural stress dominance and gendered patterns. 4. A psychological layer (\u00a7 6 ): co-occurrence patterns consistent with and interpretable through learned helplessness, chronic stress accumulation, and emotional cascade theory. 5. Documented Dari NLP challenges (\u00a7 7 ): encoding normalization, ZWNJ handling, and threshold sensitivity."
+    },
+    {
+      "heading": "2.1\u2002NLP for Stress and Well-being Detection",
+      "text": "Gamon et\u00a0al. [ 12 ] pioneered depression detection from Twitter.\nThe CLPsych shared tasks [ 11 , 49 ] targeted stress, depression, and suicide risk from online text.\nThe SMHD dataset [ 9 ] and the eRisk lab [ 28 , 29 ] introduced self-report and forum-based benchmarks. Harrigian et\u00a0al. [ 21 ] documented systematic English-language bias across the field.\nMulti-label annotation was advanced by SemEval-2018 Task\u00a01 [ 33 ] and GoEmotions [ 13 ] (mean cardinality 1.4 vs. 5.54 here). Bostan and Klinger [ 6 ] identified cultural adaptation of emotion taxonomy as\nopen [ 27 ] ."
+    },
+    {
+      "heading": "2.2\u2002Dari and Persian NLP",
+      "text": "Persian NLP resources include SentiPers [ 50 ] ,\nFarsTail [ 3 ] , and DadmaTools [ 15 ] .\nParsBERT [ 16 ] provides Persian BERT;\nXLM-RoBERTa [ 10 ] covers 100 languages.\nDari introduces orthographic and vocabulary differences absent from\nPersian tools [ 38 ] ."
+    },
+    {
+      "heading": "2.3\u2002Psychological Theory",
+      "text": "Abramson et\u00a0al. [ 2 ] formalized hopelessness depression: stable negative\nexpectations about an uncontrollable future mediate the stressor\u2013depression\npathway. Seligman [ 41 ] established learned helplessness: repeated exposure to\nuncontrollable adverse events produces motivational, cognitive, and emotional\ndeficits. McEwen [ 31 ] distinguishes acute stress (adaptive, time-limited)\nfrom chronic allostatic load (multidimensional, persistent, damaging). Selby et\u00a0al. [ 40 ] proposed emotional cascade theory: poorly regulated emotions\namplify sequentially through rumination."
+    },
+    {
+      "heading": "2.4\u2002Stress as a Social Phenomenon",
+      "text": "Pearlin [ 37 ] established that structural social conditions\nare primary stress drivers in disadvantaged populations. Link and Phelan [ 51 ] showed fundamental social causes (poverty, discrimination)\nexplain persistent health inequalities.\nEmerging evidence suggests that prolonged educational restrictions,\nparticularly the exclusion of girls from secondary and higher education,\nare associated with elevated psychological distress beyond general\ncrisis-related stressors [ 44 , 43 ] ."
+    },
+    {
+      "heading": "3.1\u2002Data Collection",
+      "text": "Collected in 2026 via an online survey distributed to Afghan individuals\nthrough community networks, including student groups, educational organisations,\nand social messaging platforms. All prompts and labels were presented in Dari.\nSurvey components: (1)\u00a0demographics; (2)\u00a0free-text stress narrative;\n(3)\u00a0Dari checklist label selection."
+    },
+    {
+      "heading": "3.2\u2002Quality Control and Label Merging",
+      "text": "739 raw responses \u2192 \\to 737 after removing 2 entries with text but no\nlabels (IDs\u00a091 and\u00a0734).\nSix label columns silently all-zero due to Unicode bug; corrected by\nre-deriving all labels from raw Dari text after normalization\n(see \u00a7 7 ).\nFive sparse labels merged to reduce class imbalance:\nmigration + + separation + + loss \u2192 \\to Displacement & Loss ;\nhealth illness + + sleep \u2192 \\to Health-Related .\nFinal: 12 labels , all n \u2265 244 n\\geq 244 ."
+    },
+    {
+      "heading": "4.1\u2002Demographic Profile",
+      "text": "The corpus is 90% female (Figure 1 ) and 65% aged 18\u201325.\nThe female rate reflects: the girls\u2019 education ban targeting female students [ 44 ] ; women\u2019s greater motivation to report education\nstressors [ 42 ] ; and anonymous platforms as a rare safe space for\nAfghan women [ 23 ] .\nThis pattern is substantively meaningful and consistent with the differential\nimpact of the crisis on women [ 17 ] , although it is also shaped by the survey\u2019s\nonline recruitment channels and should not be interpreted as nationally representative."
+    },
+    {
+      "heading": "4.2\u2002Label Distribution",
+      "text": "Mean cardinality 5.54 substantially exceeds GoEmotions (1.4) [ 13 ] and SemEval-2018 (2.3) [ 33 ] , reflecting\nthe multidimensional nature of distress under protracted crisis.\nMean text length is 174.2 characters (median 96, max 2,347)."
+    },
+    {
+      "heading": "5.1\u2002Structural Stressors Dominate Emotional Responses",
+      "text": "The two most prevalent labels are structural stressors imposed by\ngovernment policy: uncertain future (62.6%) and education closure (60.0%).\nBoth exceed primary stress affect (58.1%) and hopelessness (55.9%).\nIn stress-appraisal theory [ 26 ] , stress arises from individual\ncognitive appraisal; in Pearlin\u2019s 1989 structural\nframework and Link & Phelan\u2019s 1995 fundamental causes theory,\nstructural conditions are primary.\nThe prevalence ordering in AfStress supports the structural account:\nthe external social structure, not individual psychology, is the dominant\nsource of distress for Afghan respondents.\n\nFinding 1 (Structural dominance): In AfStress , structural\nstressors imposed by political and economic conditions are more prevalent\nthan emotional responses. Stress in the Afghan crisis is structurally\ndriven, not primarily psychological in origin."
+    },
+    {
+      "heading": "5.2\u2002Emotion\u2013Stressor Co-occurrence",
+      "text": "Figure 4 shows that Hopelessness co-occurs most strongly\nwith Uncertain\u00a0future (329 joint instances), followed by Stress\u2013Uncertain\u00a0future\n(300), Stress\u2013Education\u00a0closure (278), and Hopelessness\u2013Education\u00a0closure (280).\nThe education ban generates near-equivalent co-occurrence with both\nHopelessness and Stress, providing computational support for broader evidence that prolonged\neducational restrictions, particularly the exclusion of girls from formal\neducation, are associated with elevated psychological distress beyond\ngeneral crisis-related stressors [ 44 , 43 ] ."
+    },
+    {
+      "heading": "5.3\u2002Correlation Structure",
+      "text": "Figure 5 reveals that all 66 off-diagonal label pairs have\npositive correlations.\nThe strongest associations are Hopelessness\u2013Uncertain\u00a0future ( r = 0.40 r=0.40 ),\nSadness\u2013Family ( r = 0.34 r=0.34 ), Sadness\u2013Burnout ( r = 0.28 r=0.28 ),\nEconomic\u2013Social ( r = 0.31 r=0.31 ), and Stress\u2013Anxiety ( r = 0.37 r=0.37 ).\nNo negative correlations exist: stressors and emotions reinforce rather\nthan substitute for one another."
+    },
+    {
+      "heading": "5.4\u2002Gendered Stress Patterns",
+      "text": "Female respondents report education closure at substantially higher rates\n(60.0% corpus-wide; higher among female subgroup), directly indexing\nthe gendered education ban [ 44 ] .\nMale respondents show higher displacement and economic stress rates,\nconsistent with Afghan patterns where male family members bear primary\nmigration and economic responsibilities [ 17 , 36 ] .\n\nFinding 2 (Gendered stress): Education closure and family stress\nare female-dominant; displacement and economic stress are male-dominant.\nThese patterns reflect the gendered structure of the Afghan crisis and\nprovide quantitative support for the claim that the girls\u2019 education ban\nis a direct source of psychological harm [ 43 ] .\n\nFinding 3 (Cumulative stress network): All 66 off-diagonal\nlabel correlations are positive. Stress in the Afghan context is\nexperienced as a cumulative network of simultaneously active burdens,\nconsistent with chronic allostatic load [ 31 ] ."
+    },
+    {
+      "heading": "6.1\u2002Learned Helplessness",
+      "text": "Hopelessness (55.9%) and uncertain future (62.6%) form the corpus\u2019s\nstrongest co-occurrence pair: Pearson r = 0.40 r=0.40 , Jaccard J = 0.388 J=0.388 ,\nand 329 joint instances (44.6% of all responses).\nThis maps precisely onto Abramson et\u00a0al. \u2019s\n( 1989 ) hopelessness theory: when individuals\nattribute negative outcomes to stable, global, and uncontrollable causes,\nsuch as an indefinite government-imposed ban on their right to\neducation, stable negative expectations about the future form, producing\nhopelessness as a direct cognitive\u2013affective consequence. Seligman \u2019s ( 1975 ) original learned\nhelplessness model further predicts that repeated exposure to uncontrollable\nadverse events produces motivational inhibition, passivity, and depression,\nprecisely the conditions of Afghan women under current restrictions.\n\nPsychological finding 1 (Learned helplessness): Hopelessness\u2013Uncertain\u00a0future co-occurs in 329/737 (44.6%) responses\nwith r = 0.40 r=0.40 and J = 0.388 J=0.388 . This is consistent with population-scale learned helplessness [ 2 , 41 ] as a consequence of the Afghan girls\u2019 education ban."
+    },
+    {
+      "heading": "6.2\u2002Chronic Multi-Dimensional Stress",
+      "text": "Acute stress responses [ 26 ] are characterised by a single\ndominant stressor, short duration, and physiological resolution.\nChronic stress, allostatic load [ 31 ] , is\ncharacterised by simultaneous multiple stressors, persistence, and\ncumulative damage.\nMean label cardinality 5.54 is the computational signature of chronic\nstress: the average respondent reports simultaneously active education\ndeprivation, economic hardship, uncertain future, hopelessness, and primary\nstress.\nFigure 3 shows that 65% of respondents carry \u2265 \\geq 4\nactive labels; 2.4% carry all 12.\n\nPsychological finding 2 (Chronic stress): Mean cardinality 5.54 and density 0.462 are the computational fingerprint\nof chronic allostatic load [ 31 ] , not acute stress.\nResponses carrying 10+ active labels (4.2% of corpus) reflect extreme\ncompound adversity consistent with documented crisis conditions [ 48 , 8 ] ."
+    },
+    {
+      "heading": "6.3\u2002Emotional Cascade Structure",
+      "text": "Selby et\u00a0al. [ 40 ] proposed that poorly regulated emotions amplify\nsequentially through rumination: heightened stress triggers anxious arousal,\ntransitioning to sadness as coping resources diminish, followed by burnout,\nand finally collapsing into hopelessness.\nWe operationalise this through Jaccard similarity between all emotion label pairs.\n\nFigure 6 reveals the cascade structure:\nStress\u2013Anxiety ( J = 0.49 J=0.49 ), Stress\u2013Sadness ( J = 0.42 J=0.42 ),\nSadness\u2013Burnout ( J = 0.40 J=0.40 ), Sadness\u2013Hopelessness ( J = 0.39 J=0.39 ),\nStress\u2013Burnout ( J = 0.37 J=0.37 ), Burnout\u2013Hopelessness ( J = 0.36 J=0.36 ),\nAnxiety\u2013Hopelessness ( J = 0.31 J=0.31 ).\nThe network is fully connected with monotonically decreasing edge weights\nfrom Stress outward, exactly the sequential escalation predicted by\ncascade theory.\n\nPsychological finding 3 (Emotional cascade): Jaccard similarity analysis reveals the cascade\nStress \u2192 \\to Anxiety \u2192 \\to Sadness \u2192 \\to Burnout \u2192 \\to Hopelessness\nwith J J ranging from 0.49 to 0.31.\nThis is consistent with cascade theory [ 40 ] and indicates\na sequential emotional deterioration pathway characteristic of\nunresolved, chronic stress."
+    },
+    {
+      "heading": "8.1\u2002Setup",
+      "text": "Split: 515/111/111 train/validation/test (70/15/15%, random_state=42 ).\nFeatures: character TF-IDF n n -grams (2\u20135, max_features =30,000, min_df =2, sublinear_tf =True).\nSix systems:\n(A)\u00a0Char TF-IDF + OvR Logistic Regression;\n(B)\u00a0Char TF-IDF + Linear SVM;\n(C)\u00a0Char TF-IDF + Complement Naive Bayes;\n(D)\u00a0Char TF-IDF + Linear SVM + gender/age metadata;\n(E) ParsBERT [ 16 ] , 5 epochs, early stopping;\n(F) XLM-RoBERTa [ 10 ] , 5 epochs, early stopping.\nAll systems use per-label thresholds tuned on the validation set."
+    },
+    {
+      "heading": "9\u2002\u2006Pioneering the Dari NLP Landscape",
+      "text": "Despite Dari being spoken by over 30 million people [ 38 ] ,\nit occupies Joshi et al.\u2019s 2020 \u201cneglected\u201d language tier.\nTo the best of our knowledge, AfStress is the first-person self-reported stress narratives in Dari.\n\nThree pillars: (1) Data void addressed: prior Dari resources are news wire or\nevent-reaction corpora [ 23 ] , not first-person psychological\ndisclosure; (2) Gold standard established: documentation of the Unicode bug,\nZWNJ handling, and threshold tuning constitutes the foundational technical\nspecification for Dari multi-label NLP; (3) Active frontier opened: AfStress provides citable datasets,\nevaluation protocols, and a psychological framework enabling uptake across NLP [ 16 , 10 ] , social science [ 8 , 37 ] , and gender studies [ 43 ] .\n\nLandmark claim: AfStress moves Dari from a neglected\nresource category to an active interdisciplinary frontier, providing\nenabling infrastructure for culturally-aware stress and well-being NLP for Afghan communities, at precisely the moment when those communities\nneed it most."
+    },
+    {
+      "heading": "10\u2002\u2006Limitations",
+      "text": "Several limitations bear on the generalisability of AfStress . First, recruitment was conducted via online dissemination through\nexisting community networks (e.g., student groups, educational organisations,\nand social media platforms). As participation required internet access,\ndigital literacy, and awareness of the survey channels, the sample is\nlikely to overrepresent individuals who are more connected, educated,\nand socially engaged. Populations in remote or infrastructure-limited\nregions, where internet connectivity is unstable, restricted, or unavailable,\nare systematically underrepresented.\n\nSecond, Afghanistan\u2019s current digital environment is characterised by\nuneven connectivity, frequent network disruptions, and regional disparities\nin access to mobile data and electricity. In some provinces, internet access\nis intermittent or prohibitively expensive, which constrains participation\nin online surveys and contributes to the relatively modest sample size\n( N = 737 N=737 ) despite broad dissemination efforts.\n\nThird, the 90% female composition, while substantively meaningful as a\nreflection of the disproportionate impact of the education ban and social\nrestrictions on women, limits straightforward generalisation to male\npopulations. Male-specific stress patterns should be interpreted with\ncaution due to smaller subgroup sample sizes and higher statistical\nuncertainty.\n\nFourth, responses are self-reported and collected through an online survey,\nwhich introduces potential self-selection bias: individuals experiencing\nhigher levels of stress or stronger motivation to share their experiences\nmay be more likely to participate. Additionally, responses reflect perceived\nand reported experiences rather than clinically validated assessments.\n\nFinally, the corpus captures a single cross-sectional snapshot, precluding\nlongitudinal analysis of stress trajectories or causal inference. Observed\nco-occurrence patterns and cascade structures should therefore be interpreted\nas correlational and theory-consistent rather than causal or predictive."
+    },
+    {
+      "heading": "11\u2002\u2006Ethical Considerations",
+      "text": "All responses were anonymized; no personally identifiable information was collected,\nand free-text responses were redacted for names and locations where necessary.\nParticipation was voluntary and based on informed consent. Ethics clearance was obtained from the relevant institutional review process [omitted for blind review]. The corpus is released under a restricted\nresearch license prohibiting re-identification and surveillance-related use. AfStress is a survey corpus of self-reported experiences; it does not constitute\na clinical assessment, psychological diagnosis, or medical record [ 4 , 25 ] ."
+    },
+    {
+      "heading": "12\u2002\u2006Conclusion",
+      "text": "We introduced AfStress , the first survey-based multi-label corpus of self-reported stress narratives in Dari: 737 responses, 12 binary labels, mean cardinality 5.54, and a three-layer interdisciplinary analysis framework.\n\nComputationally: character TF-IDF + Linear SVM achieves\nMacro-F 1 = 0.651 with per-label threshold tuning, outperforming\nboth ParsBERT and XLM-RoBERTa; threshold tuning provides +10.3 pp\nMicro-F 1 and should be standard practice.\n\nSocially: structural stressors (uncertain future 62.6%,\neducation closure 60.0%) exceed emotional responses, demonstrating\nstructurally-driven stress; gendered patterns confirm the education ban\nas a direct psychological harm mechanism [ 43 ] .\n\nPsychologically: Hopelessness\u2013Uncertain\u00a0future ( r = 0.40 r=0.40 , J = 0.388 J=0.388 , 329 joint instances) is consistent with population-scale learned helplessness [ 2 , 41 ] ; mean cardinality\n5.54 is the computational fingerprint of chronic allostatic load [ 31 ] ; and the Jaccard similarity network reveals the cascade\nStress \u2192 \\to Anxiety \u2192 \\to Sadness \u2192 \\to Burnout \u2192 \\to Hopelessness,\nconsistent with cascade theory [ 40 ] .\n\nAfStress moves Dari from a neglected resource category to an active\ninterdisciplinary frontier [ 24 ] , enabling future work in\nlow-resource NLP, computational social science, public health, and the\ndevelopment of culturally-aware stress and well-being NLP tools for Afghan communities."
+    },
+    {
+      "heading": "Data Availability Statement",
+      "text": "The AfStress dataset will be made publicly available upon acceptance of this paper. Prior to release, all records will be de-identified to remove personally identifiable information and to ensure compliance with ethical and data protection requirements."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1 : Demographic distribution ( N = 737 N=737 ): Female 660 (90%), Male 77 (10%).\n65% of respondents aged 18\u201325 (476 individuals).\nThe 90% female rate reflects differential crisis impact, particularly\nthe girls\u2019 education ban, not a sampling error.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27233/assets/fig1.png"
+    },
+    {
+      "caption": "Figure 2 : Label prevalence (% of 737 respondents, all 12 labels).\nStructural stressors, Uncertain future (62.6%) and Education closure\n(60.0%), exceed the prevalence of primary emotional states (Stress 58.1%).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27233/assets/fig2.png"
+    },
+    {
+      "caption": "Figure 3 : Label cardinality: responses by number of active labels.\nMean = 5.54 (dashed line). 65% of responses carry \u2265 \\geq 4 labels.\nHigh cardinality indicates compound, chronic stress rather than\nisolated conditions.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27233/assets/x1.png"
+    },
+    {
+      "caption": "Figure 4 : Emotion\u2013Stressor co-occurrence matrix: joint positive counts\n( N = 737 N=737 ). Hopelessness\u2013Uncertain\u00a0future (329) and\nStress\u2013Uncertain\u00a0future (300) are the strongest pairs.\nAll cells are positive: every stressor co-occurs with every emotion.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27233/assets/fig5.png"
+    },
+    {
+      "caption": "Figure 5 : Pearson correlation heatmap (12 \u00d7 \\times 12, merged labels).\nAll off-diagonal correlations are positive.\nStrongest pair: Hopelessness\u2013Uncertain\u00a0future ( r = 0.40 r=0.40 ).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27233/assets/fig4.png"
+    },
+    {
+      "caption": "Figure 6 : Emotional cascade network from Jaccard similarity of emotion\nlabel co-occurrences (edges shown for J \u2265 0.15 J\\geq 0.15 ).\nThe sequence Stress \u2192 \\to Anxiety \u2192 \\to Sadness \u2192 \\to Burnout \u2192 \\to Hopelessness matches emotional cascade theory [ 40 ] .\nStrongest edge: Stress\u2013Anxiety ( J = 0.49 J=0.49 ).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27233/assets/figx.png"
+    },
+    {
+      "caption": "Figure 7 : Model comparison: Micro-F1 and Macro-F1 for all systems (tuned thresholds).\nClassical TF-IDF models outperform both transformers on this small corpus.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27233/assets/fig6.png"
+    }
+  ],
+  "ar5iv_success": true
+}

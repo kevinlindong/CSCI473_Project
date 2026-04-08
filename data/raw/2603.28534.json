@@ -1,0 +1,138 @@
+{
+  "paper_id": "2603.28534",
+  "title": "Compressing Transformer Language Models via Matrix Product Operator Decomposition: A Case Study on PicoGPT",
+  "abstract": "Transformer-based language models achieve strong performance across NLP tasks, but their quadratic parameter scaling with hidden dimension makes deployment on resource-constrained hardware expensive. We study Matrix Product Operator (MPO) decomposition as a principled compression method for transformers. MPO factorises weight matrices into chains of low-rank cores, with approximation quality controlled by the bond dimension chi. We replace every nn.Linear layer in PicoGPT, a GPT-2-style character-level language model with about 1M parameters, with an MPOLinear module parameterised as an MPO chain. Cores are initialised either by TT-SVD from pretrained dense weights or from random initialisation, and trained using standard PyTorch autograd without a custom backward pass. We derive balanced factorisation schemes for the five distinct weight shapes in PicoGPT and evaluate bond dimensions chi in {4, 8, 16, 32} on Tiny Shakespeare. MPO compression achieves up to 13x compression per transformer block at chi = 4. At chi = 16, the model uses 191,872 parameters instead of 1,020,224 while retaining 97.7% of baseline token accuracy (51.6% vs 52.8%). Reconstruction error follows the expected trend and is lower for three-site than two-site factorisations at the same bond dimension. The chi = 8 model gives the best accuracy per parameter, exceeding the dense baseline by 2.7x on this metric. These results show that MPO parameterisation is a practical and theoretically grounded alternative to low-rank methods and unstructured pruning for transformer compression.",
+  "authors": [
+    "Younes Javanmard",
+    "Tanmoy Pandit",
+    "Masoud Mardani"
+  ],
+  "date": "2026-03-30T14:57:47+00:00",
+  "url": "http://arxiv.org/abs/2603.28534v1",
+  "categories": [
+    "cs.CL",
+    "physics.data-an"
+  ],
+  "primary_category": "cs.CL",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "Transformer language models have achieved state-of-the-art performance across a broad range of natural language tasks ( Vaswani et al. , 2017 ; Radford et al. , 2019 ; Brown et al. , 2020 ) . However, their parameter counts scale quadratically with the hidden dimension, making deployment on resource-constrained hardware expensive. A key empirical observation motivating compression is that neural network weights are heavily redundant ( Denil et al. , 2013 ) , suggesting that low-dimensional structure is present. A variety of compression techniques have been proposed, including weight pruning ( Han et al. , 2015 ) , CP-decomposition of convolutional filters ( Lebedev et al. , 2015 ) , knowledge distillation ( Hinton et al. , 2015 ) , and low-rank factorisation ( Hu et al. , 2022 ) .\n\nAn alternative perspective, imported from quantum information theory, represents weight tensors as Matrix Product Operators (MPOs) ( Oseledets , 2011 ; Kolda & Bader , 2009 ; Novikov et al. , 2015 ) . An MPO factorises a high-dimensional weight tensor into a chain of low-rank cores , each carrying only \ud835\udcaa \u200b ( \u03c7 2 \u200b d 2 ) \\mathcal{O}(\\chi^{2}d^{2}) parameters when the local physical dimensions are of order d d and the bond dimension is \u03c7 \\chi . The bond dimension is the single knob that controls the accuracy\u2013compression trade-off: increasing \u03c7 \\chi systematically recovers the dense weight.\n\nThis framework is familiar in the quantum many-body community under the name Tensor Train (TT) ( Oseledets , 2011 ) or Matrix Product State (MPS) when applied to vectors; the operator variant (MPO) is the natural choice for weight matrices. MPO-based neural compression was pioneered by Novikov et al. ( 2015 ) for fully-connected layers and subsequently extended to recurrent architectures ( Yang et al. , 2017 ; Tjandra et al. , 2017 ) , transformers ( Gao et al. , 2020 ) , and more recently to large language models by Tomut et al. ( 2024 ) , who reported substantial compression of LLaMA-2\u00a07B with a relatively modest accuracy drop.\n\nIn this paper we apply MPO compression to PicoGPT ( osborne2026picogpt ) , a pedagogical GPT-2-style implementation written from scratch in Julia following the transformer architecture of Vaswani et al. ( 2017 ) , which we re-implement in PyTorch to enable gradient-based fine-tuning of the compressed cores. The MPO cores are treated as first-class nn.Parameter tensors with gradients flowing through the contraction chain automatically \u2014 an approach related to the MPO arithmetic framework developed for quantum circuit compilation ( Javanmard , 2026 ) . Our contributions are: 1. A clean, fully autograd-compatible MPO layer ( MPOLinear ) that replaces any nn.Linear without custom backward code. 2. Factorisation schemes for all five weight shapes in PicoGPT, derived from balanced MPO design principles. 3. A systematic benchmark comparing dense and MPO-parameterised models across bond dimensions \u03c7 \u2208 { 4 , 8 , 16 , 32 } \\chi\\in\\{4,8,16,32\\} on character-level Shakespeare prediction. 4. An analysis of reconstruction error, training dynamics, and the accuracy\u2013compression Pareto frontier."
+    },
+    {
+      "heading": "2.1Tensor Train and Matrix Product Operators",
+      "text": "For a physics-oriented introduction to MPS and MPO see Or\u00fas ( 2014 ) . Tensor networks were first applied to supervised machine learning by Stoudenmire & Schwab ( 2016 ) , who showed that MPS can learn relevant features from image data.\n\nThe exact number of parameters in an L L -site MPO is N MPO = \u03c7 1 \u200b d 1 out \u200b d 1 in + \u2211 l = 2 L \u2212 1 \u03c7 l \u2212 1 \u200b \u03c7 l \u200b d l out \u200b d l in + \u03c7 L \u2212 1 \u200b d L out \u200b d L in , N_{\\text{MPO}}=\\chi_{1}d_{1}^{\\mathrm{out}}d_{1}^{\\mathrm{in}}+\\sum_{l=2}^{L-1}\\chi_{l-1}\\chi_{l}\\,d_{l}^{\\mathrm{out}}d_{l}^{\\mathrm{in}}+\\chi_{L-1}d_{L}^{\\mathrm{out}}d_{L}^{\\mathrm{in}}, (3) with N dense = out \u00d7 in N_{\\text{dense}}=\\mathrm{out}\\times\\mathrm{in} for the full dense matrix. In the common special case of a uniform bond dimension \u03c7 1 = \u22ef = \u03c7 L \u2212 1 = \u03c7 \\chi_{1}=\\cdots=\\chi_{L-1}=\\chi , this becomes N MPO = \u03c7 \u200b d 1 out \u200b d 1 in + \u2211 l = 2 L \u2212 1 \u03c7 2 \u200b d l out \u200b d l in + \u03c7 \u200b d L out \u200b d L in . N_{\\text{MPO}}=\\chi\\,d_{1}^{\\mathrm{out}}d_{1}^{\\mathrm{in}}+\\sum_{l=2}^{L-1}\\chi^{2}d_{l}^{\\mathrm{out}}d_{l}^{\\mathrm{in}}+\\chi\\,d_{L}^{\\mathrm{out}}d_{L}^{\\mathrm{in}}. (4) For balanced factorizations with bounded local dimensions and fixed bond dimension, the MPO parameter count grows only linearly in the number of sites L L , whereas the dense parameter count grows multiplicatively with the full input and output dimensions."
+    },
+    {
+      "heading": "2.2TT-SVD Algorithm",
+      "text": "The TT-SVD algorithm ( Oseledets , 2011 ) converts a dense weight matrix into an MPO via a sequential SVD sweep:\n\nLet \u03c3 l , r \\sigma_{l,r} denote the singular values discarded at unfolding step l l . Then the TT-SVD approximation satisfies the standard Frobenius-norm bound ( Oseledets , 2011 ) \u2016 \ud835\udc16 \u2212 \ud835\udc16 ^ \u2016 F 2 \u2264 \u2211 l = 1 L \u2212 1 \u2211 r > \u03c7 l \u03c3 l , r 2 . \\|\\mathbf{W}-\\widehat{\\mathbf{W}}\\|_{F}^{2}\\leq\\sum_{l=1}^{L-1}\\sum_{r>\\chi_{l}}\\sigma_{l,r}^{2}. (5) In particular, the reconstruction error decreases monotonically as the admissible bond dimensions increase."
+    },
+    {
+      "heading": "2.3Gradient Flow Through MPO Layers",
+      "text": "During training, the weight matrix is reconstructed on each forward pass via the contraction \ud835\udc16 ^ = contract \u2061 ( \ud835\udc9c ( 1 ) , \ud835\udc9c ( 2 ) , \u2026 , \ud835\udc9c ( L ) ) . \\widehat{\\mathbf{W}}=\\operatorname{contract}\\!\\left(\\mathcal{A}^{(1)},\\mathcal{A}^{(2)},\\ldots,\\mathcal{A}^{(L)}\\right). (6) Writing the reconstructed weight explicitly as \ud835\udc16 ^ i 1 \u200b \u22ef \u200b i L , j 1 \u200b \u22ef \u200b j L = \u2211 \u03b1 1 , \u2026 , \u03b1 L \u2212 1 \ud835\udc9c 1 , i 1 , j 1 , \u03b1 1 ( 1 ) \u200b \ud835\udc9c \u03b1 1 , i 2 , j 2 , \u03b1 2 ( 2 ) \u200b \u22ef \u200b \ud835\udc9c \u03b1 L \u2212 1 , i L , j L , 1 ( L ) , \\widehat{\\mathbf{W}}_{i_{1}\\cdots i_{L},\\;j_{1}\\cdots j_{L}}=\\sum_{\\alpha_{1},\\ldots,\\alpha_{L-1}}\\mathcal{A}^{(1)}_{1,i_{1},j_{1},\\alpha_{1}}\\mathcal{A}^{(2)}_{\\alpha_{1},i_{2},j_{2},\\alpha_{2}}\\cdots\\mathcal{A}^{(L)}_{\\alpha_{L-1},i_{L},j_{L},1}, (7) the gradient of the loss \u2112 \\mathcal{L} with respect to the l l -th core is obtained by contracting the loss gradient with the left and right environments: \u2202 \u2112 \u2202 \ud835\udc9c \u03b1 l \u2212 1 \u200b i l \u200b j l \u200b \u03b1 l ( l ) = \u2211 i 1 , \u2026 , i l \u2212 1 , i l + 1 , \u2026 , i L j 1 , \u2026 , j l \u2212 1 , j l + 1 , \u2026 , j L \u03b1 1 , \u2026 , \u03b1 l \u2212 2 , \u03b1 l + 1 , \u2026 , \u03b1 L \u2212 1 L \u03b1 l \u2212 1 ; i 1 \u200b \u22ef \u200b i l \u2212 1 , j 1 \u200b \u22ef \u200b j l \u2212 1 ( l ) \u200b \u2202 \u2112 \u2202 \ud835\udc16 ^ i 1 \u200b \u22ef \u200b i L , j 1 \u200b \u22ef \u200b j L \u200b R \u03b1 l ; i l + 1 \u200b \u22ef \u200b i L , j l + 1 \u200b \u22ef \u200b j L ( l ) , \\frac{\\partial\\mathcal{L}}{\\partial\\mathcal{A}^{(l)}_{\\alpha_{l-1}i_{l}j_{l}\\alpha_{l}}}=\\sum_{\\begin{subarray}{c}i_{1},\\dots,i_{l-1},\\,i_{l+1},\\dots,i_{L}\\\\\nj_{1},\\dots,j_{l-1},\\,j_{l+1},\\dots,j_{L}\\\\\n\\alpha_{1},\\dots,\\alpha_{l-2},\\,\\alpha_{l+1},\\dots,\\alpha_{L-1}\\end{subarray}}L^{(l)}_{\\alpha_{l-1};\\,i_{1}\\cdots i_{l-1},\\,j_{1}\\cdots j_{l-1}}\\;\\frac{\\partial\\mathcal{L}}{\\partial\\widehat{\\mathbf{W}}_{i_{1}\\cdots i_{L},\\;j_{1}\\cdots j_{L}}}\\;R^{(l)}_{\\alpha_{l};\\,i_{l+1}\\cdots i_{L},\\,j_{l+1}\\cdots j_{L}}, (8) where L \u03b1 l \u2212 1 ; i 1 \u200b \u22ef \u200b i l \u2212 1 , j 1 \u200b \u22ef \u200b j l \u2212 1 ( l ) = \u2211 \u03b1 1 , \u2026 , \u03b1 l \u2212 2 \ud835\udc9c 1 , i 1 , j 1 , \u03b1 1 ( 1 ) \u200b \ud835\udc9c \u03b1 1 , i 2 , j 2 , \u03b1 2 ( 2 ) \u200b \u22ef \u200b \ud835\udc9c \u03b1 l \u2212 2 , i l \u2212 1 , j l \u2212 1 , \u03b1 l \u2212 1 ( l \u2212 1 ) , L^{(l)}_{\\alpha_{l-1};\\,i_{1}\\cdots i_{l-1},\\,j_{1}\\cdots j_{l-1}}=\\sum_{\\alpha_{1},\\dots,\\alpha_{l-2}}\\mathcal{A}^{(1)}_{1,i_{1},j_{1},\\alpha_{1}}\\mathcal{A}^{(2)}_{\\alpha_{1},i_{2},j_{2},\\alpha_{2}}\\cdots\\mathcal{A}^{(l-1)}_{\\alpha_{l-2},i_{l-1},j_{l-1},\\alpha_{l-1}}, (9) and R \u03b1 l ; i l + 1 \u200b \u22ef \u200b i L , j l + 1 \u200b \u22ef \u200b j L ( l ) = \u2211 \u03b1 l + 1 , \u2026 , \u03b1 L \u2212 1 \ud835\udc9c \u03b1 l , i l + 1 , j l + 1 , \u03b1 l + 1 ( l + 1 ) \u200b \u22ef \u200b \ud835\udc9c \u03b1 L \u2212 1 , i L , j L , 1 ( L ) . R^{(l)}_{\\alpha_{l};\\,i_{l+1}\\cdots i_{L},\\,j_{l+1}\\cdots j_{L}}=\\sum_{\\alpha_{l+1},\\dots,\\alpha_{L-1}}\\mathcal{A}^{(l+1)}_{\\alpha_{l},i_{l+1},j_{l+1},\\alpha_{l+1}}\\cdots\\mathcal{A}^{(L)}_{\\alpha_{L-1},i_{L},j_{L},1}. (10)\n\nThus, the gradient has the standard left-environment / local-core / right-environment contraction structure familiar from single-site tensor-network optimization methods such as DMRG ( White , 1992 ) . In PyTorch, this is computed automatically by autograd through the tensordot \u2192 \\to permute \u2192 \\to reshape chain in\u00a0( 6 ); no custom backward pass is needed."
+    },
+    {
+      "heading": "3.1PicoGPT Architecture",
+      "text": "PicoGPT ( Osborne , 2026 ) is a character-level GPT-2-style language model implemented in pure Julia without automatic differentiation. Table 1 lists its default hyperparameters. The architecture follows Radford et al. ( 2019 ) : pre-norm residual blocks, sinusoidal positional encoding (no learnable PE), scaled dot-product multi-head causal self-attention, and a two-layer FFN with ReLU activation.\n\nEach transformer block contains six linear layers: \ud835\udc16 Q , \ud835\udc16 K , \ud835\udc16 V \u2208 \u211d D \u00d7 D \\mathbf{W}_{Q},\\mathbf{W}_{K},\\mathbf{W}_{V}\\in\\mathbb{R}^{D\\times D} (query/key/value projections), \ud835\udc16 O \u2208 \u211d D \u00d7 D \\mathbf{W}_{O}\\in\\mathbb{R}^{D\\times D} (attention output), \ud835\udc16 1 \u2208 \u211d d ff \u00d7 D \\mathbf{W}_{1}\\in\\mathbb{R}^{d_{\\text{ff}}\\times D} (FFN up-projection), and \ud835\udc16 2 \u2208 \u211d D \u00d7 d ff \\mathbf{W}_{2}\\in\\mathbb{R}^{D\\times d_{\\text{ff}}} (FFN down-projection).\nAdditionally, the language-model head \ud835\udc16 LM \u2208 \u211d V \u00d7 D \\mathbf{W}_{\\text{LM}}\\in\\mathbb{R}^{V\\times D} maps hidden states to logits."
+    },
+    {
+      "heading": "3.2MPO Factorisation Schemes",
+      "text": "For each linear layer shape, we choose a factorization ( d l out ) , ( d l in ) (d_{l}^{\\text{out}}),(d_{l}^{\\text{in}}) that (a) produces reasonably balanced physical dimensions across sites and (b) yields an integer factorization of the output and input sizes. Table 2 summarizes our choices."
+    },
+    {
+      "heading": "3.3TheMPOLinearModule",
+      "text": "The MPOLinear module stores L L cores as nn.Parameter tensors, as illustrated in Figure 1 . The forward pass reconstructs \ud835\udc16 ^ \\widehat{\\mathbf{W}} via sequential torch.tensordot contractions and applies y = x \u200b \ud835\udc16 ^ \u22a4 + b y=x\\widehat{\\mathbf{W}}^{\\top}+b using F.linear . Initialisation uses the heuristic scale \u03c3 = N in \u2212 1 / 4 \u200b \u03c7 \u2212 ( L \u2212 1 ) / ( 2 \u200b L ) , \\sigma=N_{\\text{in}}^{-1/4}\\,\\chi^{-(L-1)/(2L)}, chosen so that the reconstructed weight has variance of the same order as the dense baseline initialization, namely \u03c3 dense 2 \u223c N in \u2212 1 \\sigma_{\\text{dense}}^{2}\\sim N_{\\text{in}}^{-1} , consistent with standard transformer practice ( Radford et al. , 2019 ) ."
+    },
+    {
+      "heading": "4.1Dataset and Tokenisation",
+      "text": "We train on the Tiny Shakespeare corpus ( Karpathy , 2015 ) , comprising approximately 1.1 \u00d7 10 6 1.1\\times 10^{6} characters, the same dataset used in the nanoGPT codebase ( Karpathy , 2022 ) . Character-level tokenisation yields a vocabulary of V = 65 V=65 symbols. We split the data 90/10 into training and validation sets."
+    },
+    {
+      "heading": "4.2Training Protocol",
+      "text": "All models are trained with AdamW ( Loshchilov & Hutter , 2019 ) ( \u03b2 1 = 0.9 \\beta_{1}=0.9 , \u03b2 2 = 0.95 \\beta_{2}=0.95 , weight decay 0.1 0.1 ) with a cosine learning rate schedule: linear warmup over 100 steps to \u03b7 max = 3 \u00d7 10 \u2212 4 \\eta_{\\text{max}}=3\\times 10^{-4} , followed by cosine decay to \u03b7 min = 0 \\eta_{\\text{min}}=0 . We train for 2\u2009000 steps with batch size 32 and sequence length T = 256 T=256 . Gradient clipping at \u2016 \u2207 \u2016 = 1.0 \\|\\nabla\\|=1.0 is applied as in Osborne ( 2026 ) . All runs use the same data pipeline and optimization hyperparameters. Dense and MPO models are initialized independently."
+    },
+    {
+      "heading": "4.3Compression Modes",
+      "text": "We consider two compression scenarios: 1. Train-from-scratch : MPO models are trained from random initialisations. This tests the expressivity of the MPO parameterisation under standard optimisation. 2. Compress-then-finetune : A fully-trained dense model is compressed via TT-SVD to initialise the MPO cores; the MPO model is then fine-tuned for 500 steps. This mirrors a practical deployment workflow."
+    },
+    {
+      "heading": "5.1Compression Statistics",
+      "text": "Table 3 reports total parameter counts and compression ratios for each bond dimension."
+    },
+    {
+      "heading": "5.2Per-Layer Reconstruction Error",
+      "text": "Figure 2 shows the reconstruction error as a function of bond dimension for each layer type. The FFN up-projection ( \ud835\udc16 1 \\mathbf{W}_{1} , 512 \u00d7 128 512\\times 128 , L = 3 L=3 ) achieves the lowest error at all \u03c7 \\chi , consistent with the fact that a three-site MPO can distribute structure across more local factors than a two-site decomposition at the same bond dimension. This is also consistent with the more favorable factorisation geometry of \ud835\udc16 1 \\mathbf{W}_{1} :\nfor fixed bond dimension, a three-site decomposition can distribute correlations across more\nlocal cores and therefore approximate anisotropic matrix structure more efficiently than a\ntwo-site decomposition of comparable size."
+    },
+    {
+      "heading": "5.3Training Dynamics",
+      "text": "Figures 3 and 4 show training and validation loss alongside validation token accuracy for all models trained from scratch.\n\nFigure 4 highlights the accuracy\u2013compression trade-off achieved by the MPO parameterisation. The left panel shows that all models improve steadily during training, with larger bond dimensions converging faster and reaching higher final validation accuracies. In particular, the \u03c7 = 16 \\chi=16 and \u03c7 = 32 \\chi=32 MPO models closely track the dense baseline throughout training and nearly saturate at the same final performance, whereas the more strongly compressed \u03c7 = 4 \\chi=4 and \u03c7 = 8 \\chi=8 models plateau at lower accuracies. The right panel summarizes this behaviour as a Pareto frontier: increasing \u03c7 \\chi systematically improves accuracy at the cost of additional parameters, with clear diminishing returns beyond \u03c7 = 16 \\chi=16 . Most notably, the MPO model with \u03c7 = 16 \\chi=16 attains 51.6 % 51.6\\% validation accuracy, which corresponds to 97.7 % 97.7\\% of the dense model\u2019s 52.8 % 52.8\\% accuracy, while using only 191\u2009872 191\\,872 parameters instead of 1\u2009020\u2009224 1\\,020\\,224 , i.e. a 5.3 \u00d7 5.3\\times parameter compression. This identifies \u03c7 = 16 \\chi=16 as the most attractive compromise between compression and predictive performance in the present experiments."
+    },
+    {
+      "heading": "5.4Summary of Results",
+      "text": "Table 4 summarises the final performance of all models after 2\u2009000 training steps.\n\nUnder the heuristic proxy acc / N \\text{acc}/\\sqrt{N} used in Table 4 , MPO \u03c7 = 8 \\chi=8 achieves the highest parameter-efficiency score. We treat this quantity only as an informal diagnostic; the main comparison in this work is the accuracy\u2013compression Pareto frontier in Figure 4 ."
+    },
+    {
+      "heading": "7Conclusion",
+      "text": "We have demonstrated MPO compression of all linear layers in a GPT-2-style transformer, achieving parameter compression ratios of 5 \u2013 13 \u00d7 5\\text{--}13\\times per transformer block. At bond dimension \u03c7 = 16 \\chi=16 , the MPO model retains 97.7 % 97.7\\% of the dense baseline\u2019s token accuracy with only 18.8 % 18.8\\% of its parameters. The implementation is straightforward in PyTorch: MPO cores are standard nn.Parameter tensors, and the entire pipeline \u2014 from TT-SVD initialization through autograd fine-tuning \u2014 requires no custom backward code.\n\nFuture directions include: (1) direct MPS\u2013MPO contraction for inference-time FLOP reduction; (2) ALS-based training for better convergence at low \u03c7 \\chi ; (3) dynamic bond adaptation (growing/pruning bonds during training); (4) application to larger models such as GPT-2 or LLaMA, where the compression ratio may improve further due to the larger factorized weight matrices; and (5) exploration of deeper tensor network architectures beyond the shallow MPO chain.\nMore broadly, these results support the view that tensor-network structure can provide an\ninterpretable inductive bias for neural compression, linking approximation quality directly\nto a controllable structural parameter."
+    },
+    {
+      "heading": "Acknowledgements",
+      "text": "We thank Tobias Osborne for the PicoGPT.jl codebase, which served as the reference implementation, and Andrej Karpathy for the Tiny Shakespeare dataset and nanoGPT codebase ( Karpathy , 2022 ) ."
+    },
+    {
+      "heading": "Code Availability",
+      "text": "The full PyTorch implementation of MPO-PicoGPT \u2014 including the MPOLinear module, TT-SVD compression pipeline, training loop, and benchmark scripts \u2014 is publicly available at: https://github.com/younesjavanmard/mpo-picogpt The repository contains mpo_picogpt.py (core implementation) and benchmark_mpo.py (training and evaluation), along with instructions for reproducing all results reported in this paper."
+    },
+    {
+      "heading": "Plain Language Summary",
+      "text": "Modern AI language models contain hundreds of millions of numerical parameters\n(weights), making them expensive to run on laptops, phones, or embedded\ndevices. This paper asks: can we store these weights in a more compact form\nwithout losing much accuracy? We borrow a mathematical tool from quantum\nphysics called a Matrix Product Operator (MPO), which represents a large\nweight matrix as a short chain of smaller tensors connected by a \u201cbond\u201d.\nBy choosing a small bond dimension \u03c7 \\chi , we can compress each weight matrix\nby a factor of 5 to 13 while retaining over 97% of the model\u2019s\ncharacter-prediction accuracy. Crucially, our implementation in PyTorch is\nas easy to train as an ordinary neural network \u2014 the compact tensors are\nlearned automatically using standard gradient descent. We release all code\nopenly so that others can apply this approach to larger models."
+    },
+    {
+      "heading": "Author Contributions",
+      "text": "Y.J. : Conceptualization, methodology, software, formal analysis,\nwriting \u2014 original draft, writing \u2014 review & editing. T.P. : Validation, formal analysis, writing \u2014 review & editing. M.D. : Validation, formal analysis, writing \u2014 review & editing."
+    },
+    {
+      "heading": "Funding",
+      "text": "This research received no specific grant from any funding agency in the\npublic, commercial, or not-for-profit sectors."
+    },
+    {
+      "heading": "Declarations",
+      "text": "Conflict of interest. The authors declare that they have no known competing financial interests or\npersonal relationships that could have appeared to influence the work reported\nin this paper.\n\nEthics statement. This work involves no human participants, animal subjects, or sensitive\npersonal data. All datasets used (Tiny Shakespeare) are publicly available\nand in the public domain. No ethical approval was required."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1: Tensor network diagram of an MPO weight matrix. Horizontal lines carry\nvirtual (bond) indices of dimension \u03c7 \\chi ; vertical lines are physical indices\nof size d l out d_{l}^{\\mathrm{out}} (blue, upward) and d l in d_{l}^{\\mathrm{in}} (red, downward).\nContracting all bond indices reconstructs the full weight \ud835\udc16 ^ \u2208 \u211d out \u00d7 in \\widehat{\\mathbf{W}}\\in\\mathbb{R}^{\\mathrm{out}\\times\\mathrm{in}} .",
+      "image_path": ""
+    },
+    {
+      "caption": "Figure 2: Per-layer MPO reconstruction error versus bond dimension. Three-site decompositions ( L = 3 L=3 ) achieve lower error per parameter than two-site ones ( L = 2 L=2 ) across the range of \u03c7 \\chi considered here.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28534/assets/x1.png"
+    },
+    {
+      "caption": "Figure 3: Training (left) and validation (right) cross-entropy loss as a function of training step. Higher bond dimensions converge faster and to lower loss values in the train-from-scratch setting studied here.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28534/assets/x2.png"
+    },
+    {
+      "caption": "",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28534/assets/x2.png"
+    },
+    {
+      "caption": "",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28534/assets/x3.png"
+    },
+    {
+      "caption": "Figure 4: Left : Validation token accuracy during training for all models. Right : Pareto frontier of final validation accuracy versus parameter count. MPO \u03c7 = 16 \\chi=16 retains 97.7 % 97.7\\% of the dense accuracy at 5.3 \u00d7 5.3\\times parameter compression.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28534/assets/x4.png"
+    },
+    {
+      "caption": "",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28534/assets/x4.png"
+    },
+    {
+      "caption": "",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28534/assets/x5.png"
+    }
+  ],
+  "ar5iv_success": true
+}

@@ -1,0 +1,19 @@
+{
+  "paper_id": "2603.27459",
+  "title": "A tree interpretation of arc standard dependency derivation",
+  "abstract": "We show that arc-standard derivations for projective dependency trees determine a unique ordered tree representation with surface-contiguous yields and stable lexical anchoring. Each \\textsc{shift}, \\textsc{leftarc}, and \\textsc{rightarc} transition corresponds to a deterministic tree update, and the resulting hierarchical object uniquely determines the original dependency arcs. We further show that this representation characterizes projectivity: a single-headed dependency tree admits such a contiguous ordered representation if and only if it is projective. The proposal is derivational rather than convertive. It interprets arc-standard transition sequences directly as ordered tree construction, rather than transforming a completed dependency graph into a phrase-structure output. For non-projective inputs, the same interpretation can be used in practice via pseudo-projective lifting before derivation and inverse decoding after recovery. A proof-of-concept implementation in a standard neural transition-based parser shows that the mapped derivations are executable and support stable dependency recovery.",
+  "authors": [
+    "Zihao Huang",
+    "Ai Ka Lee",
+    "Jungyeul Park"
+  ],
+  "date": "2026-03-29T00:45:43+00:00",
+  "url": "http://arxiv.org/abs/2603.27459v1",
+  "categories": [
+    "cs.CL"
+  ],
+  "primary_category": "cs.CL",
+  "sections": [],
+  "figures": [],
+  "ar5iv_success": true
+}

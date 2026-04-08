@@ -1,0 +1,92 @@
+{
+  "paper_id": "2603.28376",
+  "title": "Marco DeepResearch: Unlocking Efficient Deep Research Agents via Verification-Centric Design",
+  "abstract": "Deep research agents autonomously conduct open-ended investigations, integrating complex information retrieval with multi-step reasoning across diverse sources to solve real-world problems. To sustain this capability on long-horizon tasks, reliable verification is critical during both training and inference. A major bottleneck in existing paradigms stems from the lack of explicit verification mechanisms in QA data synthesis, trajectory construction, and test-time scaling. Errors introduced at each stage propagate downstream and degrade the overall agent performance. To address this, we present Marco DeepResearch, a deep research agent optimized with a verification-centric framework design at three levels: \\textbf{(1)~QA Data Synthesis:} We introduce verification mechanisms to graph-based and agent-based QA synthesis to control question difficulty while ensuring answers are unique and correct; \\textbf{(2)~Trajectory Construction:} We design a verification-driven trajectory synthesis method that injects explicit verification patterns into training trajectories; and \\textbf{(3)~Test-time scaling:} We use Marco DeepResearch itself as a verifier at inference time and effectively improve performance on challenging questions. Extensive experimental results demonstrate that our proposed Marco DeepResearch agent significantly outperforms 8B-scale deep research agents on most challenging benchmarks, such as BrowseComp and BrowseComp-ZH. Crucially, under a maximum budget of 600 tool calls, Marco DeepResearch even surpasses or approaches several 30B-scale agents, like Tongyi DeepResearch-30B.",
+  "authors": [
+    "Bin Zhu",
+    "Qianghuai Jia",
+    "Tian Lan",
+    "Junyang Ren",
+    "Feng Gu",
+    "Feihu Jiang",
+    "Longyue Wang",
+    "Zhao Xu",
+    "Weihua Luo"
+  ],
+  "date": "2026-03-30T12:42:02+00:00",
+  "url": "http://arxiv.org/abs/2603.28376v1",
+  "categories": [
+    "cs.CL",
+    "cs.AI"
+  ],
+  "primary_category": "cs.CL",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "Large language models (LLMs) have enabled tool-augmented agents that can autonomously reason and interact with external environments [Team et al., 2025b , Huang et al., 2025 ] . Within this line, Deep research agents [OpenAI, 2025 , Google, 2024 ] have attracted broad attention: proprietary systems such as OpenAI Deep Research [OpenAI, 2025 ] and Gemini Deep Research [Google, 2024 ] demonstrate exceptional information-seeking capabilities for solving complex tasks in real-world scenarios, while open-source systems like MiroThinker [Team et al., 2025a ] , Tongyi DeepResearch [Team et al., 2025b ] , and AgentCPM-Explore [Chen et al., 2026a ] have rapidly narrowed the gap and in some settings matched or surpassed proprietary alternatives [Mialon et al., 2023 , Wei et al., 2025 , Phan et al., 2025 ] . This progress is largely driven by advances in data synthesis [Li et al., 2025a , Tao et al., 2025 ] , reinforcement learning [Shao et al., 2024 , Dong et al., 2025 ] , and test-time scaling [Xu et al., 2026c , Li et al., 2025b ] .\n\nDespite this progress, current deep research agents face a critical bottleneck: the lack of explicit verification across the following three essential stages, leading to error propagation and overall performance degradation of agents [Xu et al., 2026a , Lan et al., 2024a , b ] :\n(1) QA Data Synthesis : most works synthesize QA samples from graph-based [Wu et al., 2025a ] or agent-based web exploration [Xu et al., 2026b ] , but entity obfuscation\u2014the most widely adopted technique in existing pipelines\u2014often yields non-unique or incorrect answers [Team et al., 2026c ] , undermining supervision quality and propagating errors to downstream trajectory construction;\n(2) Trajectory construction : most existing works rely on strong teacher models to generate ReAct-style trajectories that can directly reach correct final answers, but these trajectories usually lack explicit verification [Yao et al., 2023 ] ; as a result, trained agents tend to accept early low-quality results, under-explore high-value alternatives [Hu et al., 2025b , Wan et al., 2026a ] ;\nand (3) Test-time scaling : systems generally lack explicit verification for both intermediate steps and the final answers during inference; consequently, flawed intermediate states and incorrect conclusions propagate unchecked, leading agents to accept early errors rather than triggering verifier-guided behaviors to effectively scale test-time compute [Wan et al., 2026a ] .\n\nTo address these verification gaps, we present Marco DeepResearch , an efficient 8B-scale deep research agent with three improvements across these stages: (1) Verified Data Synthesis (Section 3 ): where we introduce an explicit verification mechanisms to graph-based and agent-based QA synthesis methods so that question-answer pairs are carefully checked, ensuring their difficulties, uniqueness and correctness; (2) Verification-Driven Trajectory Construction (Section 4 ): where we introduce a specialized verifier agent to verify the answers of sub-tasks and final answer using web search tools, providing more explicit verification patterns into single-agent and multi-agent trajectories; and (3) Verifier-Guided Test-Time Scaling (Section 5 ): we use the Marco DeepResearch agent itself as a verifier and continue reasoning on challenging questions under a controlled compute budget, thereby more effectively unlocking the potential of test-time scaling.\n\nWith these optimizations, we synthesize high-quality trajectories and train the Marco DeepResearch agent based on the Qwen3-8B base model [Yang et al., 2025a ] , and evaluate it on six deep search benchmarks like BrowseComp [Wei et al., 2025 ] , BrowseComp-ZH [Zhou et al., 2025 ] , and GAIA [Mialon et al., 2023 ] .\nSpecifically, Marco DeepResearch outperforms 8B-scale deep research agents on most challenging deep benchmarks such as BrowseComp [Team et al., 2025a , Chen et al., 2026a ] . Moreover, under a budget of up to 600 tool calls [Team et al., 2025a ] , our proposed Marco DeepResearch agent surpasses MiroThinker-v1.0-8B on BrowseComp-ZH and matches or exceeds several 30B-scale agents, including Tongyi DeepResearch-30B [Team et al., 2025b ] and MiroThinker-v1.0-30B [Team et al., 2025a ] . Ablation studies further prove the contributions of our designs for optimizing Marco DeepResearch."
+    },
+    {
+      "heading": "3Verified Data Synthesis",
+      "text": "In this section, we apply explicit verification to QA data synthesis to ensure the quality and answer uniqueness while keeping their difficulties.\nHigh-quality QA data is essential for both trajectory synthesis and optimization.\nA common bottleneck in existing approaches is answer non-uniqueness : to increase question difficulty, most methods obfuscate entity information in multi-hop questions [Team et al., 2025a , Xu et al., 2026b ] , which inevitably introduces ambiguity and may result in low-quality questions with multiple valid answers.\nWhen such data is used as ground truth, the training becomes biased and unstable.\nWe address this problem through two complementary synthesis pipelines: graph-based and agent-based, each incorporating explicit verification to guarantee answer quality."
+    },
+    {
+      "heading": "3.1Graph-Based Synthesis with Adversarial Verification",
+      "text": "Most graph-based QA synthesis methods still face a core difficulty: it is hard to jointly guarantee search depth, answer uniqueness, correctness, and entity leakage control in QA construction [Team et al., 2026c ] . To address this, we introduce a unified paradigm of answer-first reverse construction with adversarial verification in graph-based QA synthesis, organized as an iterative loop:"
+    },
+    {
+      "heading": "3.2Agent-Based Web Exploration Synthesis",
+      "text": "Compared with graph-based methods, agent-based QA synthesis significantly enhances data realism and broadens domain coverage [Team et al., 2025a , Xu et al., 2026b ] . Motivated by these advantages, we also construct QA data via agent-based web exploration, empowering agents to autonomously navigate real-world web environments to formulate real-world, complex, multi-hop questions [Xu et al., 2026b , Tao et al., 2025 ] . Despite its benefits, this dynamic setting inevitably introduces common failure cases, such as factual hallucinations, ambiguous answers, and pseudo multi-hop questions that are easily bypassed by shortcut retrieval [Xu et al., 2026b ] .\nTo control these failures, we design a Generation\u2013Execution\u2013Verification loop with a question agent, a search agent, and a verification agent. The key design is to separate question construction from independent solving and then enforce strict third-party verification before data acceptance."
+    },
+    {
+      "heading": "4Verification-Driven Trajectory Construction",
+      "text": "Single-agent ReAct is still the dominant trajectory synthesis recipe in current deep research systems [Li et al., 2025a , Team et al., 2025a ] . However, this pipeline typically does not explicitly verify key intermediate results, so errors made in early steps can directly propagate and accumulate, degrading final performance. We therefore argue that high-quality trajectories should contain explicit verification patterns, including both intermediate checks for sub-task outputs and final checks for the proposed answer. Prior work [Wan et al., 2026b ] on deep-search benchmarks also suggests that, for needle-in-a-haystack tasks, direct solving is difficult while answer verification conditioned on the question (or sub-question) is relatively reliable [Mialon et al., 2023 , Wei et al., 2025 ] .\nTo capitalize on this easy-to-verify property, we introduce two complementary designs for trajectory construction: multi-agent verified synthesis and verification-reflection re-rollout."
+    },
+    {
+      "heading": "5Verifier-Guided Test-Time Scaling",
+      "text": "Current test-time scaling for deep research agents mainly increases interaction rounds or rollout budget [Team et al., 2025a ] . While this can improve coverage, blindly scaling turns often accumulates early tool errors and noisy intermediate conclusions, which reduces reliability on long-horizon search tasks [Team et al., 2026b ] . Therefore, we propose Verifier-Guided Test-time Scaling that adds explicit verification into inference-time scaling and uses Marco DeepResearch itself as a verifier. By combining the Discard All context management strategy with verification [DeepSeek-AI et al., 2025 ] , we realize more effective test-time scaling under a fixed maximum interaction budget T max T_{\\max} ."
+    },
+    {
+      "heading": "6Training Pipeline",
+      "text": "The training pipeline consists of Supervised Fine-Tuning and Reinforcement Learning."
+    },
+    {
+      "heading": "6.2Reinforcement Learning",
+      "text": "Starting from the SFT checkpoint, we optimize the policy with Group Relative Policy Optimization (GRPO) [Shao et al., 2024 ] , where updates are driven by within-group relative advantages. Concretely, for each query q q , we sample a group of G G rollouts { o i } i = 1 G \\{o_{i}\\}_{i=1}^{G} from the old policy \u03c0 \u03b8 old \\pi_{\\theta_{\\text{old}}} and optimize \ud835\udca5 GRPO ( \u03b8 ) = \ud835\udd3c q \u223c P \u200b ( Q ) { o i } i = 1 G \u223c \u03c0 \u03b8 old [ \\displaystyle\\mathcal{J}_{\\text{GRPO}}(\\theta)=\\mathbb{E}_{\\begin{subarray}{c}q\\sim P(Q)\\\\\n\\{o_{i}\\}_{i=1}^{G}\\sim\\pi_{\\theta_{\\text{old}}}\\end{subarray}}\\Bigg[ 1 G \u200b \u2211 i = 1 G min \u2061 ( r i \u200b ( \u03b8 ) \u200b A ^ i , clip \u200b ( r i \u200b ( \u03b8 ) , 1 \u2212 \u03f5 , 1 + \u03f5 ) \u200b A ^ i ) \\displaystyle\\frac{1}{G}\\sum_{i=1}^{G}\\min\\Big(r_{i}(\\theta)\\hat{A}_{i},\\,\\mathrm{clip}\\!\\left(r_{i}(\\theta),1-\\epsilon,1+\\epsilon\\right)\\hat{A}_{i}\\Big) (2) \u2212 \u03b2 \ud835\udd3b KL [ \u03c0 \u03b8 \u2225 \u03c0 ref ] ] \\displaystyle-\\beta\\,\\mathbb{D}_{\\text{KL}}\\!\\left[\\pi_{\\theta}\\,\\|\\,\\pi_{\\text{ref}}\\right]\\Bigg] where r i \u200b ( \u03b8 ) = \u03c0 \u03b8 \u200b ( o i | q ) \u03c0 \u03b8 old \u200b ( o i | q ) r_{i}(\\theta)=\\frac{\\pi_{\\theta}(o_{i}|q)}{\\pi_{\\theta_{\\text{old}}}(o_{i}|q)} denotes the importance sampling ratio. The relative advantage is computed by reward normalization within each group: A ^ i = r i \u2212 mean \u200b ( { r j } j = 1 G ) std \u200b ( { r j } j = 1 G ) . \\hat{A}_{i}=\\frac{r_{i}-\\mathrm{mean}\\left(\\{r_{j}\\}_{j=1}^{G}\\right)}{\\mathrm{std}\\left(\\{r_{j}\\}_{j=1}^{G}\\right)}. (3)\n\nWe adopt an outcome-based reward, and balance reward quality and computational cost by using a two-stage LLM-as-Judge pipeline: a fast primary judge (Qwen-Turbo-Latest) evaluates all samples, and uncertain or low-confidence cases are escalated to a secondary judge (GPT-4.1) for re-evaluation: r \u200b ( q , o ) = { 1 , if \u200b \ud835\udca5 \u200b ( o , a \u2217 ) = correct , 0 , otherwise , r(q,o)=\\begin{cases}1,&\\text{if }\\mathcal{J}(o,a^{*})=\\text{correct},\\\\\n0,&\\text{otherwise},\\end{cases} (4) where q q is the input query, o o is the generated output, a \u2217 a^{*} is the reference answer, and \ud835\udca5 \u200b ( \u22c5 ) \\mathcal{J}(\\cdot) is the judging function."
+    },
+    {
+      "heading": "8.1Main Results",
+      "text": "Table 1 demonstrates that Marco-DeepResearch-8B outperforms other 8B-scale open-source deep search trained agents on most of benchmarks.\nSpecifically, it attains the highest scores in its size category on exploration-heavy tasks, including BrowseComp (31.4), BrowseComp-ZH (47.1), WebWalkerQA (69.6), and xBench-DeepSearch (82.0 on the 2505 split and 42.0 on the 2510 split). For the remaining three benchmarks, our proposed Marco-DeepResearch agent remains highly competitive, missing the top score on GAIA text-only by a marginal 0.5 points compared to RE-TRAC-4B.\nNotably, Marco-DeepResearch-8B approaches and even surpasses several competitive 30B-scale deep search agents on several benchmark, like Tongyi-DeepResearch. These results validate the efficacy of our proposed QA data synthesis, trajectory construction methods and test-time scaling strategy, proving that our optimized 8B model can effectively close the performance gap with massive foundation models in complex web navigation and information-seeking tasks."
+    },
+    {
+      "heading": "8.2Analysis",
+      "text": "We conduct detailed analysis from five aspects: (1) data statistics analysis; (2) effect of QA data verification; (3) ablation study on verification-driven trajectory construction; (4) improvement of reinforcement learning; (5) ablation study on verifier-guided test-time scaling; and (6) context window extension during training."
+    },
+    {
+      "heading": "9Conclusion",
+      "text": "This paper addresses a bottleneck in current deep research agents: the lack of explicit verification across QA data synthesis, trajectory construction, and inference, which leads to error propagation and under-utilized test-time computation. To solve this, we propose Marco DeepResearch, a 8B-scale deep search agent that optimized by our proposed verification-centric design with three improvements: verified QA synthesis, verification-driven trajectory construction, and verifier-guided test-time scaling. Extensive experimental results demonstrate that our proposed Marco DeepResearch agent significantly outperforms 8B-scale open-source deep search agents on most benchmarks BrowseComp and BrowseComp-ZH, and surpasses several 30B-scale deep search agents on BrowseComp-ZH. Furthermore, detailed analysis and ablation study verify the positive contributions of our verification-centric designs."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1 : Benchmark performance of our proposed Marco DeepResearch 8B-scale agent.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28376/assets/x1.png"
+    },
+    {
+      "caption": "Figure 2 : Overall framework of our verification-center design for Marco DeepResearch agents.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28376/assets/x2.png"
+    },
+    {
+      "caption": "Figure 3 : Distribution comparison between the open-source multi-hop QA dataset (2Wiki, BeerQA, etc.) and our synthesized data. Left: token count per sample. Right: tool-call rounds per sample.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28376/assets/x3.png"
+    },
+    {
+      "caption": "Figure 4 : Distribution comparison between three deep search data (ASearcher, DeepDive, and REDSearcher) and our synthesized data. Left: token count per sample. Right: tool-call rounds per sample. Our data is consistently shifted toward longer outputs and more tool interactions.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28376/assets/x5.png"
+    },
+    {
+      "caption": "Figure 5 : Relative to open-source data, our synthesized datasets indicate higher intrinsic difficulty.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28376/assets/x7.png"
+    }
+  ],
+  "ar5iv_success": true
+}

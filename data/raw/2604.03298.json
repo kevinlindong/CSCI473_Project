@@ -1,0 +1,38 @@
+{
+  "paper_id": "2604.03298",
+  "title": "ENEC: A Lossless AI Model Compression Method Enabling Fast Inference on Ascend NPUs",
+  "abstract": "The rapid scaling of Large Language Models presents significant challenges for their deployment and inference, particularly on resource-constrained specialized AI hardware accelerators such as Huawei's Ascend NPUs, where weight data transfer has become a critical performance bottleneck. While lossless compression can preserve model accuracy and reduce data volume, existing lossless compression algorithms exhibit extremely low throughput when ported to the Ascend NPU architecture. In this paper, we propose ENEC, a novel lossless compression method specifically customized for AI model weights and optimized for Ascend Neural Processing Units. ENEC adopts a block-based fixed-length encoding scheme and incorporates a series of NPU-specific optimizations: bit-width quantization with hierarchical halving bit-packing, vectorized branch-free integer transformation, and dependency-decoupled intra-segment scan for efficient prefix-sum computation. Experimental results demonstrate that ENEC outperforms existing state-of-the-art NPU compressors in both compression ratio and throughput. Compared to leading GPU solutions, ENEC achieves a 3.43X higher throughput than DietGPU and a 1.12X better compression ratio than nvCOMP. By reducing weight transmission overhead, ENEC significantly improves end-to-end inference performance, achieving up to a 6.3X speedup. On Ascend NPUs, ENEC is the first open-source lossless compression algorithm for model weights that achieves performance comparable to state-of-the-art GPU compressors, offering an effective solution for deploying large-scale AI models.",
+  "authors": [
+    "Jinwu Yang",
+    "Jiaan Wu",
+    "Zedong Liu",
+    "Xinyang Ma",
+    "Hairui Zhao",
+    "Yida Gu",
+    "Yuanhong Huang",
+    "Xingchen Liu",
+    "Wenjing Huang",
+    "Zheng Wei",
+    "Jing Xing",
+    "Yili Ma",
+    "Qingyi Zhang",
+    "Baoyi An",
+    "Zhongzhe Hu",
+    "Shaoteng Liu",
+    "Xia Zhu",
+    "Jiaxun Lu",
+    "Guangming Tan",
+    "Dingwen Tao"
+  ],
+  "date": "2026-03-28T16:11:56+00:00",
+  "url": "http://arxiv.org/abs/2604.03298v2",
+  "categories": [
+    "cs.AR",
+    "cs.DC",
+    "cs.LG"
+  ],
+  "primary_category": "cs.AR",
+  "sections": [],
+  "figures": [],
+  "ar5iv_success": false
+}

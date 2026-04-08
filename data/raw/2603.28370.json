@@ -1,0 +1,22 @@
+{
+  "paper_id": "2603.28370",
+  "title": "Tailoring AI-Driven Reading Scaffolds to the Distinct Needs of Neurodiverse Learners",
+  "abstract": "Neurodiverse learners often require reading supports, yet increasing scaffold richness can sometimes overload attention and working memory rather than improve comprehension. Grounded in the Construction-Integration model and a contingent scaffolding perspective, we examine how structural versus semantic scaffolds shape comprehension and reading experience in a supervised inclusive context. Using an adapted reading interface, we compared four modalities: unmodified text, sentence-segmented text, segmented text with pictograms, and segmented text with pictograms plus keyword labels. In a within-subject pilot with 14 primary-school learners with special educational needs and disabilities, we measured reading comprehension using standardized questions and collected brief child- and therapist-reported experience measures alongside open-ended feedback. Results highlight heterogeneous responses as some learners showed patterns consistent with benefits from segmentation and pictograms, while others showed patterns consistent with increased coordination costs when visual scaffolds were introduced. Experience ratings showed limited differences between modalities, with some apparent effects linked to clinical complexity, particularly for perceived ease of understanding. Open-ended feedback of the learners frequently requested simpler wording and additional visual supports. These findings suggest that no single scaffold is universally optimal, reinforcing the need for calibrated, adjustable scaffolding and provide design implications for human-AI co-regulation in supervised inclusive reading contexts.",
+  "authors": [
+    "Soufiane Jhilal",
+    "Eleonora Pasqua",
+    "Caterina Marchesi",
+    "Riccardo Corradi",
+    "Martina Galletti"
+  ],
+  "date": "2026-03-30T12:38:41+00:00",
+  "url": "http://arxiv.org/abs/2603.28370v2",
+  "categories": [
+    "cs.CL",
+    "cs.HC"
+  ],
+  "primary_category": "cs.CL",
+  "sections": [],
+  "figures": [],
+  "ar5iv_success": false
+}

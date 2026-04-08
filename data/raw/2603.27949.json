@@ -1,0 +1,64 @@
+{
+  "paper_id": "2603.27949",
+  "title": "EnsemJudge: Enhancing Reliability in Chinese LLM-Generated Text Detection through Diverse Model Ensembles",
+  "abstract": "Large Language Models (LLMs) are widely applied across various domains due to their powerful text generation capabilities. While LLM-generated texts often resemble human-written ones, their misuse can lead to significant societal risks. Detecting such texts is an essential technique for mitigating LLM misuse, and many detection methods have shown promising results across different datasets. However, real-world scenarios often involve out-of-domain inputs or adversarial samples, which can affect the performance of detection methods to varying degrees. Furthermore, most existing research has focused on English texts, with limited work addressing Chinese text detection. In this study, we propose EnsemJudge, a robust framework for detecting Chinese LLM-generated text by incorporating tailored strategies and ensemble voting mechanisms. We trained and evaluated our system on a carefully constructed Chinese dataset provided by NLPCC2025 Shared Task 1. Our approach outperformed all baseline methods and achieved first place in the task, demonstrating its effectiveness and reliability in Chinese LLM-generated text detection. Our code is available at https://github.com/johnsonwangzs/MGT-Mini.",
+  "authors": [
+    "Zhuoshang Wang",
+    "Yubing Ren",
+    "Guoyu Zhao",
+    "Xiaowei Zhu",
+    "Hao Li",
+    "Yanan Cao"
+  ],
+  "date": "2026-03-30T01:50:46+00:00",
+  "url": "http://arxiv.org/abs/2603.27949v1",
+  "categories": [
+    "cs.CL"
+  ],
+  "primary_category": "cs.CL",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "Large Language Models (LLMs) have become increasingly integrated into daily life due to their impressive natural language generation capabilities. As LLMs continue to evolve and become more accessible, the cost of generating text has significantly decreased, leading to growing concerns over the misuse of LLM-generated content. For instance, students may use LLMs to write academic papers on their behalf, malicious actors might produce and disseminate harmful fake news, and hallucinated content from LLMs could spread misinformation, negatively impacting online communities. These issues pose serious challenges to the responsible development and deployment of LLMs.\n\nAs a result, detecting LLM-generated text has become an urgent and essential task. Early approaches were primarily rule-based, relying on the extraction of specific statistical features from the text for classification [ 4 , 10 , 13 ] . However, with the advancement of LLMs, LLM-generated text has become increasingly similar to human-written content, rendering such statistical methods progressively less effective. In recent years, training-based methods [ 16 , 12 , 8 , 24 , 7 , 17 ] \u2014such as fine-tuning pretrained language models\u2014and training-free approaches [ 14 , 23 , 1 , 9 , 22 ] based on generation probability have emerged. Nevertheless, these methods often suffer from notable limitations: rule-based approaches are labor-intensive and rely heavily on handcrafted rules; training-based methods tend to struggle with generalization to out-of-domain data; and training-free methods are sensitive to factors such as text length, making them less reliable for real-world deployment. Moreover, the majority of existing work has been conducted on English datasets, and the effectiveness of these methods on other languages, such as Chinese, remains underexplored.\n\nIn this paper, we propose an ensemble-based framework for LLM-generated text detection, aiming to optimize overall detection performance across diverse scenarios. Specifically, we treat each existing detection method as an independent base model and evaluate their performance differences when handling various types of text. We dynamically assign ensemble strategies to different inputs, each strategy applies differentiated voting weights to the individual models, thereby enabling the system to achieve optimal performance in aggregate. This framework effectively leverages the strengths of different models on different text types, ensuring robust and reliable performance across many real-world conditions.\n\nBased on this framework, we develop a complete LLM-generated text detection system. We participate in the NLPCC2025 Shared Task 1, where we train and fine-tune our models using the official training set. Evaluation results show that our system achieves the highest macro F1 score compared to baseline models on the test set, which includes normal and adversarial texts. It is important to note that the test set differs significantly from the training set in terms of data distribution, and its construction methodology is entirely unknown to participants before the release of evaluation results. As a result, system optimization relies solely on anticipating potential adversarial strategies.\n\nOur main contributions are as follows: 1. We evaluate the performance of several mainstream LLM-generated text detection methods on Chinese text data and assess their robustness against a variety of adversarial scenarios that may arise in real-world applications. 2. We propose an ensemble-based detection framework, EnsemJudge, which effectively integrates the strengths of multiple models by applying tailored strategies and ensemble voting rules to different types of text. 3. Based on this framework, we implement an extensible LLM-generated text detection system which achieves first place on the NLPCC2025 Shared Task 1, demonstrating its strong performance and reliability."
+    },
+    {
+      "heading": "2Related Work",
+      "text": "Detecting LLM-generated texts has attracted increasing attention due to its critical role in enhancing transparency and preventing misuse. Existing detection methods primarily include training-based methods and training-free methods.\n\nTraining-based methods typically utilize supervised classifiers to differentiate human-written from LLM-generated texts, such as early RoBERTa classifiers [ 16 ] . Recent advancements like RADAR [ 12 ] , DeTeCtive [ 8 ] , DPIC [ 24 ] , and Biscope [ 7 ] leverage adversarial training, contrastive learning, prompt reconstruction, and statistical features, respectively. However, these methods face significant limitations, particularly poor generalization to out-of-distribution (OOD) scenarios due to feature overfitting [ 2 ] , prompting a shift toward training-free solutions.\n\nTraining-free methods exploit statistical and probabilistic text characteristics, bypassing model training. Techniques such as LogRank [ 4 ] , Likelihood [ 10 ] , and Entropy [ 13 ] analyze uncertainty metrics. DetectGPT [ 14 ] introduced contrastive perturbation paradigms, later enhanced by methods like Fast-DetectGPT [ 1 ] for improved efficiency, Binoculars [ 9 ] using cross-model perplexity, and Lastde++ [ 22 ] via Diversity Entropy. Despite advancements, computational efficiency and real-time detection remain key challenges."
+    },
+    {
+      "heading": "3Method",
+      "text": "In this section, we present EnsemJudge, an ensemble-based framework for LLM-generated text detection. We begin by outlining the motivation for adopting an ensemble approach, followed by a detailed description of the framework."
+    },
+    {
+      "heading": "3.1Observation and Motivation",
+      "text": "Although numerous LLM-generated text detection methods have been proposed in recent years [ 20 ] , most of them are designed and evaluated on English datasets, with limited evidence of their effectiveness on Chinese text. Therefore, we first extract features or train models based on the training set and evaluate the performance of various detection methods on the development set. 1 1 1 According to the guidelines of NLPCC2025 Shared Task 1, all data involved in the task are in Chinese, and participants are restricted to using only the officially provided training and development sets for system development; the use of external data is not permitted [ 15 ] ."
+    },
+    {
+      "heading": "3.2EnsemJudge: A Reliable Detection Framework",
+      "text": "We begin by defining the notion of reliability in LLM-generated text detection, followed by a detailed introduction to the EnsemJudge framework."
+    },
+    {
+      "heading": "4Experiments",
+      "text": "In this section, we evaluate EnsemJudge for Chinese LLM-generated text detection based on the resources provided by NLPCC2025 Shared Task 1 [ 15 ] . We first present the details of the dataset, evaluation metrics, and system implementation, followed by a report of the evaluation results."
+    },
+    {
+      "heading": "4.2Evaluation Results",
+      "text": "We evaluate the LLM-generated text detection system implemented based on the EnsemJudge framework on the official test set. Table 3 reports the macro F1 scores of the overall system as well as each base model across different test set partitions. Specifically, \u201cMixed\u201d, \u201cParaphrase\u201d and \u201cPerturbation\u201d denote three types of adversarial attacks, while \u201c64\u201d, \u201c128\u201d, \u201c256\u201d and \u201c512\u201d indicate four different text lengths. Labels such as \u201c5001-6000\u201d represent the ID ranges of the corresponding subsets within the test set.\n\nOverall Performance. Our system achieves the best performance on the overall test set as well as across all individual subsets. On non-adversarial samples, it reaches a perfect macro F1 score of 1.000, indicating completely correct predictions. Even on the full test set, the system achieves a macro F1 of 0.9922, with improvements up to 9.0% on certain individual subsets, demonstrating strong reliability.\nAs illustrated in figure 2 , different categories of detection methods exhibited substantial performance differences. Rule-based methods are largely ineffective, with macro F1 scores not exceeding 0.6. Training-free methods perform moderately better, with scores around 0.8. Training-based methods show the best results, reaching up to 0.95. Furthermore, for methods of the same type, we observe similar patterns when confronted with various adversarial attacks. Their differences in performance primarily stem from specific implementation details."
+    },
+    {
+      "heading": "5Conclusion",
+      "text": "In this paper, we propose EnsemJudge, a reliable and extensible ensemble framework for LLM-generated text detection in real-world scenarios. By dynamically assigning voting strategies based on lightweight textual features and integrating a decision support module, EnsemJudge effectively leverages the strengths of diverse detection methods while mitigating their weaknesses. Our system is rigorously evaluated on the NLPCC2025 Shared Task 1 dataset, which includes both in-distribution and challenging out-of-distribution adversarial samples. The experimental results demonstrate that EnsemJudge achieves state-of-the-art performance, showing strong generalization and robustness across various text types and attack settings. This work highlights the importance of adaptive ensemble approaches for reliable LLM-generated text detection, especially in low-resource languages such as Chinese, and provides a practical foundation for future research and deployment in real-world applications.\n\n{credits}"
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1: The EnsemJudge Detection Framework.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27949/assets/x1.png"
+    },
+    {
+      "caption": "Figure 2: Model performance (macro F1-score) for our system and different base models.",
+      "image_path": ""
+    }
+  ],
+  "ar5iv_success": true
+}

@@ -1,0 +1,377 @@
+{
+  "paper_id": "2603.27515",
+  "title": "Match or Replay: Self Imitating Proximal Policy Optimization",
+  "abstract": "Reinforcement Learning (RL) agents often struggle with inefficient exploration, particularly in environments with sparse rewards. Traditional exploration strategies can lead to slow learning and suboptimal performance because agents fail to systematically build on previously successful experiences, thereby reducing sample efficiency. To tackle this issue, we propose a self-imitating on-policy algorithm that enhances exploration and sample efficiency by leveraging past high-reward state-action pairs to guide policy updates. Our method incorporates self-imitation by using optimal transport distance in dense reward environments to prioritize state visitation distributions that match the most rewarding trajectory. In sparse-reward environments, we uniformly replay successful self-encountered trajectories to facilitate structured exploration. Experimental results across diverse environments demonstrate substantial improvements in learning efficiency, including MuJoCo for dense rewards and the partially observable 3D Animal-AI Olympics and multi-goal PointMaze for sparse rewards. Our approach achieves faster convergence and significantly higher success rates compared to state-of-the-art self-imitating RL baselines. These findings underscore the potential of self-imitation as a robust strategy for enhancing exploration in RL, with applicability to more complex tasks.",
+  "authors": [
+    "Gaurav Chaudhary",
+    "Laxmidhar Behera",
+    "Washim Uddin Mondal"
+  ],
+  "date": "2026-03-29T04:44:48+00:00",
+  "url": "http://arxiv.org/abs/2603.27515v1",
+  "categories": [
+    "cs.LG"
+  ],
+  "primary_category": "cs.LG",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "Deep Reinforcement Learning (DRL) (Li, 2017 ) has achieved remarkable success in solving complex problems across a variety of domains, including robotic manipulation (Han et\u00a0al., 2023 ) , flight control (Kaufmann et\u00a0al., 2018 ) , epidemic control (Ling et\u00a0al., 2024 ) , intelligent perception system (Chaudhary et\u00a0al., 2023 ) , and real-time strategy game-play (Andersen et\u00a0al., 2018 ) . However, despite these advancements, DRL algorithms still face significant challenges in efficient learning, leading to poor sample efficiency (Baker et\u00a0al., 2019 ) . A major contributing factor is reliance on unguided exploration to discover near-optimal policies, leading to slow convergence, particularly in environments with sparse rewards.\n\nGuided exploration using expert demonstration has been proposed as a potential solution. Approaches such as those in (Salimans & Chen, 2018 ; Ecoffet et\u00a0al., 2019 ; Xu et\u00a0al., 2023 ; Duan et\u00a0al., 2017 ; Zhou et\u00a0al., 2019 ; Haldar et\u00a0al., 2023 ) have used expert data to guide the agent\u2019s learning process. However, these methods often face challenges, such as difficulty obtaining expert demonstrations, the risk of bias, and the potential for convergence to suboptimal policies when demonstrations are insufficiently informative.\n\nOur work addresses these challenges by exploiting the agent\u2019s past successful state-action transitions to guide exploration. To this end, we propose a novel Self-Imitation Learning (SIL) (Oh et\u00a0al., 2018 ) approach that leverages the agent\u2019s past high-reward transitions to guide current policy updates\u2014effectively \u201cbootstrapping\" its learning process. This strategy enhances exploration and reduces the risk of divergence from effective behaviors (Lin, 1992 ) .\nBy leveraging the most rewarding past trajectories, our approach prevents the agent from deviating too far from previously learned successful behaviors, thereby improving exploration and learning efficiency.\n\nSelf-imitation learning has been applied to diverse complex tasks such as robotics (Luo & Schomaker, 2023 ; Luo et\u00a0al., 2021 ) , text-based games (Shi et\u00a0al., 2023 ) , procedurally generated environments (Lin et\u00a0al., 2023 ) , interactive navigation (Kim et\u00a0al., 2023 ) , and large language models (Xiao et\u00a0al., 2024 ) . Despite these advancements, a unified on-policy RL approach that effectively integrates self-imitation across both low-dimensional (structured) and high-dimensional (pixel-based) observations, while accommodating both dense and sparse reward settings, remains absent. Prior work, such as (Oh et\u00a0al., 2018 ) , has explored self-imitation in reinforcement learning; however, it primarily focuses on off-policy algorithms or incorporates off-policy elements when adapting self-imitation to on-policy methods like PPO (Schulman et\u00a0al., 2017 ) . In contrast, we introduce Self-Imitating Proximal Policy Optimization (SIPP)\u2014a framework explicitly designed for on-policy RL that seamlessly integrates self-imitation into PPO\u2019s update mechanism, without relying on replay buffers or off-policy corrections. By doing so, SIPP preserves PPO\u2019s stability and theoretical guarantees while significantly enhancing exploration and sample efficiency.\n\nFor dense reward environments, we propose the MATCH strategy. Even with high-dimensional state and action spaces and dense rewards, RL agents struggle with sample efficiency, leading to slow convergence or suboptimal policies. As implemented in SIPP, self-imitation addresses this by guiding the agent toward high-value regions of the state space, thereby reducing divergence from effective policies and accelerating learning. Specifically, the MATCH strategy uses optimal transport (Peyr\u00e9 et\u00a0al., 2019 ) , particularly the Sinkhorn algorithm (Cuturi, 2013 ) , to measure the similarity between the current policy\u2019s state distributions and the most rewarding episodic rollout from past experience. By prioritizing state-action transitions that closely match these rewarding distributions, the MATCH strategy ensures that exploration focuses on the self-encountered regions of the state space with high expected rewards.\n\nFor sparse and binary reward environments, we introduce the REPLAY strategy. Sparse and binary reward environments often present significant challenges for learning agents due to the limited availability of positive feedback. Our proposed REPLAY strategy, a variant of the MATCH strategy tailored to such sparse-reward scenarios, maintains an imitation buffer that stores previously encountered successful trajectories. However, while MATCH prioritizes individual state-action pairs, REPLAY introduces a trajectory-level replay mechanism tailored to sparse-reward settings. By replaying entire successful trajectories rather than isolated experiences, REPLAY improves learning in sparse-reward settings by repeatedly exposing the agent to high-return trajectories, which effectively reinforces key state-action dependencies over time. Additionally, as demonstrated in the Animal-AI Olympics experiments, REPLAY can handle partial observability, making it more versatile than existing methods.\n\nTo summarize, our key contributions are as follows:\n\n\u2022 Self-imitating on-policy algorithm: We propose Self-Imitating Proximal Policy Optimization (SIPP), a novel self-imitation learning algorithm that enhances exploration and sample efficiency in dense and sparse reward settings. \u2022 Optimal transport-based prioritization: We introduce the MATCH strategy, which uses Optimal Transport (Peyr\u00e9 et\u00a0al., 2019 ) and the Sinkhorn algorithm (Cuturi, 2013 ) to prioritize state-action transitions that closely match the state distribution of the most rewarding past episodic rollout, thereby improving learning efficiency in dense-reward environments. \u2022 Sparse reward scenario: We develop a REPLAY strategy that stores and reuses successful trajectories to reinforce long-term dependencies and improve learning from delayed rewards, resulting in enhanced sample efficiency. \u2022 Diverse empirical validation: We validate SIPP through experiments across a wide range of environments, including complex MuJoCo (Towers et\u00a0al., 2023 ) tasks, multi-goal PointMaze navigation (de\u00a0Lazcano et\u00a0al., 2023 ) , and partially observable 3D Animal-AI Olympics (Crosby et\u00a0al., 2019 ) , demonstrating significant improvements in learning efficiency and performance over state-of-the-art (Oh et\u00a0al., 2018 ; Gangwani et\u00a0al., 2018 ) ."
+    },
+    {
+      "heading": "2Related Work",
+      "text": "Many attempts have addressed the sample efficiency and exploration problem in reinforcement learning. However, this literature has divided the long work history mainly into guided and unguided exploration.\n\nGuided exploration paradigms aim to leverage expert trajectories (Chaudhary & Behera, 2025 ; Chaudhary et\u00a0al., 2025 ) to address RL agents\u2019 sample-efficiency and exploration problems. Recently, in this direction, (Sontakke et\u00a0al., 2024 ) presented an approach that uses a single demonstration and distilled knowledge contained in Video-and-Language Models (VLMs) to train a robotics policy. They use VLMs to generate rewards by comparing expert trajectories and policy rollouts. Another single demonstration guided approach was presented by (Libardi et\u00a0al., 2021 ) for solving three-dimensional stochastic exploration. They exploit expert trajectories and value-estimate prioritized trajectories to learn optimal policies under uncertainty. Similarly, (Salimans & Chen, 2018 ) trained a robust policy using a single demonstration by replaying the demonstration for n n steps, after which agents learned in a self-supervised manner. To make the agent robust to randomness, they monotonically decrease the replay steps n n . (Uchendu et\u00a0al., 2023 ) presents an expert-guided learning. They employ two policies to solve tasks: the guide policy and the exploration policy. The guide policy introduces a curriculum of initial states for the exploration policy, significantly easing the exploration challenge and facilitating rapid learning. As the exploration policy becomes more proficient, the reliance on the guide policy diminishes, allowing the RL policy to develop independently and continue improving autonomously. This progressive reduction in the influence of the guide policy enables the agent to transition to a fully autonomous exploration phase, thereby enhancing its long-term performance and adaptability.\n\n(Xu et\u00a0al., 2023 ) uses expert demonstration to improve exploration in learning from demonstrations in sparse reward settings. They assign an exploration score to each demonstration, generate an episode, and train a policy to imitate exploration behaviors. (Nair et\u00a0al., 2018 ) designs an auxiliary objective based on demonstrations to address hard exploration problems and gradually wean the demonstration guidance once the policy performs better than the demonstration. (Huang et\u00a0al., 2023 ) used a two-component approach: a novel actor-critic-based policy-learning module that efficiently uses demonstration data to guide RL exploration, and a non-parametric module that employs nearest-neighbor matching and locally weighted regression for robust guidance propagation at states distant from the demonstrated ones.\n\nUnguided exploration approaches use self-experience, count-based methods, or prioritized experience replay buffers to guide policy in hard exploration problems. In this literature, we focus only on approaches within the Self-Imitation Learning (SIL) paradigm, as coined by (Oh et\u00a0al., 2018 ) . (Oh et\u00a0al., 2018 ) presented an approach for self-imitation learning for off-policy algorithms. They store experiences in a replay buffer and learn to imitate state-action pairs in the replay buffer only when the return in the past episode is greater than the agent\u2019s value estimate. They also extended their approach to the on-policy algorithm. However, the proposed algorithm lacks a strong theoretical connection to on-policy algorithms.\n\n(Gangwani et\u00a0al., 2018 ) introduces the Stein Variational Policy Gradient (SVPG), a self-imitating algorithm designed for on-policy reinforcement learning. In this approach, policy optimization is framed as a divergence minimization problem, with the objective of minimizing the difference between the visitation distribution of the current policy and the distribution induced by experience replay trajectories with high returns. The method incorporates an auxiliary objective that regularizes this divergence, allowing for improved exploration and more effective policy updates. However, their experiments are limited to episodic, delayed, or noisy reward settings, which may restrict the generalizability of their results to more complex environments.\n\n(Chen & Lin, 2020 ) presents a SIL technique for off-policy algorithms. In their approach, they provide a constant reward at each step in addition to an episodic environment reward. Further, they maintain two replay buffers, one with K K highest episodic reward trajectories and the other with all agent-generated trajectories, and sample from these two replay buffers to train the policy. They limit their work to delayed episodic rewards. (Tang, 2020 ) presents a self-imitation learning approach for off-policy learning by extending the traditional Q-learning with a generalized\nn-step lower bound. They adopt SIL by leveraging trajectories where the behavior policy performs better than the current policy. (Ferret et\u00a0al., 2020 ) proposes a self-imitating variant of DQN for dense reward environments. In this approach, they propose adopting self-imitation via a modified reward function. They augment the true reward with a weighted advantage term, the difference between a true discounted reward and an expected future return.\n\n(Kang & Chen, 2020 ) introduces the Explore-then-Exploit (EE) framework, which integrates Random Network Distillation (RND) (Burda et\u00a0al., 2018 ) and Generative Adversarial Self-Imitation Learning (GASIL) (Guo et\u00a0al., 2018 ) . The framework addresses the exploration-exploitation trade-off by leveraging RND to facilitate exploration and prevent the policy from stagnating in local optima. At the same time, GASIL accelerates policy convergence by leveraging past successful trajectories. Rather than directly combining these methods, which could confuse the agent, the authors propose an interleaving approach in which the agent alternates between exploration and imitation based on specific criteria.\n\nRecently, (Li et\u00a0al., 2023 ) extended the SIL approach to Goal-Conditioned Reinforcement Learning. They achieve this by designing a target-action-value function that effectively combines the training mechanisms of the self-initiated policy and the actor policy. The SILP (Luo et\u00a0al., 2021 ) method uses a planning mechanism for robotic manipulation that identifies effective policies from prior experience, enabling the agent to imitate high-quality actions even when explicit demonstrations are unavailable. By incorporating planning into the SIL framework, the agent can efficiently explore and exploit past successful behaviors. The approach improves the exploration-exploitation balance and enhances learning stability.\n\nThe proposed approach aligns with unguided exploration with a focus on on-policy learning. The proposed approach uses past experiences to bootstrap policy learning, making a strong connection with the self-imitation learning paradigm."
+    },
+    {
+      "heading": "3Preliminaries",
+      "text": "We consider a Markov Decision Process (MDP) symbolized as the tuple \u2133 : \u27e8 \ud835\udcae , \ud835\udc9c , T , R , \u03b3 , \u03c1 \u27e9 \\mathcal{M}:\\langle\\mathcal{S},\\mathcal{A},T,R,\\gamma,\\rho\\rangle where \ud835\udcae \\mathcal{S} is the collection of environment states, \ud835\udc9c \\mathcal{A} is the action space, T : \ud835\udcae \u00d7 \ud835\udc9c \u2192 \u0394 \u200b ( \ud835\udcae ) T:\\mathcal{S}\\times\\mathcal{A}\\rightarrow\\Delta(\\mathcal{S}) indicates the state transition function where \u0394 \u200b ( \u22c5 ) \\Delta(\\cdot) defines the probability simplex over its argument set, R : \ud835\udcae \u00d7 \ud835\udc9c \u00d7 \ud835\udcae \u2192 \u211d R:\\mathcal{S}\\times\\mathcal{A}\\times\\mathcal{S}\\rightarrow\\mathbb{R} is the reward function, \u03b3 \\gamma \u2208 \\in ( 0 , 1 ) (0,1) denotes the discount factor, and \u03c1 \u2208 \u0394 \u200b ( \ud835\udcae ) \\rho\\in\\Delta(\\mathcal{S}) is the initial state distribution. At each time step t t , the agent observes the state s t s_{t} and executes an action a t \u2208 \ud835\udc9c a_{t}\\in\\mathcal{A} . As a consequence, the state of the environment changes to s t + 1 s_{t+1} following the transition law T T , and the agent receives a reward r t = R \u200b ( s t , a t , s t + 1 ) r_{t}=R(s_{t},a_{t},s_{t+1}) . A (stationary) policy is defined to be a map \u03c0 : \ud835\udcae \u2192 \u0394 \u200b ( A ) \\pi:\\mathcal{S}\\rightarrow\\Delta(A) . The reinforcement learning agent is trained to maximize the expected long-term discounted reward defined below over all \u03c0 \u2208 \u03a0 \\pi\\in\\Pi where \u03a0 \\Pi is the collection of all policies (Mondal & Aggarwal, 2024 ) . J \u03c1 \u03c0 = \ud835\udc04 \u03c0 \u200b [ \u2211 t = 0 \u221e \u03b3 t \u200b r t | s 0 \u223c \u03c1 ] \\displaystyle J^{\\pi}_{\\rho}=\\mathbf{E}_{\\pi}\\left[\\sum_{t=0}^{\\infty}\\gamma^{t}r_{t}\\big|s_{0}\\sim\\rho\\right] (1) where \ud835\udc04 \u03c0 \\mathbf{E}_{\\pi} denotes expectation over all \u03c0 \\pi -induced trajectories { ( s t , a t ) } t = 0 \u221e \\{(s_{t},a_{t})\\}_{t=0}^{\\infty} emanating from the initial distribution \u03c1 \\rho . For large state spaces, the policies are represented by a parameter \u03b8 \u2208 \u211d d \\theta\\in\\mathbb{R}^{\\mathrm{d}} where the dimension d \\mathrm{d} is chosen such that d \u226a | \ud835\udcae | \u200b | \ud835\udc9c | \\mathrm{d}\\ll|\\mathcal{S}||\\mathcal{A}| . For Neural Network-based policies, \u03b8 \\theta is the weight parameter. In this framework, the agent\u2019s goal is to maximize J \u03c1 \u03c0 \u03b8 \u225c J \u200b ( \u03b8 ) J_{\\rho}^{\\pi_{\\theta}}\\triangleq J(\\theta) over \u03b8 \u2208 \u211d d \\theta\\in\\mathbb{R}^{\\mathrm{d}} . We have dropped the dependence of \u03c1 \\rho on J \u200b ( \u03b8 ) J(\\theta) to simplify notations. We achieve this using a PPO-style gradient-based learning algorithm with few changes, driven by the self-imitation objective as explained in the forthcoming section."
+    },
+    {
+      "heading": "4Method",
+      "text": "In this work, we propose an approach that guides an agent\u2019s exploration by combining its current behavior with past successful trajectories to enable on-policy RL. Unlike prior self-imitation methods that rely on off-policy data or modify the reward function, SIPP operates entirely within the on-policy framework. By modifying the rollout buffer sampling strategy (MATCH) or selectively replaying successful trajectories (REPLAY), SIPP reuses successful trajectories in a controlled fashion and integrates them into PPO\u2019s on-policy training loop, without additional target networks or density-ratio corrections that are typical in off-policy RL. While this introduces some bias due to sample reuse, as discussed in works such as GePPO (Queeney et\u00a0al., 2021 ) , empirical results indicate that the training remains stable and effective. This seamless integration with PPO ensures that our approach is both stable and efficient. The key highlights are as follows:\n\n\u2022 Our approach does not alter the base RL policy (PPO) nor introduce new separate models requiring training, unlike prior works Gangwani et\u00a0al. ( 2018 ); Kang & Chen ( 2020 ) . \u2022 Our approach does not modify the true reward, preventing any bias in learning, unlike (Chen & Lin, 2020 ) . \u2022 We address exploration by self-imitation for dense, sparse, and binary rewards encompassing both low and high-dimensional (pixel-based) observations, unlike (Oh et\u00a0al., 2018 ; Gangwani et\u00a0al., 2018 ) , which addressed only delayed and noisy rewards for low-dimensional observations in an on-policy setting."
+    },
+    {
+      "heading": "4.1MATCH: A Self-Imitating Proximal Policy Optimization",
+      "text": "The MATCH strategy is designed to enhance exploration in dense reward environments by encouraging the agent to revisit transitions similar to those in the most rewarding past trajectory. Inspired by self-imitation learning, this approach assigns higher priority to state-action pairs that closely align with previously successful behaviors. To formally define the idea of similarity, we use Optimal Transport (OT) as a principled method to compare empirical state visitation distributions.\n\nOptimal Transport (OT) (Cuturi, 2013 ; Peyr\u00e9 & Cuturi, 2020 ; Luo et\u00a0al., 2023 ) is a geometry-aware framework for comparing probability distributions. Suppose we are given two empirical distributions represented as: \u03bc = 1 T \u200b \u2211 t = 1 T \u03b4 x t , \u03bd = 1 T \u2032 \u200b \u2211 t \u2032 = 1 T \u2032 \u03b4 y t \u2032 , \\mu=\\frac{1}{T}\\sum_{t=1}^{T}\\delta_{x_{t}},\\quad\\nu=\\frac{1}{T^{\\prime}}\\sum_{t^{\\prime}=1}^{T^{\\prime}}\\delta_{y_{t^{\\prime}}}, where x t x_{t} and y t \u2032 y_{t^{\\prime}} denote sample points in a metric space (e.g., state embeddings), and \u03b4 x t \\delta_{x_{t}} is the Dirac measure centered at x t x_{t} , assigning unit mass at that point.\n\nThe squared Wasserstein distance between \u03bc \\mu and \u03bd \\nu is given by: W 2 \u200b ( \u03bc , \u03bd ) = min \u03b6 \u2208 \u0393 \u200b \u2211 t = 1 T \u2211 t \u2032 = 1 T \u2032 c \u200b ( x t , y t \u2032 ) \u200b \u03b6 t \u200b t \u2032 , W^{2}(\\mu,\\nu)=\\min_{\\zeta\\in\\Gamma}\\sum_{t=1}^{T}\\sum_{t^{\\prime}=1}^{T^{\\prime}}c(x_{t},y_{t^{\\prime}})\\zeta_{tt^{\\prime}}, (2) where \u0393 = { \u03b6 \u2208 \u211d + T \u00d7 T \u2032 : \u03b6 \u200b \ud835\udfcf T \u2032 = 1 T \u200b \ud835\udfcf T , \u03b6 \u22a4 \u200b \ud835\udfcf T = 1 T \u2032 \u200b \ud835\udfcf T \u2032 } \\Gamma=\\left\\{\\zeta\\in\\mathbb{R}_{+}^{T\\times T^{\\prime}}:\\zeta\\mathbf{1}_{T^{\\prime}}=\\frac{1}{T}\\mathbf{1}_{T},\\zeta^{\\top}\\mathbf{1}_{T}=\\frac{1}{T^{\\prime}}\\mathbf{1}_{T^{\\prime}}\\right\\} is the set of doubly stochastic coupling matrices, and c \u200b ( x t , y t \u2032 ) c(x_{t},y_{t^{\\prime}}) is the cost of transporting unit mass from x t x_{t} to y t \u2032 y_{t^{\\prime}} . We invoke the cosine distance as the cost. To solve the above optimization efficiently, we apply the Sinkhorn algorithm (Cuturi, 2013 ) , which incurs a computational complexity of \ud835\udcaa \u200b ( T \u200b T \u2032 ) \\mathcal{O}(TT^{\\prime}) .\n\nThe MATCH algorithm has a nested loop structure. At the k k th instance of the outer loop, it produces a T T -length trajectory { ( s t k , a t k ) } t = 1 T \\{(s_{t}^{k},a_{t}^{k})\\}_{t=1}^{T} produced by the current policy \u03c0 \u03b8 k \\pi_{\\theta_{k}} (based on the task, T T is either deterministic or random) and stores it in a data buffer \ud835\udc9f \\mathcal{D} . If the trajectory stored in \ud835\udc9f \\mathcal{D} is the highest-rewarding one seen so far, then it is also stored in the imitation buffer \u212c \u2110 \\mathcal{B}_{\\mathcal{I}} , replacing any earlier-stored trajectories in it. Let { s 1 k , \u22ef , s T k } \\{s_{1}^{k},\\cdots,s_{T}^{k}\\} and { s 1 e , \u22ef , s T \u2032 e } \\{s_{1}^{e},\\cdots,s_{T^{\\prime}}^{e}\\} be the states of the trajectories stored in \ud835\udc9f \\mathcal{D} and \u212c \u2110 \\mathcal{B}_{\\mathcal{I}} respectively. Their empirical distributions are given as: q ^ k = 1 T \u200b \u2211 t = 1 T \u03b4 s t k , q ^ e = 1 T \u2032 \u200b \u2211 t \u2032 = 1 T \u2032 \u03b4 s t \u2032 e , \\displaystyle\\hat{q}_{k}=\\frac{1}{T}\\sum_{t=1}^{T}\\delta_{s^{k}_{t}},\\quad\\hat{q}_{e}=\\frac{1}{T^{\\prime}}\\sum_{t^{\\prime}=1}^{T^{\\prime}}\\delta_{s^{e}_{t^{\\prime}}}, (3) Their corresponding OT distance is given as: W 2 \u200b ( q ^ \u03c0 , q ^ e ) = min \u03b6 \u2208 \u0393 \u200b \u2211 t = 1 T \u2211 t \u2032 = 1 T \u2032 c \u200b ( s t k , s t \u2032 e ) \u200b \u03b6 t \u200b t \u2032 . W^{2}(\\hat{q}_{\\pi},\\hat{q}_{e})=\\min_{\\zeta\\in\\Gamma}\\sum_{t=1}^{T}\\sum_{t^{\\prime}=1}^{T^{\\prime}}c(s^{k}_{t},s^{e}_{t^{\\prime}})\\zeta_{tt^{\\prime}}. (4)\n\nLet \u03b6 \u2217 \\zeta^{*} be the solution to the above optimization. We define an OT-based similarity score for each state s t k s^{k}_{t} in the trajectory in \ud835\udc9f \\mathcal{D} as follows. d OT \u200b ( s t k ) = \u2212 \u2211 t \u2032 = 1 T \u2032 c \u200b ( s t k , s t \u2032 e ) \u200b \u03b6 t \u200b t \u2032 \u2217 d_{\\mathrm{OT}}(s^{k}_{t})=-\\sum_{t^{\\prime}=1}^{T^{\\prime}}c(s^{k}_{t},s^{e}_{t^{\\prime}})\\zeta^{*}_{tt^{\\prime}} (5)\n\nThe inner loop starts with initialization: \u03b8 k , 0 \u2190 \u03b8 k \\theta_{k,0}\\leftarrow\\theta_{k} . At the h h th instant of the inner loop, the agent chooses a batch of state-actions { ( s j k , a j k ) } j \u2208 \ud835\udca5 \\{(s_{j}^{k},a_{j}^{k})\\}_{j\\in\\mathcal{J}} from \ud835\udc9f \\mathcal{D} either via a uniform probability (exploration) or a priority-based strategy determined by the similarity score in equation 5 (imitation). The choice between exploration and imitation is decided by a hyperparameter \u03be \\xi , called the Imitation-Exploration Trade-off (IET) coefficient. For the chosen batch of state-action pairs, we can now define the PPO-based surrogate loss function as follows (Schulman et\u00a0al., 2017 ) . L PPO \u200b ( \u03b8 k , h ) = \ud835\udd3c j \u200b [ min \u2061 ( r j k \u200b h \u200b A j , clip \u200b ( r j k \u200b h , 1 \u2212 \u03f5 , 1 + \u03f5 ) \u200b A j ) ] , L^{\\text{PPO}}(\\theta_{k,h})=\\mathbb{E}_{j}\\left[\\min\\left(r_{j}^{kh}\\,A_{j},\\;\\text{clip}\\left(r_{j}^{kh},1-\\epsilon,1+\\epsilon\\right)A_{j}\\right)\\right], (6) where \ud835\udd3c j \\mathbb{E}_{j} denotes the empirical average over j \u2208 \ud835\udca5 j\\in\\mathcal{J} , \u03f5 \\epsilon defines a clipping hyperparameter, A j A_{j} is the estimate of the advantage (Schulman et\u00a0al., 2015 ) function corresponding to the policy \u03c0 \u03b8 k \u200b h \\pi_{\\theta_{kh}} and the pair ( s j , a j ) (s_{j},a_{j}) , and the ratio r j k \u200b h r_{j}^{kh} is given as follows. r j k \u200b h = \u03c0 \u03b8 k , h \u200b ( a j | s j ) \u03c0 \u03b8 k , h \u2212 1 \u200b ( a j | s j ) \\displaystyle r_{j}^{kh}=\\dfrac{\\pi_{\\theta_{k,h}}(a_{j}|s_{j})}{\\pi_{\\theta_{k,h-1}}(a_{j}|s_{j})} where we use the convention that, for h = 0 h=0 , \u03b8 k , h \u2212 1 \u2190 \u03b8 k \u2212 1 \\theta_{k,h-1}\\leftarrow\\theta_{k-1} . The policy parameter is now updated using gradient descent. \u03b8 k , h + 1 \u2190 \u03b8 k , h \u2212 \u03b7 \u200b \u2207 \u03b8 L PPO \u200b ( \u03b8 k , h ) \\displaystyle\\theta_{k,h+1}\\leftarrow\\theta_{k,h}-\\eta\\nabla_{\\theta}L^{\\text{PPO}}(\\theta_{k,h}) (7) where \u03b7 \\eta is the learning rate. Finally, we assign \u03b8 k + 1 \u2190 \u03b8 k , H \\theta_{k+1}\\leftarrow\\theta_{k,H} where H H is the inner loop length and start the ( k + 1 ) (k+1) th instant of the outer loop. Algorithm 1 summarizes the entire process.\n\nNote that our proposed approach does not rely on any explicit expert policy. Instead, it utilizes the distribution of the most-rewarding trajectory generated by the current behavior policy (stored in the imitation buffer) as the surrogate expert policy. This removes the dependency on external expert trajectories and leverages the agent\u2019s high-performing experiences. Our algorithm ensures that the imitation buffer evolves continuously as the agent discovers better-performing trajectories, thus adapting the surrogate expert distribution over time."
+    },
+    {
+      "heading": "4.2REPLAY: Self-Imitating Proximal Policy",
+      "text": "This section addresses the exploration challenge in sparse-reward settings using self-imitation. Sparse-reward environments often pose significant challenges for learning agents due to the limited availability of positive feedback. To mitigate this challenge, we propose the REPLAY strategy, adapted from (Libardi et\u00a0al., 2021 ) , a variant of the MATCH strategy tailored specifically for sparse-reward scenarios. Unlike MATCH, which uses past trajectories to generate preferences for current trajectories, the REPLAY strategy focuses on directly replaying successful past behaviors.\n\nThe structure of REPLAY is very similar to that of MATCH, except for some modifications mentioned below. REPLAY also maintains an imitation buffer, \u212c \u2110 \\mathcal{B}_{\\mathcal{I}} , and a data buffer, \ud835\udc9f \\mathcal{D} . However, unlike MATCH, in this case, \u212c \u2110 \\mathcal{B}_{\\mathcal{I}} dynamically stores multiple trajectories. The capacity of \u212c \u2110 \\mathcal{B}_{\\mathcal{I}} is a given hyperparameter. REPLAY runs in multiple epochs. Let the policy parameter at the k k th epoch be \u03b8 k \\theta_{k} . The agent either selects a trajectory from \u212c \u2110 \\mathcal{B}_{\\mathcal{I}} at random (imitation) or generates a trajectory induced by the current policy \u03c0 \u03b8 k \\pi_{\\theta_{k}} (exploration), and stores it into the data buffer \ud835\udc9f \\mathcal{D} . The probability of choosing either of these events is determined by the IET parameter \u03be \\xi . This sampling mechanism ensures a balance between imitation and exploration. A higher value of IET emphasizes exploitation by prioritizing trajectory sampling from \u212c \u2110 \\mathcal{B_{I}} , while a lower value encourages exploration by focusing on the trajectories generated from the agent\u2019s most recent interactions.\n\nNext, a batch of state-action pairs, { ( s j k , a j k ) } j \u2208 \ud835\udca5 \\{(s^{k}_{j},a^{k}_{j})\\}_{j\\in\\mathcal{J}} of length B B , is uniformly selected from the trajectory in \ud835\udc9f \\mathcal{D} . We can now define the surrogate PPO objective L PPO \u200b ( \u03b8 k ) L^{\\text{PPO}}(\\theta_{k}) in a way similar to equation 6 . The policy parameter \u03b8 k \\theta_{k} is updated via gradient descent. \u03b8 k + 1 \u2190 \u03b8 k \u2212 \u03b7 \u200b \u2207 \u03b8 L PPO \u200b ( \u03b8 k ) \\displaystyle\\theta_{k+1}\\leftarrow\\theta_{k}-\\eta\\nabla_{\\theta}L^{\\text{PPO}}(\\theta_{k}) (8) where \u03b7 \\eta is the learning rate. Finally, the data buffer is emptied, the imitation buffer \u212c \u2110 \\mathcal{B}_{\\mathcal{I}} is updated by storing the top L L number of rewarding trajectories seen so far, where L L is the capacity of \u212c \u2110 \\mathcal{B}_{\\mathcal{I}} , and the agent is prepared for the ( k + 1 ) (k+1) th update epoch. Observe that the update procedure of \u212c \u2110 \\mathcal{B}_{\\mathcal{I}} resembles the first-in first-out (FIFO) queuing mechanism. Algorithm 2 summarizes the entire process.\n\nIn our algorithm, the process of \u201creplay\u201d refers to including the trajectories stored in the imitation buffer \u212c \u2110 \\mathcal{B_{I}} into the data buffer \ud835\udc9f \\mathcal{D} and treating them as potential behaviors generated by the current policy. This ensures that the agent encounters successful trajectories at each epoch to guide policy learning, even in sparse-reward environments where most interactions yield little to no reward. This selective reuse of high-rewarding trajectories improves the sample efficiency and reduces the risk of the agent getting stuck in\nunproductive exploration loops. Our REPLAY strategy thus offers a robust framework for learning in sparse-reward environments."
+    },
+    {
+      "heading": "5Experiments",
+      "text": "In this section, we aim to answer the following questions: \u2022 Does bootstrapping policy learning, with its few past experiences, enhance sample efficiency and hard exploration across diverse tasks? \u2022 Can a single past successful behavior be sufficient to guide policy learning in complex sequential continuous control tasks? \u2022 Is replaying past successful trajectories sufficient for policy learning in multi-goal and partially observable, sparse reward settings?"
+    },
+    {
+      "heading": "5.1Implementation Details",
+      "text": "For dense reward environments in MuJoCo (Towers et\u00a0al., 2023 ) , we implement the Match strategy. The network architecture utilizes a multi-layer perceptron (MLP) with two hidden layers containing 64 units and t \u200b a \u200b n \u200b h tanh as the activation function. The PPO policy is updated over 10 epochs per training iteration. Training batches are sampled uniformly or prioritized based on the optimal transport distance between the current trajectories and past best episodic rollouts, controlled by the Imitation-Exploration Trade-off coefficient \u03f5 \\epsilon at each epoch. The imitation buffer is initiated with size 1. Further details about the hyperparameters and implementation can be found in the supplementary material Table 3 .\n\nFor sparse-reward settings, such as multi-goal PointMaze (de\u00a0Lazcano et\u00a0al., 2023 ) navigation tasks, we adopt the Replay strategy. This setup uses the same MLP-based architecture as MuJoCo environments. Similarly, for the Animal-AI Olympics (Crosby et\u00a0al., 2019 ) , a partially observable 3D environment with binary rewards, we apply the Replay strategy but with a different architecture: a three-layer convolutional neural network (CNN). The input comprises the last four stacked frames (84 \u00d7 84 RGB pixels). In both PointMaze and Animal-AI tasks, the rollout buffer is populated with trajectories sampled either from the current policy with probability 1 \u2212 \u03f5 1-\\epsilon or from the imitation buffer \u212c \u2110 \\mathcal{B_{I}} with probability \u03f5 \\epsilon . The imitation buffer is initialized with size 10. Comprehensive details of the hyperparameters for all environments are provided in the supplementary material Table 3 ."
+    },
+    {
+      "heading": "5.2Choice of Baselines:",
+      "text": "Self-imitation learning (SIL) has been primarily explored to enhance exploration in off-policy reinforcement learning (RL) algorithms, with limited focus on on-policy RL algorithms. Further, recent works (Luo & Schomaker, 2023 ; Xiao et\u00a0al., 2024 ; Shi et\u00a0al., 2023 ) predominantly focus on problem-specific adoption of SIL rather than advancing SIL from a broader algorithmic perspective. Notably, there remains limited analysis of SIL\u2019s potential for on-policy RL algorithms across diverse problem settings, leaving a significant gap in understanding its general applicability. This limits the choice of baseline for our problem.\n\nPPO: PPO is vanilla proximal policy algorithm (Schulman et\u00a0al., 2017 ) , which does not impose any self-imitation learning paradigm.\n\nSIL-PPO: SIL (Oh et\u00a0al., 2018 ) is an off-policy RL algorithm that imitates past state-action pairs that have higher returns than agent value estimates. The proposed approach was also extended to the on-policy PPO (Schulman et\u00a0al., 2017 ) algorithm with a focus on dense or delayed rewards. Further, as highlighted by (Oh et\u00a0al., 2018 ) , SIL lacks a theoretical connection with on-policy algorithms.\n\nSVPG-PPO: SVPG (Gangwani et\u00a0al., 2018 ) is a self-imitating on-policy algorithm that uses Stein variational gradient descent to minimize the divergence between the current policy\u2019s visitation distribution and that of past high-return trajectories. Unlike SIPP, SVPG introduces an auxiliary objective that regularizes this divergence, potentially complicating the learning process.\n\nPER-PPO : Prioritize Experience Replay (PER) (Schaul et\u00a0al., 2015 ) technique uses TD-error based transition prioritization. We extended this method to PPO, prioritizing samples in the rollout buffer based on TD error. We use a strategy similar to our method to balance exploration and exploitation."
+    },
+    {
+      "heading": "5.3Performance ofMatchon Continuous Control Tasks",
+      "text": "In this section, we investigate the effect of self-imitation on continuous control tasks with dense rewards. We evaluate the performance of our SIPP-Match strategy across 10 MuJoCo (Towers et\u00a0al., 2023 ) tasks, using selected baselines.\n\nCompared with all the baselines, the performance of the Match strategy on continuous control tasks is shown in Figure 1 . The proposed Match algorithm outperforms PPO (Schulman et\u00a0al., 2017 ) and SIL-PPO across all tasks, with SVPG+PPO lagging in most tasks, except for competitive performance on Walker2d-v4 and Humanoid-v4. PER (Schaul et\u00a0al., 2015 ) uses a TD-error-based strategy that prioritizes transitions and lags across all tasks using value function estimates.\n\nIn MuJoCo benchmark environments, the agent benefits from continuous feedback via a smooth and dense reward structure, facilitating faster exploration and learning. Despite this, our experiments demonstrate that the optimal transport distance, prioritizing self-bootstrapping, can further enhance exploration for the proximal policy.\nBy prioritizing the most informative experiences, our method ensures that the agent focuses on high-value learning opportunities, accelerating convergence and improving policy robustness.\n\nAdditionally, the proposed approach stores only the states visited by the most rewarding past episodic rollout, making it simpler than prior methods. Unlike our approach, (Oh et\u00a0al., 2018 ) compares returns of past experiences with agent value estimates to select experiences for self-imitation, which can be noisy and introduce bias in policy learning (Libardi et\u00a0al., 2021 ; Raileanu & Fergus, 2021 ) . Furthermore, (Gangwani et\u00a0al., 2018 ) uses Stein variational gradient descent as a regularizer to minimize divergence between state-action visitation distributions of the current policy and past rewarding experiences. However, their approach introduces bias in policy learning, which they address by simultaneously learning multiple diverse policies.\n\nIn summary, the proposed Match algorithm integrates seamlessly with PPO without introducing additional learning parameters and requires only one trajectory to guide self-imitation learning. It introduces a single hyperparameter, IET coefficient ( \u03f5 \\epsilon ), to control whether training batches are uniformly sampled or prioritized using optimal transport distance based on past successful episodic rollouts.\nThe single hyperparameter provides a simple mechanism to balance exploration and exploitation. This approach offers a practical and efficient solution to enhance reinforcement learning performance in complex environments."
+    },
+    {
+      "heading": "5.4Performance ofReplayin Sparse Reward Tasks",
+      "text": "In this section, we empirically evaluate self-imitation performance in sparse and binary reward settings. We believe that self-imitation can play a crucial role in such reward settings, as the ability of an agent to reach some success can be extremely difficult with sparse rewards. Previous work was limited to MuJoCo environments with dense or delayed rewards. Motivated by this, we evaluate the performance of SIPP-Replay on a diverse set of tasks, including multi-goal gymnasium-robotics PointMaze navigation sparse reward environments (de\u00a0Lazcano et\u00a0al., 2023 ) and partially observable 3-dimensional Animal-AI Olympics (Crosby et\u00a0al., 2019 ) binary reward environments."
+    },
+    {
+      "heading": "5.5Tuning Self-Imitation vs. Exploration",
+      "text": "The proposed strategy exploits the agent\u2019s past behaviors. However, it is crucial for the agent to learn an optimal policy. This balance between exploitation and exploration in SIPP is achieved through the Imitation-Exploration Trade-off (IET) coefficient \u03f5 \\epsilon . In SIPP-Match this parameter indicates the probability of sampling training batches uniformly or with a priority proportional to the optimal transport distance with the most successful past trajectory. In SIPP-Replay , this parameter controls the trajectory replay probability from the imitation buffer \u212c \u2110 \\mathcal{B_{I}} .\n\nThe effect of IET for SIPP-Match strategy is shown in Figure 5 . The ablation study shows the maximum performance improvement for e \u200b p \u200b s \u200b i \u200b l \u200b o \u200b n = 0.1 , 0.2 \\ epsilon=0.1,0.2 , or 0.3 0.3 across all tasks. This highlights the importance of exploration, as greedy imitation results in sub-optimal performance. However, for simpler tasks such as MountainCarContinuous, the performance is mostly similar as these simpler environments require less exploration, and even an aggressive imitation strategy results in similar performance.\n\nA similar analysis was performed to find the balance between the exploration and exploitation trade-off of the PointMaze navigation environments. The results of this ablation study are shown in Figure 6 . We didn\u2019t perform a similar analysis of the Animal-AI Olympics environment. However, the IET coefficient for the Animal-AI Olympics environment was kept \u03f5 = 0.3 \\epsilon=0.3 based on the insights from the above ablation studies.\n\nIn conclusion, our ablation study on \u03f5 \\epsilon highlights its influence on SIPP\u2019s performance. In dense reward environments like MuJoCo, smaller \u03f5 = 0.1 , 0.2 \\epsilon=0.1,0.2 perform well, as frequent rewards naturally guide exploration. Conversely, in sparse-reward settings like PointMaze, a higher value of \u03f5 = 0.3 \\epsilon=0.3 improves outcomes by emphasizing imitation of rare successful trajectories. These results indicate that \u03f5 \\epsilon should be adjusted based on the task\u2019s reward structure and exploration demands."
+    },
+    {
+      "heading": "6Conclusion",
+      "text": "This paper proposes a self-imitating proximal policy framework to address exploration and sample-efficiency challenges in dense and sparse-reward environments. Through extensive experimentation, we demonstrated that bootstrapping policy learning from past rewarding experiences effectively reduces policy divergence, leading to enhanced exploration and stability. The simplicity and efficacy of the proposed algorithm highlight its versatility across different problem settings. Furthermore, we showed that self-imitation and exploration are inherently complementary, enabling agents to leverage prior successes for guided learning, which can be crucial in hard exploration tasks."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "(a)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27515/assets/leged.png"
+    },
+    {
+      "caption": "(a)",
+      "image_path": ""
+    },
+    {
+      "caption": "(b)",
+      "image_path": ""
+    },
+    {
+      "caption": "(c)",
+      "image_path": ""
+    },
+    {
+      "caption": "(d)",
+      "image_path": ""
+    },
+    {
+      "caption": "(e)",
+      "image_path": ""
+    },
+    {
+      "caption": "(f)",
+      "image_path": ""
+    },
+    {
+      "caption": "(g)",
+      "image_path": ""
+    },
+    {
+      "caption": "(h)",
+      "image_path": ""
+    },
+    {
+      "caption": "(i)",
+      "image_path": ""
+    },
+    {
+      "caption": "(a)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27515/assets/reach_goal.jpg"
+    },
+    {
+      "caption": "(a)",
+      "image_path": ""
+    },
+    {
+      "caption": "(b)",
+      "image_path": ""
+    },
+    {
+      "caption": "(c)",
+      "image_path": ""
+    },
+    {
+      "caption": "(d)",
+      "image_path": ""
+    },
+    {
+      "caption": "(e)",
+      "image_path": ""
+    },
+    {
+      "caption": "(a)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27515/assets/leged.png"
+    },
+    {
+      "caption": "(a)",
+      "image_path": ""
+    },
+    {
+      "caption": "(b)",
+      "image_path": ""
+    },
+    {
+      "caption": "(c)",
+      "image_path": ""
+    },
+    {
+      "caption": "(d)",
+      "image_path": ""
+    },
+    {
+      "caption": "(e)",
+      "image_path": ""
+    },
+    {
+      "caption": "(a)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27515/assets/legend2.png"
+    },
+    {
+      "caption": "(a)",
+      "image_path": ""
+    },
+    {
+      "caption": "(b)",
+      "image_path": ""
+    },
+    {
+      "caption": "(c)",
+      "image_path": ""
+    },
+    {
+      "caption": "(d)",
+      "image_path": ""
+    },
+    {
+      "caption": "(e)",
+      "image_path": ""
+    },
+    {
+      "caption": "(a)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27515/assets/legend_abe.png"
+    },
+    {
+      "caption": "(a)",
+      "image_path": ""
+    },
+    {
+      "caption": "(b)",
+      "image_path": ""
+    },
+    {
+      "caption": "(c)",
+      "image_path": ""
+    },
+    {
+      "caption": "(d)",
+      "image_path": ""
+    },
+    {
+      "caption": "(e)",
+      "image_path": ""
+    },
+    {
+      "caption": "(a)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27515/assets/legend_abe.png"
+    },
+    {
+      "caption": "(a)",
+      "image_path": ""
+    },
+    {
+      "caption": "(b)",
+      "image_path": ""
+    },
+    {
+      "caption": "(c)",
+      "image_path": ""
+    },
+    {
+      "caption": "(d)",
+      "image_path": ""
+    },
+    {
+      "caption": "(e)",
+      "image_path": ""
+    },
+    {
+      "caption": "(a)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27515/assets/leged.png"
+    },
+    {
+      "caption": "(a)",
+      "image_path": ""
+    },
+    {
+      "caption": "(b)",
+      "image_path": ""
+    },
+    {
+      "caption": "(c)",
+      "image_path": ""
+    },
+    {
+      "caption": "(d)",
+      "image_path": ""
+    },
+    {
+      "caption": "(e)",
+      "image_path": ""
+    },
+    {
+      "caption": "(f)",
+      "image_path": ""
+    },
+    {
+      "caption": "(g)",
+      "image_path": ""
+    },
+    {
+      "caption": "(h)",
+      "image_path": ""
+    },
+    {
+      "caption": "(i)",
+      "image_path": ""
+    },
+    {
+      "caption": "Table 2 : Parameters For Animal-AI Olympics Environment",
+      "image_path": ""
+    },
+    {
+      "caption": "Table 3 : PPO Hyper-parameters",
+      "image_path": ""
+    },
+    {
+      "caption": "(a)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27515/assets/leged.png"
+    },
+    {
+      "caption": "(a)",
+      "image_path": ""
+    },
+    {
+      "caption": "(b)",
+      "image_path": ""
+    },
+    {
+      "caption": "(c)",
+      "image_path": ""
+    },
+    {
+      "caption": "(d)",
+      "image_path": ""
+    },
+    {
+      "caption": "(e)",
+      "image_path": ""
+    },
+    {
+      "caption": "(a)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27515/assets/legend2.png"
+    },
+    {
+      "caption": "(a)",
+      "image_path": ""
+    },
+    {
+      "caption": "(b)",
+      "image_path": ""
+    },
+    {
+      "caption": "(c)",
+      "image_path": ""
+    },
+    {
+      "caption": "(d)",
+      "image_path": ""
+    },
+    {
+      "caption": "(e)",
+      "image_path": ""
+    },
+    {
+      "caption": "(a)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27515/assets/legend_abe.png"
+    },
+    {
+      "caption": "(a)",
+      "image_path": ""
+    },
+    {
+      "caption": "(b)",
+      "image_path": ""
+    },
+    {
+      "caption": "(c)",
+      "image_path": ""
+    },
+    {
+      "caption": "(d)",
+      "image_path": ""
+    },
+    {
+      "caption": "(e)",
+      "image_path": ""
+    },
+    {
+      "caption": "(a)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27515/assets/legend_abe.png"
+    },
+    {
+      "caption": "(a)",
+      "image_path": ""
+    },
+    {
+      "caption": "(b)",
+      "image_path": ""
+    },
+    {
+      "caption": "(c)",
+      "image_path": ""
+    },
+    {
+      "caption": "(d)",
+      "image_path": ""
+    },
+    {
+      "caption": "(e)",
+      "image_path": ""
+    }
+  ],
+  "ar5iv_success": true
+}

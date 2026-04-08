@@ -1,0 +1,73 @@
+{
+  "paper_id": "2603.28114",
+  "title": "Attention Frequency Modulation: Training-Free Spectral Modulation of Diffusion Cross-Attention",
+  "abstract": "Cross-attention is the primary interface through which text conditions latent diffusion models, yet its step-wise multi-resolution dynamics remain under-characterized, limiting principled training-free control. We cast diffusion cross-attention as a spatiotemporal signal on the latent grid by summarizing token-softmax weights into token-agnostic concentration maps and tracking their radially binned Fourier power over denoising. Across prompts and seeds, encoder cross-attention exhibits a consistent coarse-to-fine spectral progression, yielding a stable time-frequency fingerprint of token competition. Building on this structure, we introduce Attention Frequency Modulation (AFM), a plug-and-play inference-time intervention that edits token-wise pre-softmax cross-attention logits in the Fourier domain: low- and high-frequency bands are reweighted with a progress-aligned schedule and can be adaptively gated by token-allocation entropy, before the token softmax. AFM provides a continuous handle to bias the spatial scale of token-competition patterns without retraining, prompt editing, or parameter updates. Experiments on Stable Diffusion show that AFM reliably redistributes attention spectra and produces substantial visual edits while largely preserving semantic alignment. Finally, we find that entropy mainly acts as an adaptive gain on the same frequency-based edit rather than an independent control axis.",
+  "authors": [
+    "Seunghun Oh",
+    "Unsang Park"
+  ],
+  "date": "2026-03-30T07:24:41+00:00",
+  "url": "http://arxiv.org/abs/2603.28114v1",
+  "categories": [
+    "cs.CV",
+    "cs.LG"
+  ],
+  "primary_category": "cs.CV",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "Diffusion-based text-to-image models achieve state-of-the-art synthesis by progressively denoising text-conditioned latent representations [ ho2020ddpm , rombach2022ldm ] .\nDespite their success, the inference-time internal dynamics that govern how global layout, fine detail, and sample-to-sample variability emerge over denoising steps remain under-explored [ ho2022cfg , karras2022edm ] .\nThis gap is not only an interpretability issue but also a controllability bottleneck: widely used controls such as prompt engineering and guidance tuning often act as user-facing heuristics that entangle multiple factors, offering limited insight into what changes inside the model and when those changes occur [ ho2022cfg , hertz2022prompt2prompt , chefer2023attendexcite ] .\n\nA central yet under-explored component is cross-attention, which injects textual conditioning into the U-Net at multiple resolutions and at every denoising step [ rombach2022ldm , vaswani2017attention ] .\nBecause it is repeatedly applied along the diffusion trajectory, cross-attention is a natural carrier of stage-dependent signals (e.g., layout formation early vs. detail refinement late) [ rombach2022ldm , vaswani2017attention ] .\nHowever, existing analyses typically focus on attention heatmaps at a few timesteps or token relevance scores, leaving the time-resolved organization across spatial scales unclear and limiting principled, training-free control.\nWe ask whether cross-attention exhibits a consistent multi-scale organization over denoising, and whether that structure can be used for controllable, inference-time edits."
+    },
+    {
+      "heading": "2.1Diffusion models and cross-attention along the denoising trajectory",
+      "text": "Diffusion models synthesize images via an iterative denoising process [ ho2020ddpm ] .\nLatent diffusion models (LDMs) perform this process in a learned latent space for efficient high-resolution generation [ rombach2022ldm ] .\nAt denoising step t t , given latent x t x_{t} and text condition c c , the reverse update is x t \u2212 1 = f \u03b8 \u200b ( x t , t , c ) , x_{t-1}=f_{\\theta}(x_{t},t,c), (1) where f \u03b8 f_{\\theta} is typically a U-Net with multi-resolution blocks: the downsampling path (encoder), the bottleneck (middle), and the upsampling path (decoder).\nText conditioning is injected through cross-attention layers.\nWith queries Q Q from latent features and keys/values K , V K,V from text embeddings, a standard cross-attention operation is Attn \u200b ( Q , K , V ) = softmax \u200b ( Q \u200b K \u22a4 d ) \u200b V . \\mathrm{Attn}(Q,K,V)=\\mathrm{softmax}\\!\\left(\\frac{QK^{\\top}}{\\sqrt{d}}\\right)V. (2) Because cross-attention is applied at every denoising step and at multiple spatial resolutions, it naturally admits a stage-dependent view of generation dynamics.\nIn this work, we treat cross-attention as a temporally evolving internal conditioning signal, rather than a static alignment artifact.\nFor clarity across schedulers, we later reparameterize the step index by a monotone denoising progress."
+    },
+    {
+      "heading": "2.2Cross-attention maps as spatial signals",
+      "text": "For a layer/head at sampling iteration s s , token-softmax cross-attention yields \ud835\udc00 s \u2208 \u211d H \u200b W \u00d7 T \\mathbf{A}_{s}\\in\\mathbb{R}^{HW\\times T} (spatial queries \u00d7 \\times tokens).\nSince each row sums to 1, naive token summation is uninformative.\nWe therefore analyze token-agnostic concentration summaries (e.g., mean top- K K probability)\nas spatial signals on the latent grid and study their spectral evolution over denoising.\nAll definitions (top- K K /top-1, entropy statistics) are provided in\nSec. 3.1 and Sec. 3.3 ."
+    },
+    {
+      "heading": "3Method",
+      "text": "We present a frequency-domain framework to analyze and edit diffusion cross-attention at inference time.\nWe first define a measurement pipeline that converts cross-attention into a stable spatial signal and quantifies its spectral evolution over denoising, and then introduce a training-free, plug-and-play intervention that edits token-wise pre-softmax cross-attention logits via frequency-selective reweighting."
+    },
+    {
+      "heading": "3.3Training-Free Attention Frequency Modulation (AFM)",
+      "text": "We now describe AFM, a plug-and-play inference-time attention editing method that performs token-wise logit-space spectral reweighting during denoising."
+    },
+    {
+      "heading": "4Experiments",
+      "text": "We evaluate Training-Free Attention Frequency Modulation (AFM) along three axes:\n(i) attention-level evidence that cross-attention exhibits a consistent coarse-to-fine spectral evolution and that AFM induces controlled spectral redistribution,\n(ii) image-level sensitivity under paired generation (LPIPS),\nand (iii) text\u2013image alignment stability (CLIP cosine similarity).\nUnless otherwise stated, we use paired comparisons with matched prompts and random seeds to isolate the causal effect of AFM."
+    },
+    {
+      "heading": "4.3Image-level controllability and alignment",
+      "text": "We compare AFM against SAG and FreeU as representative training-free inference-time baselines under identical prompts, seeds, and sampling settings [ hong2022sag , si2023freeu ] .\nPrompts are sampled from COCO and LAION, and results are averaged over fixed seeds (2025\u20132028).\nAll methods share the same scheduler, step count, CFG scale, and output resolution to isolate the effect of the intervention."
+    },
+    {
+      "heading": "5Conclusion",
+      "text": "We presented a frequency-domain view of diffusion cross-attention by interpreting attention-derived concentration maps as spatial signals on the latent grid, revealing a stable coarse-to-fine spectral progression over denoising. Building on this structure, we introduced Attention Frequency Modulation (AFM), a training-free inference-time intervention that edits token-wise pre-softmax cross-attention logits in the Fourier domain with a progress-aligned low/high-frequency schedule. AFM provides an interpretable inference-time knob to bias how conditioning manifests across spatial scales in attention-derived diagnostics, which in turn tends to yield stronger changes in image high-frequency residuals under our proxy evaluation. We further find that attention entropy mainly acts as an adaptive gain for the same frequency-based edit and is a strict no-op when AFM strength is zero.\n\nLimitations and potential negative impact. Our coarse-to-fine interpretation is based on spatial-frequency statistics of attention-derived top- K K concentration maps, which quantify token-competition structure on the latent grid. These signals are proxies and do not directly measure image Fourier content, object layout, or semantic detail.\nAccordingly, our image-level evaluation (band-wise LPIPS) should be interpreted as heuristic evidence rather than a ground-truth disentanglement metric."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1 : Qualitative comparison on Stable Diffusion v1.5 under matched sampling settings (same prompt/seed). (a) Baseline, (b) SAG, (c) FreeU, (d) Ours (AFM).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28114/assets/last_figure/FigE/FigE_teaser.png"
+    },
+    {
+      "caption": "Figure 2 : Time\u2013frequency evolution of encoder cross-attention (top- K K , mean).\nLeft/middle: normalized radial energy distributions for Baseline and AFM-curve.\nRight: log energy ratio log \u2061 ( E curve / E baseline ) \\log(E_{\\text{curve}}/E_{\\text{baseline}}) , highlighting frequency bands amplified/suppressed by AFM over denoising progress. The x-axis is denoising progress u \u200b ( s ) u(s) (early \u2192 \\rightarrow late); tick labels show the corresponding DDIM scheduler timesteps \u03c4 s \\tau_{s} (decreasing). Dashed line indicates the HF cutoff radius r c r_{c} used in \u03c1 s \\rho_{s} .",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28114/assets/last_figure/FigA/FigA_timefreq_triplet_MEAN_encoder_topk_entropy_off_refnone_tgtcurve_rmax1.00.png"
+    },
+    {
+      "caption": "(a) HF ratio \u03c1 s \\rho_{s} and \u0394 \u200b \u03c1 s \\Delta\\rho_{s} .",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28114/assets/x1.png"
+    },
+    {
+      "caption": "(a) HF ratio \u03c1 s \\rho_{s} and \u0394 \u200b \u03c1 s \\Delta\\rho_{s} .",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28114/assets/x1.png"
+    },
+    {
+      "caption": "(b) Radial energy profiles.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28114/assets/x2.png"
+    }
+  ],
+  "ar5iv_success": true
+}

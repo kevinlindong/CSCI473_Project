@@ -1,0 +1,106 @@
+{
+  "paper_id": "2603.27889",
+  "title": "Article and Comment Frames Shape the Quality of Online Comments",
+  "abstract": "Framing theory posits that how information is presented shapes audience responses, but computational work has largely ignored audience reactions. While recent work showed that article framing systematically shapes the content of reader responses, this paper asks: Does framing also affect response quality? Analyzing 1M comments across 2.7K news articles, we operationalize quality as comment health (constructive, good-faith contributions). We find that article frames significantly predict comment health while controlling for topic, and that comments that adopt the article frame are healthier than those that depart from it. Further, unhealthy top-level comments tend to generate more unhealthy responses, independent of the frame being used in the comment. Our results establish a link between framing theory and discourse quality, laying the groundwork for downstream applications. We illustrate this potential with a proactive frame-aware LLM- based system to mitigate unhealthy discourse",
+  "authors": [
+    "Matteo Guida",
+    "Yulia Otmakhova",
+    "Eduard Hovy",
+    "Lea Frermann"
+  ],
+  "date": "2026-03-29T22:01:27+00:00",
+  "url": "http://arxiv.org/abs/2603.27889v1",
+  "categories": [
+    "cs.CL"
+  ],
+  "primary_category": "cs.CL",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "Online news platforms have associated comment threads in which readers not only can directly engage with the article, but also with each other. Maintaining constructive dialogue in these spaces, however, is challenging. While extensive computational work has focused on predicting comment toxicity or quality (Pavlopoulos et al. , 2017 ; Founta et al. , 2018 ; Shankaran and Sharma, 2024 ) , it treats all discussions as equivalent, overlooking a fundamental insight from framing theory: the perspective ( framing ) through which issues are presented shapes how audiences respond (Entman, 1993 ; Scheufele, 1999 ; Chong and Druckman, 2007 ) .\n\nTraditionally, computational framing research analyzed only source texts (e.g., news articles, political speeches, social media posts) while ignoring how audiences responded to framed content (Card et al. , 2015 ; Field et al. , 2018 ; Liu et al. , 2019 ) . 2 2 2 See Ali and Hassan ( 2022 ) and Otmakhova et al. ( 2024 ) for overviews of computational framing analysis. Recent work has begun to address this gap by jointly analysing framing in articles and audience responses at scale (Guida et al. , 2025 ) . Analyzing news comment sections, they found that on average less than half of the comments retain the dominant article frame\u2014the rest selectively adopt secondary frames or introduce entirely new ones. This proved to be true especially for value-laden frames (Morality, Fairness and Cultural Identity), suggesting that framing shapes response content : the perspectives that people adopt when discussing issues.\nHowever, a critical question remains:\nif the choice of frames shape how audiences interpret and reconstruct messages, does it also influence the quality of discussions?\n\nWe connect framing theory with discourse quality across 1M comments on 2.7K articles from The New York Times and The Globe and Mail. We operationalize discourse quality as comment health : the extent to which contributions are made in good faith, invite engagement, and focus on substance rather than hostility (Price et al. , 2020 ) . Healthy comments may include robust disagreement but remain constructive in tone. Health is thus different from the widely used concept toxicity and the two have been shown to correlate poorly\u00a0(see Price et al. ( 2020 ) and Appendix B ).\nTable 1 shows two examples each for healthy and unhealthy comments, taken from our corpus.\n\nWe posit two ways in which frames influence discussion quality. First, article frames may directly influence the health of comments. For instance, a news article framing immigration as a \"security threat\" versus an \"economic opportunity\" may activate different affective responses and generate more or less constructive discussions. Second, direct comments to the article serve as \"secondary\" framers who mediate the article\u2019s message. Healthy or unhealthy replies to such comments may unfold: a healthy top-level comment using an economic frame may elicit healthier replies than a healthy comment using a moral frame, even when both respond to the same article. We therefore ask:\n\n(RQ1) Do article frames influence the health of top-level comments through (a) frame type (which frames are used) and (b) frame alignment (whether commentators match or depart from article frames)?\n\n(RQ2) Does the frame of top-level comments influence the health of their replies ?\n\nImportantly, all our analyses control for the confounding factor of article topic. We find that comment health significantly varies as a function of the article frame.\nFrame alignment also matters: comments that adopt the article frames are significantly healthier than those introducing new perspectives. Analysis of comment threads shows that healthy comments generate healthier replies through a cascade effect that operates consistently across all frame types.\n\nWe are the first to show a systematic impact of framing on discussion quality at scale on naturalistic data. Our findings can impact content moderation approaches, suggesting that\nrather than reacting to malicious content after it appears, platforms could proactively identify high-risk comments based on which frames are used, or whether commentators depart from article frames. We illustrate this through a frame, content and health aware LLM-based system that analyzes article and comments to provide real-time reformulation suggestions, helping commenters express views more constructively."
+    },
+    {
+      "heading": "2.1Data",
+      "text": "Our analysis examines news articles and associated comment threads from The New York Times (NYT), a major U.S. newspaper, and The Globe and Mail (SOCC), Canada\u2019s national newspaper. We build on the dataset from Guida et al. ( 2025 ) , comprising news articles and comments from 2012-2018 across 11 topics (e.g., Immigration, Healthcare, Climate Change).\n\nWe extend the data set in two key ways. First, while they sampled only top-level comments, we retrieve complete comment threads associated with these articles from the original datasets. 3 3 3 Kolhatkar et al. ( 2020 ) and https://www.kaggle.com/datasets/aashita/nyt-comments This enables us to examine both top-level comment health (RQ1) and how health propagates through reply chains (RQ2). Second, we apply frame and health classifiers to this expanded set of replies. Table 2 summarizes the final dataset."
+    },
+    {
+      "heading": "3.1RQ1: Article Framing Effects on Comment Health",
+      "text": "We examine (1) whether article frame type predicts health, and (2) whether frame alignment (matching the article\u2019s primary frame, adopting a secondary frame, or introducing new frames) affects health, while controlling for topic. We fit mixed-effects logistic regression to predict binary top-level comment health with random effects for article IDs and fixed effects for article topic (all models), article framing (RQ1.1) or frame alignment (RQ1.2). 6 6 6 Full model specifications in Appendix F.1 ."
+    },
+    {
+      "heading": "3.2RQ2: Comment Framing Effects on Reply Health",
+      "text": "We model mean reply health by fitting a linear regression with top-level comment health, top-level comment frame and topic as well as health \u00d7 \\times frame interactions as predictors. We then test (1) how top-level comment health impacts subsequent discussion and (2) whether this trend differs across frames; while again controlling for topic. 7 7 7 Full modeling details in Appendix F.2 .\n\nTop-level comment health strongly predicts subsequent reply health in both outlets ( p < 0.001 p<0.001 ). This is in line with similar studies on toxicity in Reddit threads (Shankaran and Sharma, 2024 ) .\nThis trend does not significantly vary by top-level comment frame. In other words, healthy top comments initiate healthy discussions and unhealthy top comments initiate unhealthy discussions \u2013 largely independent of their topic or frame.\nFull results are in Appendix Table 15 .\n\nCombined with RQ1\u2014where frame type and alignment significantly predicted baseline comment health\u2014this suggests a two-stage model, in which article framing sets discourse environments, while individual comment health governs propagation through reply chains."
+    },
+    {
+      "heading": "3.3Frame-Aware Content Moderation",
+      "text": "Current content moderation systems operate reactively: they detect and remove toxic content after posting. This approach addresses symptoms rather than causes, it penalizes users without helping them improve, and cannot prevent unhealthy discussions before they escalate.\n\nOur findings suggest an alternative: proactive, frame-aware moderation.\nWe illustrate this through a prototype system that analyzes article framing, comment framing, their frame alignment\nand comment health. Based on these inputs, the system stratifies comments into three risk levels (high, medium and low), and suggests LLM-based reformulations informed by full context. The system can be accessed online at this link . 8 8 8 As it uses serverless GPU infrastructure, initial requests may experience a short delay while models are initiated and loaded. See Appendix G for complete technical specifications."
+    },
+    {
+      "heading": "4Discussion and Conclusion",
+      "text": "Our findings suggest that framing and health of online discourse are intertwined. The primary article frame significantly predicts comment health, with value laden frames like Morality and Fairness frames generating the least healthy comments. Furthermore, frame alignment is crucial: departing from the article\u2019s frame correlates with decreased health, with complete reframing showing the strongest negative effects. At the reply level (RQ2), we find that comment health is the primary driver of reply quality, operating uniformly across all frame types, with top-level comment health strongly predicting reply health.\n\nWe provide computational evidence for framing theory (Neuman et al. , 1992 ; Scheufele, 1999 ) , which posits that audiences actively interpret and reconstruct media frames rather than passively accepting them. We extend this line of work by illustrating that frame reconstruction patterns predict not just what audiences say but how they engage.\n\nBeyond theoretical significance in the context of framing theory and mechanisms, our findings are of practical importance for maintaining healthy online discourse. We illustrate this potential through a pro-active, frame-aware comment moderation prototype that combines frame classification with health detection to provide constructive reformulation suggestions."
+    },
+    {
+      "heading": "Limitations",
+      "text": "Our analysis examines correlational patterns rather than causal mechanisms. Our binary health operationalization enables large-scale analysis while simplifying the multidimensional nature of discourse quality. We analyze two major English-language news outlets (NYT, Globe and Mail) from 2012-2018, which may reflect outlet-specific moderation practices and temporal context. Our thread analysis focuses on top-level comments and immediate replies (depth \u2264 \\leq 2); deeper nested dynamics warrant further investigation. The frame and health classifiers achieve robust performance on our datasets, though generalization to other platforms and languages remains to be validated."
+    },
+    {
+      "heading": "Ethical Considerations",
+      "text": "Our moderation prototype is intended to support constructive discourse, not suppress dissent. We caution against using frame alignment as a sole criterion for moderation, as novel perspectives that depart from article framing may represent valuable contributions. The operationalization of \"health\" reflects norms from specific cultural contexts and should be adapted for other communities."
+    },
+    {
+      "heading": "E.1Frame Alignment Effects by Topic",
+      "text": "Figure 2 shows how frame alignment effects vary across topics. The consistent pattern\u2014where matching frames yield healthier comments than selective or complete reframing\u2014holds across most topics."
+    },
+    {
+      "heading": "F.1RQ1: Article effects on top-level comments",
+      "text": "For RQ1, we ask how article framing influences comment health. First, we examine whether article frame type predicts health. We fit a mixed-effects logistic regression model that predicts (binary) health of a top-level comment based on article frame, topic as fixed effects and article ID as random effect due to multiple measurements (top comments) for the same article. Our variable of interest is article_frame, and we include topic as a control variable: health \u223c article_frame + topic + ( 1 | id ) . \\displaystyle\\text{health}\\sim\\text{article\\_frame}+\\text{topic}+(1|\\text{id}). (1)\n\nSecond, we test the effect of frame alignment between articles and comments predicts health (frame_condition). Similarly, we fit a logistic regression mixed-effects model replacing article_frame with frame_condition, health \u223c frame_condition + topic + ( 1 | id ) , \\displaystyle\\text{health}\\sim\\text{frame\\_condition}+\\text{topic}+(1|\\text{id}), (2) where frame_condition is a three-level factor indicating whether comments match the article\u2019s primary frame, selectively reframe by adopting a secondary frame present in the article, or completely reframe by introducing frames not in the article."
+    },
+    {
+      "heading": "F.2RQ2: Top-level comment effects on reply thread health",
+      "text": "For RQ2, we model mean reply health (MRH) using ordinary least squares (OLS) linear regression, specifying the model as follows: MRH \u223c \\displaystyle\\text{MRH}\\sim top_c_health + top_c_frame \\displaystyle\\text{top\\_c\\_health}+\\text{top\\_c\\_frame} (3) + article_topic \\displaystyle+\\text{article\\_topic} + top_c_health \u00d7 top_c_frame , \\displaystyle+\\text{top\\_c\\_health}\\times\\text{top\\_c\\_frame}, where top_c is short for top_comment. We include article_frame again as a control factor and also capture the interaction of health and frame in the interaction term."
+    },
+    {
+      "heading": "G.1System Architecture",
+      "text": "Given a user-based keyword input (e.g., \u201cClimate change\u201d), our system scrapes the three most recent articles from the The Conversation website 10 10 10 https://theconversation.com/us/ , CC BY-ND 4.0 and classifies the article frames, the comment frames, the type of reframing (or match) and the comment health. These components, along with the article and comment text, are parsed by an LLM, which is then prompted to make suggestions based on decision heuristics. Table 17 provides a complete overview of the system pipeline."
+    },
+    {
+      "heading": "G.2LLM Prompt Structure",
+      "text": "For reformulation suggestions, we use Gemma 3:1b deployed via Ollama for local inference. The prompt includes full context (article text, frames, comment, alignment) and requests structured JSON output with risk level confirmation, 2\u20133 specific suggestions, and an allow/block recommendation. Example prompt structure is shown in Figure 3 ."
+    },
+    {
+      "heading": "G.3Interface Example",
+      "text": "Figures 4 and 5 illustrate the system interface and moderation workflow, with an example of comment analysis on a news article."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1: Health by frame alignment across platforms. A clear gradient emerges where comments matching article frames have the highest health rates, followed by selective reframing (adopting secondary frames present in the article), with complete reframing (introducing frames absent from the article) showing the lowest health. Error bars represent 95% confidence intervals.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27889/assets/x1.png"
+    },
+    {
+      "caption": "Figure 2: Comment health by frame alignment (Match, Diff in Article, Never in Article) across topics for NYT (top) and SOCC (bottom). The dashed line represents overall health.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27889/assets/x2.png"
+    },
+    {
+      "caption": "Table 13: Estimated marginal means: Frame alignment effects on health. Matching is the reference level.",
+      "image_path": ""
+    },
+    {
+      "caption": "Table 14: Estimated marginal means: Comment health by article frame.",
+      "image_path": ""
+    },
+    {
+      "caption": "Figure 3: LLM prompt used for comment reformulation.",
+      "image_path": ""
+    },
+    {
+      "caption": "Figure 4: Landing page with topic search functionality. Users can enter keywords or select predefined topics to retrieve 3 relevant articles from The Conversation. Article view with sentence-level frame analysis. Detected frames are displayed as tags; hovering over a frame highlights corresponding sentences in the article text.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27889/assets/screenshot-search.png"
+    },
+    {
+      "caption": "Figure 5: Moderation output for an unhealthy comment expressing climate skepticism. The system assigns a high risk level based on healthiness score, detects frames and retention, and recommends refusing the comment. The LLM generates three ways to reformulate more constructively while preserving the user\u2019s core concern and idea.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27889/assets/screenshot-article.png"
+    }
+  ],
+  "ar5iv_success": true
+}

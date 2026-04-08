@@ -1,0 +1,19 @@
+{
+  "paper_id": "2603.27664",
+  "title": "Investigating the Influence of Language on Sycophantic Behavior of Multilingual LLMs",
+  "abstract": "Large language models (LLMs) have achieved strong performance across a wide range of tasks, but they are also prone to sycophancy, the tendency to agree with user statements regardless of validity. Previous research has outlined both the extent and the underlying causes of sycophancy in earlier models, such as ChatGPT-3.5 and Davinci. Newer models have since undergone multiple mitigation strategies, yet there remains a critical need to systematically test their behavior. In particular, the effect of language on sycophancy has not been explored.\n  In this work, we investigate how the language influences sycophantic responses. We evaluate three state-of-the-art models, GPT-4o mini, Gemini 1.5 Flash, and Claude 3.5 Haiku, using a set of tweet-like opinion prompts translated into five additional languages: Arabic, Chinese, French, Spanish, and Portuguese. Our results show that although newer models exhibit significantly less sycophancy overall compared to earlier generations, the extent of sycophancy is still influenced by the language. We further provide a granular analysis of how language shapes model agreeableness across sensitive topics, revealing systematic cultural and linguistic patterns. These findings highlight both the progress of mitigation efforts and the need for broader multilingual audits to ensure trustworthy and bias-aware deployment of LLMs.",
+  "authors": [
+    "Bayan Abdullah Aldahlawi",
+    "A. B. M. Ashikur Rahman",
+    "Irfan Ahmad"
+  ],
+  "date": "2026-03-29T12:31:05+00:00",
+  "url": "http://arxiv.org/abs/2603.27664v1",
+  "categories": [
+    "cs.CL"
+  ],
+  "primary_category": "cs.CL",
+  "sections": [],
+  "figures": [],
+  "ar5iv_success": true
+}

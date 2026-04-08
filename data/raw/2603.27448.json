@@ -1,0 +1,346 @@
+{
+  "paper_id": "2603.27448",
+  "title": "GIFT: Bootstrapping Image-to-CAD Program Synthesis via Geometric Feedback",
+  "abstract": "Generating executable CAD programs from images requires alignment between visual geometry and symbolic program representations, a capability that current methods fail to learn reliably as design complexity increases. Existing fine-tuning approaches rely on either limited supervised datasets or expensive post-training pipelines, resulting in brittle systems that restrict progress in generative CAD design. We argue that the primary bottleneck lies not in model or algorithmic capacity, but in the scarcity of diverse training examples that align visual geometry with program syntax. This limitation is especially acute because the collection of diverse and verified engineering datasets is both expensive and difficult to scale, constraining the development of robust generative CAD models. We introduce Geometric Inference Feedback Tuning (GIFT), a data augmentation framework that leverages geometric feedback to turn test-time compute into a bootstrapped set of high-quality training samples. GIFT combines two mechanisms: Soft-Rejection Sampling (GIFT-REJECT), which retains diverse high-fidelity programs beyond exact ground-truth matches, and Failure-Driven Augmentation (GIFT-FAIL), which converts near-miss predictions into synthetic training examples that improve robustness on challenging geometries. By amortizing inference-time search into the model parameters, GIFT captures the benefits of test-time scaling while reducing inference compute by 80%. It improves mean IoU by 12% over a strong supervised baseline and remains competitive with more complex multimodal systems, without requiring additional human annotation or specialized architectures.",
+  "authors": [
+    "Giorgio Giannone",
+    "Anna Clare Doris",
+    "Amin Heyrani Nobari",
+    "Kai Xu",
+    "Akash Srivastava",
+    "Faez Ahmed"
+  ],
+  "date": "2026-03-28T23:49:20+00:00",
+  "url": "http://arxiv.org/abs/2603.27448v1",
+  "categories": [
+    "cs.LG",
+    "cs.AI",
+    "cs.CE"
+  ],
+  "primary_category": "cs.LG",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "From its theoretical origins ( ross1963theoretical ; coons1963outline ; mantyla1987introduction ) , Computer-Aided Design (CAD) has evolved into the cornerstone of modern engineering, enabled by the sophisticated modeling capabilities of geometric kernels ( piegl2012nurbs ) .\n\nDeep generative modeling is transforming engineering design, offering new solutions to complex, high-dimensional problems ( ahmed2025design ; regenwetter2022deep ; song2023multi ) . Recent empirical successes highlight the versatility of these methods in tasks such as topology optimization ( nie2021topologygan ; maze2022topodiff ; giannone2023aligning ; nobari2025nito ) , mechanism linkage design ( nobari2024link ) , vehicle dynamics ( elrefaie2024drivaernet++ ) , and CAD generation ( alam2024gencad ) .\n\nWhile researchers have developed direct forward models to synthesize 3D shapes from diverse inputs like point clouds, images, and text ( alam2024gencad ; yu2025gencad ; tsuji2025gencad ) , these approaches face a critical bottleneck: the output format. Existing generative models ( lambourne2021brepnet ; li2025dtgbrepgen ) typically yield tessellated meshes (STL) or Boundary Representations (B-Rep, STEP). These formats are inherently verbose and topologically complex, making them difficult for engineers to parameterize or edit. Moreover, the need for specialized 3D decoders or large language models to generate such structures imposes significant computational and structural overhead."
+    },
+    {
+      "heading": "3Method",
+      "text": "We argue that the main bottleneck in image-conditional CAD generation is not model capacity, but modality alignment : the scarcity of diverse supervised examples that connect visual geometry to valid program structure. To address this limitation, we introduce GIFT, a verifier-guided data augmentation framework. Rather than relying solely on the original image-code pairs, GIFT samples candidate programs from a pretrained image-to-CAD model, evaluates them with a geometric kernel, and converts geometrically valid and near-valid generations into additional supervised training examples.\n\nOperationally, GIFT transforms inference-time search into an offline augmentation pipeline (Algorithm 1 ). For each training image, high-quality alternative programs are retained as additional targets for the original input, while structured near-miss failures are rendered back into the image domain and paired with the ground-truth code. The resulting augmented dataset improves both output diversity and robustness without requiring online reinforcement learning or additional human annotation."
+    },
+    {
+      "heading": "3.1Geometric Inference Feedback Tuning",
+      "text": "Let \ud835\udc9f S \u200b F \u200b T = { ( \ud835\udc1c ( n ) , \ud835\udc33 g \u200b t ( n ) ) } n = 1 N \\mathcal{D}_{SFT}=\\{(\\mathbf{c}^{(n)},\\mathbf{z}^{(n)}_{gt})\\}^{N}_{n=1} be a training dataset of N N image-program pairs, where \ud835\udc1c \\mathbf{c} is the visual input and \ud835\udc33 g \u200b t \\mathbf{z}_{gt} is the ground truth CAD program (Fig. 5 ). We denote the base policy (the base Image-to-Code model ( doris2025cad ) ) as p \u03b8 \u200b ( \ud835\udc33 | \ud835\udc1c ) p_{\\theta}(\\mathbf{z}|\\mathbf{c}) .\n\nFor each input \ud835\udc1c \\mathbf{c} , we perform inference-time scaling by sampling a set of K K candidate programs \ud835\udcb5 K \\mathcal{Z}_{K} from the current policy: \ud835\udcb5 K = { \ud835\udc33 ( k ) } k = 1 K \u223c p \u03b8 \u200b ( \ud835\udc33 | \ud835\udc1c ) . \\mathcal{Z}_{K}=\\{\\mathbf{z}^{(k)}\\}_{k=1}^{K}\\sim p_{\\theta}(\\mathbf{z}|\\mathbf{c}). For every candidate \ud835\udc33 \u2208 \ud835\udcb5 K \\mathbf{z}\\in\\mathcal{Z}_{K} , we compute a geometric validity function f \u200b ( \ud835\udc33 ) f(\\mathbf{z}) using a CAD kernel (e.g., OpenCASCADE) to measure alignment with the ground truth: f ( \ud835\udc33 ) = IoU ( Execute ( d ( \ud835\udc33 ) ) ) , Execute ( d ( \ud835\udc33 g \u200b t ) ) ) , f(\\mathbf{z})=\\text{IoU}(\\text{Execute}(d(\\mathbf{z}))),\\text{Execute}(d(\\mathbf{z}_{gt}))), where d \u200b ( \ud835\udc33 ) d(\\mathbf{z}) projects code to a format amenable to the CAD kernel (STEP or STL files), and Execute runs the geometric kernel to obtain the final 3D model as a B-Rep or Mesh representation, and the Intersection-over-Union (IoU) is computed between the generated and ground truth CAD models. In the following we will use the shorthand f \u200b ( \ud835\udc33 ) := IoU \u200b ( \ud835\udc33 , \ud835\udc33 g \u200b t ) f(\\mathbf{z}):=\\text{IoU}(\\mathbf{z},\\mathbf{z}_{gt}) for simplicity.\n\nWe employ two complementary augmentation mechanisms: Soft Rejection Sampling (SRS) and Failure-Driven Augmentation (FDA). SRS augments the output space (code) by capturing diverse valid programs to limit memorization, while FDA augments the input space (image) to specifically target hard failures.\n\nThrough repeated sampling, this approach constructs an augmented training set whose composition reflects the model\u2019s inference behavior across compute budgets."
+    },
+    {
+      "heading": "4.1Inference-Time Scaling: Analysis",
+      "text": "We first investigate the latent capabilities of the base CAD-Coder model by analyzing its scaling behavior on the training set. We employ Inference-Time Scaling (ITS) with varying computational budgets N \u2208 { 8 , 16 , 32 , 64 , 128 } N\\in\\{8,16,32,64,128\\} , generating multiple program candidates per image and filtering them via geometric verification (IoU against ground truth)."
+    },
+    {
+      "heading": "4.2Amortizing Inference-Time Augmentation",
+      "text": "The significant performance disparity between Top-1 and Top-10% generations drives our inference-time compute-driven data augmentation strategy.\nTo tune the model, we leverage high-fidelity candidates via Soft-Rejection Sampling to expand solution coverage, while utilizing Failure-Driven Augmentation to specifically target inputs where the model consistently fails."
+    },
+    {
+      "heading": "4.3Intrinsic Metrics",
+      "text": "To further analyze the robustness of our approach, we examine the relationship between model performance and task complexity, where complexity is proxied by the token length of the ground truth CAD programs (Fig. 2(b) ). As illustrated in Fig. 2(c) , while all models exhibit an expected degradation in performance as the geometric complexity increases, the models trained with GIFT demonstrate significantly greater resilience compared to the SFT baseline.\n\nThe performance gap becomes particularly pronounced at higher complexity levels, where the baseline SFT model\u2019s accuracy drops sharply. In contrast, GIFT maintains a more stable performance profile, effectively mitigating the curse of complexity often observed in autoregressive code generation. This suggests that by incorporating hard negatives through Failure-Driven Augmentation (FDA) and diverse valid solutions via Soft-Rejection Sampling (SRS), the model learns to sustain geometric coherence even for intricate designs requiring longer program sequences.\nAppendix D expands this analysis with finer-grained complexity breakdowns and distributional statistics over operations and token lengths (Figure 16 and 17 )."
+    },
+    {
+      "heading": "4.4General Evaluation",
+      "text": "Table 4 compares GIFT with recent modality-to-CAD systems across several input settings, including depth, point clouds, text, multi-view images, and single-view images. Despite using only a single-view image as input, GIFT delivers competitive performance relative to methods that rely on richer modalities such as point clouds or multi-view supervision.\nIn Table 8 we provide evidence of sensitivity to failed rendering (code that cannot be compiled) for modality-to-code models, and show how median values are more reliable and stable than mean values for such problems."
+    },
+    {
+      "heading": "5Limitations and Conclusion",
+      "text": "We presented Geometric Inference Feedback Tuning (GIFT), a verifier-guided data augmentation framework for Image-to-CAD program synthesis. By using a CAD kernel to mine both diverse valid outputs and structured failure cases, GIFT converts inference-time search into additional supervised training signal.\nEmpirically, this produces stronger single-shot generation, reduces dependence on inference compute, and narrows the gap to more complex multimodal systems."
+    },
+    {
+      "heading": "C.1Inference-Time Scaling Ablation",
+      "text": "Figure 12 extends the inference-time scaling analysis by including GIFT-FAIL alongside SFT, GIFT-REJECT, and the full GIFT model. Across all compute budgets, the full GIFT model remains the strongest configuration, indicating that output diversification and failure-driven robustness are complementary rather than redundant. Notably, GIFT-FAIL alone already yields a substantial gain over the SFT baseline, suggesting that learning from structured near-miss failures is an effective way to improve single-view Image-to-CAD generation."
+    },
+    {
+      "heading": "C.2Model Ablation",
+      "text": "Table 6 and Figure 13 examine whether the benefits of GIFT depend strongly on the base model used for augmentation and training. Across training phases and sampler choices, the overall trend is consistent: the amortization mechanism itself remains beneficial across model variants. This suggests that GIFT is not tied to a single initialization and can be viewed as a general recipe for converting inference-time geometric feedback into improved supervised training signals."
+    },
+    {
+      "heading": "C.3Sampling Temperature Ablation",
+      "text": "Figure 14 studies sensitivity to decoding temperature at inference time. The SFT baseline degrades more noticeably as temperature increases, whereas GIFT maintains stronger performance across the full range, especially in higher-temperature regimes. This supports the claim that GIFT broadens the model\u2019s support over valid programs, making it less brittle to exploratory decoding."
+    },
+    {
+      "heading": "D.1Out-of-Distribution Evaluation",
+      "text": "Table 7 provides a more detailed error analysis for both in-distribution and out-of-distribution evaluation. On the in-distribution split, GIFT achieves a higher valid sample rate than SFT while also reducing failed generations and OpenCASCADE execution failures. On the out-of-distribution split, the picture is more mixed: GIFT preserves a strong valid-sample rate and lowers direct generation failures, but kernel-related failures increase, indicating that robustness to real-world imagery remains constrained by execution stability as well as prediction quality.\n\nFigure 15 presents a preliminary out-of-distribution scaling analysis on 400 real-world images ( doris2025cad ) . Although absolute IoU is substantially lower than on the standard test set, GIFT maintains a clear advantage over SFT across compute budgets, suggesting that the benefits of amortized geometric feedback transfer beyond the training distribution. At the same time, the reduced OOD performance highlights that further work is needed to improve visual robustness and compilation reliability under more realistic image conditions."
+    },
+    {
+      "heading": "D.2Failure Handling",
+      "text": "Table 8 contextualizes our results against stronger multimodal and specialized systems ( kolodiazhnyi2025cadrille ) , including settings with and without failed generations. The comparison highlights two points. First, failure handling materially affects reported mean IoU, making median IoU a useful complementary statistic for program-generation systems. Second, despite relying only on a single-view image and a general-purpose VLM backbone, CAD-Coder-GIFT closes a meaningful portion of the gap to specialized multimodal pipelines."
+    },
+    {
+      "heading": "D.3Performance Metrics and Task Complexity",
+      "text": "Figure 16 refines the intrinsic robustness analysis by separating complexity into operation-count and token-count views. Across both measures, GIFT improves median and mean IoU while increasing the fraction of successfully solved problems, especially on more complex examples. This supports the interpretation that GIFT does not merely improve easy cases, but shifts the model toward more reliable geometric reasoning on harder synthesis tasks.\n\nFigure 17 analyzes the distribution of problem complexity in both ground-truth and generated programs. The comparison suggests that the gains from GIFT are not explained simply by producing shorter or structurally simpler programs. Instead, the model continues to generate programs with complexity profiles similar to the target distribution while achieving higher geometric fidelity, indicating better alignment rather than trivial simplification."
+    },
+    {
+      "heading": "G.1The GIFT Approximation",
+      "text": "GIFT bypasses online sampling by approximating the expectation using a static, high-quality dataset collected via Inference-Time Scaling (ITS). We treat the sample selection process as an importance sampling step where the weights are binary (hard rejection)."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1 : Efficiency vs. Performance. We compare Pass@k (test set IoU) across compute budgets. GIFT (green) matches the peak performance of the CAD-Coder-SFT baseline (orange) while using 80% less compute (requiring far fewer samples). GIFT outperforms both SFT and GIFT-REJECT at every compute level, demonstrating that self-training with geometric feedback significantly enhances image-conditional CAD generation. Results reflect mean IoU on the GenCAD test subset, including failure cases. An extended scaling analysis is provided in Appendix C (Figure 12 ).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x1.png"
+    },
+    {
+      "caption": "(a) Accuracy.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x2.png"
+    },
+    {
+      "caption": "(a) Accuracy.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x2.png"
+    },
+    {
+      "caption": "(b) Complexity - Tokens.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x3.png"
+    },
+    {
+      "caption": "(c) Performance vs Task Complexity.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x4.png"
+    },
+    {
+      "caption": "(d) Ratio Problems Solved.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x5.png"
+    },
+    {
+      "caption": "Figure 3 : The CAD-Coder pipeline processes multimodal inputs (text prompts and images) to generate executable CAD code. This code is converted into STEP files via geometric alignment and validated against the ground truth using IoU metrics.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x6.png"
+    },
+    {
+      "caption": "(a) Image-to-Text (Generalist VLM).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x7.png"
+    },
+    {
+      "caption": "(a) Image-to-Text (Generalist VLM).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x7.png"
+    },
+    {
+      "caption": "(b) Image-to-CAD (Specialist VLM).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x8.png"
+    },
+    {
+      "caption": "Figure 5 : Standard SFT Baseline. The model is trained on static image-code pairs using a next-token prediction objective.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x9.png"
+    },
+    {
+      "caption": "Figure 6 : Soft Rejection Sampling (SRS). We sample K K programs, verify them with a geometric kernel, and retain diverse valid programs ( 0.9 \u2264 IoU < 0.99 0.9\\leq\\text{IoU}<0.99 ) to expand the training distribution beyond the single ground truth.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x10.png"
+    },
+    {
+      "caption": "Figure 7 : Failure-Driven Augmentation (FDA). We identify hard negatives (programs with 0.5 \u2264 IoU < 0.9 0.5\\leq\\text{IoU}<0.9 ), render them into synthetic images ( \u03d5 \u200b ( \ud835\udc33 ) \\phi(\\mathbf{z}) ), and train the model to map these \u2019noisy\u2019 inputs back to the correct ground truth code ( \ud835\udc33 g \u200b t \\mathbf{z}_{gt} ).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x11.png"
+    },
+    {
+      "caption": "(a) All samples",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x12.png"
+    },
+    {
+      "caption": "(a) All samples",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x12.png"
+    },
+    {
+      "caption": "(b) All samples w/o GT",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x13.png"
+    },
+    {
+      "caption": "(c) Best samples",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x14.png"
+    },
+    {
+      "caption": "(d) Best samples w/o GT",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x15.png"
+    },
+    {
+      "caption": "(a) Best IoU Scaling.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x16.png"
+    },
+    {
+      "caption": "(a) Best IoU Scaling.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x16.png"
+    },
+    {
+      "caption": "(b) IoU Threshold.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x17.png"
+    },
+    {
+      "caption": "Figure 10 : GIFT strategies impact. We compare the SFT baseline against GIFT-REJECT (targeting output diversity) and the full GIFT framework (combining diversity and robustness). The full GIFT method yields the largest performance gain, confirming the critical value of learning from hard negatives.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x18.png"
+    },
+    {
+      "caption": "(a) BLEU.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x19.png"
+    },
+    {
+      "caption": "(a) BLEU.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x19.png"
+    },
+    {
+      "caption": "(b) METEOR.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x20.png"
+    },
+    {
+      "caption": "(c) ROUGE.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x21.png"
+    },
+    {
+      "caption": "Figure 12 : Extended inference-time scaling comparison including GIFT-FAIL. Across all compute budgets, GIFT achieves the highest IoU, while GIFT-FAIL and GIFT-REJECT each improve over the SFT baseline. The full GIFT model matches the high-compute performance of SFT with substantially less inference-time sampling.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x22.png"
+    },
+    {
+      "caption": "(a) 5k steps.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x23.png"
+    },
+    {
+      "caption": "(a) 5k steps.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x23.png"
+    },
+    {
+      "caption": "(b) 10k steps.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x24.png"
+    },
+    {
+      "caption": "(c) 15k steps.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x25.png"
+    },
+    {
+      "caption": "Figure 14 : Sensitivity to temperature sampling for GIFT and SFT. GIFT is more robust in particular for large temperatures.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x26.png"
+    },
+    {
+      "caption": "Figure 15 : Preliminary out-of-distribution evaluation using a set of 400 real-world images, based on the data split provided by ( doris2025cad ) . The results show that GIFT effectively leverages inference-time compute to handle challenging, unseen inputs.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x27.png"
+    },
+    {
+      "caption": "(a) Accuracy.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x28.png"
+    },
+    {
+      "caption": "(a) Accuracy.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x28.png"
+    },
+    {
+      "caption": "(b) Ratio Problems Solved.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x29.png"
+    },
+    {
+      "caption": "(c) Performance vs Complexity (Operations).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x30.png"
+    },
+    {
+      "caption": "(d) Performance vs Complexity (Tokens).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x31.png"
+    },
+    {
+      "caption": "(a) Operations (Ground Truth).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x32.png"
+    },
+    {
+      "caption": "(a) Operations (Ground Truth).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x32.png"
+    },
+    {
+      "caption": "(b) Tokens (Ground Truth).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x33.png"
+    },
+    {
+      "caption": "(c) Operations (Generated).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x34.png"
+    },
+    {
+      "caption": "(d) Tokens (Generated).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x35.png"
+    },
+    {
+      "caption": "(e) Mean Operations (Generated).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x36.png"
+    },
+    {
+      "caption": "(f) Mean Tokens (Generated).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x37.png"
+    },
+    {
+      "caption": "Figure 18 : Distribution of Top-1 samples with I \u200b o \u200b U > 0.9 IoU>0.9 .",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x38.png"
+    },
+    {
+      "caption": "(a) Before balancing.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x39.png"
+    },
+    {
+      "caption": "(a) Before balancing.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x39.png"
+    },
+    {
+      "caption": "(b) After balancing.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x40.png"
+    },
+    {
+      "caption": "(a)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/img/render/11.png"
+    },
+    {
+      "caption": "(a)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/img/render/11.png"
+    },
+    {
+      "caption": "(b)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/img/render/40021.png"
+    },
+    {
+      "caption": "(c)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/img/render/72730.png"
+    },
+    {
+      "caption": "(d)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/img/render/77387.png"
+    },
+    {
+      "caption": "(e)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/img/render/79461.png"
+    },
+    {
+      "caption": "(f)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/img/render/86199.png"
+    },
+    {
+      "caption": "(g)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/img/render/122810.png"
+    },
+    {
+      "caption": "(h)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/img/render/153219.png"
+    },
+    {
+      "caption": "(i)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/img/render/161780.png"
+    },
+    {
+      "caption": "Figure 21 : Examples of low-IoU but executable generations used for Failure-Driven Augmentation. The rendered failures provide structured hard negatives that train the model to recover the original ground-truth program from imperfect visual geometry.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x41.png"
+    },
+    {
+      "caption": "(a) SFT workflow description",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x42.png"
+    },
+    {
+      "caption": "(b) GIFT workflow description",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x43.png"
+    },
+    {
+      "caption": "Figure 23 : Example of high IoU CAD generations used for SRS augmentation.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x44.png"
+    },
+    {
+      "caption": "Figure 24 : Example of high IoU CAD generations used for SRS augmentation.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x45.png"
+    },
+    {
+      "caption": "Figure 25 : Example of high IoU CAD generations used for SRS augmentation.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27448/assets/x46.png"
+    }
+  ],
+  "ar5iv_success": true
+}

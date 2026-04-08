@@ -1,0 +1,76 @@
+{
+  "paper_id": "2603.28257",
+  "title": "Nonlinear Factor Decomposition via Kolmogorov-Arnold Networks: A Spectral Approach to Asset Return Analysis",
+  "abstract": "KAN-PCA is an autoencoder that uses a KAN as encoder and a linear map as decoder. It generalizes classical PCA by replacing linear projections with learned B-spline functions on each edge. The motivation is to capture more variance than classical PCA, which becomes inefficient during market crises when the linear assumption breaks down and correlations between assets change dramatically.\n  We prove that if the spline activations are forced to be linear, KAN-PCA yields exactly the same results as classical PCA, establishing PCA as a special case. Experiments on 20 S&P 500 stocks (2015-2024) show that KAN-PCA achieves a reconstruction R^2 of 66.57%, compared to 62.99% for classical PCA with the same 3 factors, while matching PCA out-of-sample after correcting for data leakage in the training procedure.",
+  "authors": [
+    "David Breazu"
+  ],
+  "date": "2026-03-30T10:33:59+00:00",
+  "url": "http://arxiv.org/abs/2603.28257v1",
+  "categories": [
+    "q-fin.ST",
+    "cs.LG"
+  ],
+  "primary_category": "q-fin.ST",
+  "sections": [
+    {
+      "heading": "Introduction",
+      "text": "A factor model is a useful tool for understanding a portfolio of assets. Instead of analyzing every stock individually, a factor model identifies a small number of common forces that drive all assets simultaneously. These forces are called factors (Fama and French, 1993 ) . For a hedge fund, this means that instead of tracking hundreds of individual positions, one can understand the entire portfolio through a handful of underlying risk sources, making risk management far more tractable.\n\nClassical PCA is the standard method for extracting these factors from return data. However, PCA cannot capture the nonlinearities present in financial markets. During a crisis such as the COVID-19 pandemic, PCA would report near-unity correlations between certain assets, which is empirically misleading. It treats the crisis as a linear amplification of normal market dynamics rather than a qualitatively different regime.\n\nWe therefore propose KAN-PCA: an autoencoder that uses a KAN encoder (Liu et\u00a0al., 2024a ) combined with a linear decoder. The KAN encoder replaces linear projections with learned spline functions, while the linear decoder preserves direct interpretability of the factors. When spline activations are forced to be linear, KAN-PCA recovers exactly classical PCA. In cases of genuine nonlinearity, it captures substantially more structure from the data.\n\nOur main contributions are: 1. A formal proof that forcing the spline activations to be linear yields exactly the same results as classical PCA, establishing PCA as a special case of our framework. 2. Experimental evidence that KAN-PCA captures more in-sample variance than classical PCA with the same number of factors ( 66.57 % 66.57\\% vs 62.99 % 62.99\\% ). 3. An ablation study identifying and correcting a data leakage issue in the original training procedure, showing that corrected KAN-PCA matches PCA out-of-sample ( 56.56 % 56.56\\% vs 57.33 % 57.33\\% ). 4. Visualization of the learned edge functions, providing direct evidence of nonlinear factor structure in S&P\u00a0500 returns."
+    },
+    {
+      "heading": "Classical PCA",
+      "text": "Let { x t } t = 1 T \u2282 \u211d N \\{x_{t}\\}_{t=1}^{T}\\subset\\mathbb{R}^{N} be a sequence of N N -dimensional standardized return vectors with zero mean. The empirical covariance matrix is: \u03a3 := 1 T \u200b \u2211 t = 1 T x t \u200b x t \u22a4 \u2208 \u211d N \u00d7 N , ( \u03a3 i \u200b j = empirical covariance between asset \u200b i \u200b and asset \u200b j ) \\Sigma:=\\frac{1}{T}\\sum_{t=1}^{T}x_{t}x_{t}^{\\top}\\;\\in\\;\\mathbb{R}^{N\\times N},\\qquad(\\Sigma_{ij}=\\text{empirical covariance between asset }i\\text{ and asset }j) By the spectral theorem, since \u03a3 \\Sigma is symmetric positive semidefinite, it admits the decomposition: \u03a3 = U \u200b \u039b \u200b U \u22a4 , \u039b = diag \u200b ( \u03bb 1 , \u2026 , \u03bb N ) , \u03bb 1 \u2265 \u22ef \u2265 \u03bb N \u2265 0 \\Sigma=U\\Lambda U^{\\top},\\qquad\\Lambda=\\mathrm{diag}(\\lambda_{1},\\ldots,\\lambda_{N}),\\quad\\lambda_{1}\\geq\\cdots\\geq\\lambda_{N}\\geq 0 where U = [ u 1 \u200b \u2223 \u22ef \u2223 \u200b u N ] U=[u_{1}\\mid\\cdots\\mid u_{N}] satisfies U \u22a4 \u200b U = I U^{\\top}U=I (columns are orthonormal: each eigenvector has unit length and is perpendicular to all others). The k k -factor PCA projection uses the top- k k eigenvectors U k := [ u 1 \u200b \u2223 \u22ef \u2223 \u200b u k ] U_{k}:=[u_{1}\\mid\\cdots\\mid u_{k}] : z t = U k \u22a4 \u200b x t \u2208 \u211d k , x ^ t = U k \u200b z t \u2208 \u211d N z_{t}=U_{k}^{\\top}x_{t}\\;\\in\\;\\mathbb{R}^{k},\\qquad\\hat{x}_{t}=U_{k}z_{t}\\;\\in\\;\\mathbb{R}^{N} The reconstruction loss equals \u2211 i = k + 1 N \u03bb i \\sum_{i=k+1}^{N}\\lambda_{i} , the minimum achievable among all rank- k k linear approximations. In our experiment with N = 20 N=20 stocks and k = 3 k=3 , PCA achieves R 2 = 62.99 % R^{2}=62.99\\% , with: \u03bb 1 \u200b explains \u200b 48.00 % , \u03bb 2 \u200b explains \u200b 8.96 % , \u03bb 3 \u200b explains \u200b 6.03 % \\lambda_{1}\\text{ explains }48.00\\%,\\quad\\lambda_{2}\\text{ explains }8.96\\%,\\quad\\lambda_{3}\\text{ explains }6.03\\%"
+    },
+    {
+      "heading": "B-Spline Functions",
+      "text": "B-splines are piecewise polynomials that are smooth at their knots. A cubic B-spline ( k = 3 k=3 ) is C 2 C^{2} -continuous, meaning it has two continuous derivatives everywhere, which is sufficient smoothness for financial applications. The basis functions { B i , k } \\{B_{i,k}\\} are computed via the Cox-de\u00a0Boor recursion and satisfy the partition of unity property \u2211 i B i , k \u200b ( x ) = 1 \\sum_{i}B_{i,k}(x)=1 ."
+    },
+    {
+      "heading": "Kolmogorov-Arnold Networks",
+      "text": "The Kolmogorov-Arnold representation theorem (Kolmogorov, 1957 ) states that any continuous function f : [ 0 , 1 ] n \u2192 \u211d f:[0,1]^{n}\\to\\mathbb{R} can be written as: f \u200b ( x 1 , \u2026 , x n ) = \u2211 q = 1 2 \u200b n + 1 \u03a6 q \u200b ( \u2211 p = 1 n \u03c6 q , p \u200b ( x p ) ) f(x_{1},\\ldots,x_{n})=\\sum_{q=1}^{2n+1}\\Phi_{q}\\!\\left(\\sum_{p=1}^{n}\\varphi_{q,p}(x_{p})\\right) where \u03a6 q , \u03c6 q , p : \u211d \u2192 \u211d \\Phi_{q},\\varphi_{q,p}:\\mathbb{R}\\to\\mathbb{R} are continuous univariate functions.\n\nThe key distinction from MLPs is that activations reside on edges. Each edge carries its own learned function rather than a scalar weight, and nodes merely sum their inputs."
+    },
+    {
+      "heading": "KAN-PCA",
+      "text": "Unlike classical PCA, each asset\u2019s contribution to each factor is mediated by a learned spline function \u03c6 j \u200b i \\varphi_{ji} rather than a fixed scalar weight. This allows the model to capture asymmetric and regime-dependent relationships between assets and factors."
+    },
+    {
+      "heading": "Data and Setup",
+      "text": "We use daily log-returns for 20 S&P\u00a0500 large-cap constituents from January 2015 to January 2024, comprising 2,263 trading days. The tickers include AAPL, MSFT, GOOGL, JPM, JNJ, XOM, BAC, PG, KO, WMT, CVX, GS, HD, MCD, CAT, MMM, IBM, GE, BA, and DIS. Returns are standardized to zero mean and unit variance per stock.\n\nThe dataset is split 70/10/20: training set (1,584 days, 2015\u20132020), validation set (226 days, 2021), and test set (453 days, 2022\u20132024). All hyperparameter choices are made on training and validation data only."
+    },
+    {
+      "heading": "Models",
+      "text": "We compare four models, all using k = 3 k=3 factors:\n\n\u2022 Classical PCA : Standard spectral decomposition of \u03a3 \\Sigma . Benchmark. \u2022 KAN-PCA Simple : Architecture [ 20 , 3 , 20 ] [20,3,20] , grid G = 5 G=5 , cubic B-splines. Trained with Adam (200 steps, lr= 5 \u00d7 10 \u2212 4 5\\times 10^{-4} ) then LBFGS (50 steps). \u2022 KAN-PCA Advanced : Architecture [ 20 , 10 , 3 , 20 ] [20,10,3,20] , grid G = 10 G=10 . This means: 20 stock inputs, an intermediate KAN layer of 10 neurons, compression to 3 factors, reconstruction to 20 outputs. Trained with Adam (500 steps) then LBFGS (100 steps). \u2022 KAN-PCA Improved : Same architecture as Avansat, with corrected training procedure: proper 70/10/20 split to eliminate data leakage, early stopping based on validation loss, and progressive grid extension ( 3 \u2192 5 \u2192 10 3\\to 5\\to 10 ) with stronger regularization ( \u03bb = 0.01 \\lambda=0.01 )."
+    },
+    {
+      "heading": "Results",
+      "text": "R 2 R^{2} Full = in-sample explained variance. R 2 R^{2} OOS = out-of-sample on held-out 2022\u20132024 period.\n\nKAN-PCA Advanced achieves 66.24 % 66.24\\% in-sample versus 62.99 % 62.99\\% for classical PCA, a consistent improvement of + 3.25 +3.25 percentage points with the same 3 factors. This improvement demonstrates that genuine nonlinear structure exists in S&P\u00a0500 returns that PCA cannot capture by construction.\n\nKAN-PCA Improved narrows the out-of-sample gap versus classical PCA from \u2212 3.39 -3.39 pp to \u2212 0.77 -0.77 pp, effectively matching PCA on new data while maintaining higher in-sample performance."
+    },
+    {
+      "heading": "Ablation Study",
+      "text": "The original KAN-PCA model was trained and evaluated without proper separation between training and test data. This created a data leakage issue: pykan uses the test set for internal grid updates during training, meaning the model indirectly observed test-set statistics while learning. As a result, the original out-of-sample results were optimistic.\n\nThe improved model uses a proper 70/10/20 train/val/test split, early stopping based on validation loss, and progressive grid extension ( 3 \u2192 5 \u2192 10 3\\to 5\\to 10 ) with stronger regularization. On genuinely unseen data, KAN-PCA is 0.77 0.77 pp below classical PCA in R 2 R^{2} ( 56.56 % 56.56\\% vs 57.33 % 57.33\\% ). However, the model still captures nonlinear structure that PCA cannot represent by construction. The original out-of-sample weakness was primarily a training methodology issue, not a fundamental limitation of the KAN-PCA approach."
+    },
+    {
+      "heading": "Factor Analysis",
+      "text": "All three KAN factors exhibit sharp spikes at the COVID-19 crash. Factor\u00a01 drops to \u2212 3 -3 , Factor\u00a02 spikes to + 5 +5 , and Factor\u00a03 drops to \u2212 12 -12 . This demonstrates that the model has learned to detect the crisis as a qualitatively different regime, not merely a large movement but a structurally distinct event. Classical PCA distributes the same shock linearly across its components, without this asymmetric regime-sensitive response."
+    },
+    {
+      "heading": "Edge Function Analysis",
+      "text": "The learned edge functions \u03c6 j \u200b i \u200b ( x ) \\varphi_{ji}(x) are consistently nonlinear across all 20 stocks. Notable patterns include: AAPL shows an S-shaped curve, with large negative returns having disproportionately large impact compared to positive returns; GOOGL shows an inverted-U shape, impossible to represent with a scalar PCA loading; PG shows a bimodal pattern consistent with two distinct operating regimes."
+    },
+    {
+      "heading": "Conclusion",
+      "text": "In this thesis we showed that a KAN-PCA factor model can outperform classical PCA under certain conditions. By replacing linear projections with learned spline functions, the model captures nonlinear structure in equity returns that classical PCA cannot represent by construction, achieving 66.57 % 66.57\\% in-sample explained variance versus 62.99 % 62.99\\% with the same 3 factors.\n\nAn improved version of the model, incorporating early stopping, proper train/val/test splitting, and progressive grid extension, narrows the out-of-sample gap from \u2212 3.39 -3.39 pp to \u2212 0.77 -0.77 pp versus classical PCA, effectively matching PCA on new data while maintaining higher in-sample performance. This demonstrates that the original out-of-sample weakness was primarily a training methodology issue, not a fundamental limitation of the KAN-PCA approach.\n\nAs a natural next step, the same approach could be applied to a larger universe of assets, around 200 stocks, with a more complex architecture and a longer training procedure. With sufficient regularization to control overfitting, we expect the out-of-sample advantage to close significantly."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1: KAN nonlinear factors (2015\u20132024). The red dashed line marks the COVID-19 crash of March 2020. All three factors exhibit sharp spikes at this date, demonstrating that the model treats the crash as qualitatively distinct from normal market movements.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28257/assets/factori_kan.png"
+    },
+    {
+      "caption": "Figure 2: Learned edge functions \u03c6 \u200b ( x ) \\varphi(x) for all 20 stocks (contribution to Factor 1). If relationships were linear as PCA assumes, all curves would be straight lines. They are not, providing direct visual evidence of nonlinear factor structure.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28257/assets/edge_functions.png"
+    }
+  ],
+  "ar5iv_success": true
+}

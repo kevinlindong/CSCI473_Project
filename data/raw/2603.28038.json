@@ -1,0 +1,58 @@
+{
+  "paper_id": "2603.28038",
+  "title": "Beyond the Answer: Decoding the Behavior of LLMs as Scientific Reasoners",
+  "abstract": "As Large Language Models (LLMs) achieve increasingly sophisticated performance on complex reasoning tasks, current architectures serve as critical proxies for the internal heuristics of frontier models. Characterizing emergent reasoning is vital for long-term interpretability and safety. Furthermore, understanding how prompting modulates these processes is essential, as natural language will likely be the primary interface for interacting with AGI systems. In this work, we use a custom variant of Genetic Pareto (GEPA) to systematically optimize prompts for scientific reasoning tasks, and analyze how prompting can affect reasoning behavior. We investigate the structural patterns and logical heuristics inherent in GEPA-optimized prompts, and evaluate their transferability and brittleness. Our findings reveal that gains in scientific reasoning often correspond to model-specific heuristics that fail to generalize across systems, which we call \"local\" logic. By framing prompt optimization as a tool for model interpretability, we argue that mapping these preferred reasoning structures for LLMs is an important prerequisite for effectively collaborating with superhuman intelligence.",
+  "authors": [
+    "Rohan Pandey",
+    "Eric Ye",
+    "Michael Li"
+  ],
+  "date": "2026-03-30T05:01:07+00:00",
+  "url": "http://arxiv.org/abs/2603.28038v1",
+  "categories": [
+    "cs.AI",
+    "cs.LG"
+  ],
+  "primary_category": "cs.AI",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "As the capabilities of Large Language Models (LLMs) increasingly push performance frontiers (Bubeck et al. , 2023 ) , research focus will foreseeably shift from benchmark tracking toward understanding how to best collaborate with LLMs. We identify reasoning as the most critical capability of LLMs in a post-AGI landscape, as it provides the verifiable logical scaffolding necessary for autonomous systems to navigate novel, high-stakes scenarios (Huang and Chang, 2023 ) . A rigorous understanding of these mechanisms enables more effective human-AGI collaboration in a wide range of scenarios, ensuring these systems act reliably when tackling complex challenges. Current LLMs provide a valuable window into the reasoning paradigms that may define a post-AGI world.\n\nWe see scientific reasoning as a robust testbed for probing these internal paradigms. Scientific reasoning provides essential foundational logic and structured frameworks, which can generalize to a variety of high impact downstream tasks, including but not limited to scientific discovery, spatial navigation, and engineering. In this work, we examine such reasoning in two domains: (1) GPQA, which tests graduate-level scientific reasoning (Rein et al. , 2023 ) , and (2) a formally verified algebra dataset implemented in Lean (Yang et al. , 2023b ; Zheng et al. , 2022 ) . These benchmarks allow for the observation of complex logic under controlled and interpretable conditions.\n\nSince natural language will likely be the primary interface for interacting with AGI systems, understanding how prompting affects reasoning capabilities is crucial for reliable collaboration. In this work, we first use Genetic Pareto (GEPA) to optimize prompts and discover which specific instructions result in the best performance (Agrawal et al. , 2025 ; Khattab et al. , 2023 ) . We then analyze these results to identify the patterns that elicit higher-level reasoning in these models.\n\nWe find that high-performing prompts often rely on model-specific heuristics that fail to generalize across models (Mirzadeh et al. , 2025 ) . Mapping these machine-preferred structures is vital for overseeing future general-purpose systems (Berglund et al. , 2024 ) . This work establishes a foundation for decoding LLM reasoning to ensure safety frameworks are prepared for a post-AGI society."
+    },
+    {
+      "heading": "3Methodology",
+      "text": "We assess LLM reasoning in two domains: (1) formal mathematical theorem proving via Lean from the MiniF2F dataset (Zheng et al. , 2022 ) and (2) scientific reasoning via the GPQA Diamond benchmark (Rein et al. , 2023 ) . We refer to these benchmarks as \u201cAlgebra\u201d and \u201cGPQA\u201d respectively. These domains assess scientific reasoning in complementary ways: Lean requires rigid verifiable logic and is open ended, while GPQA evaluates high level conceptual reasoning and is multiple choice. We apply a custom variant of GEPA which has been simplified and adapted for Lean theorem proving and GPQA. Implementation details are specified in Algorithm 1 .\n\nWe conduct the entirety of GEPA optimization using DeepSeek-V3.2, which currently has state-of-the-art performance on reasoning benchmarks. To gain insight into the transferability of optimized prompts across different models, we also test the same prompts on ChatGPT-5.4-mini, GLM 5, and Claude Sonnet 4.6, all of which were released within the past few months and have competitive performance. By analyzing the prompt optimization process and comparing prompt performance across models, we hope to gain insight into how prompting strategy affects reasoning performance.\n\nFor every combination of model and benchmark, we run evaluations across four prompts: (1) Hand-Crafted Simple: A hand-crafted simple prompt, intended to emulate the prompting ability of average technical users, which serves as a baseline; (2) Hand-Crafted CoT: A hand-crafted Chain-of-Thought prompt, intended to emulate best practice prompting strategies to current knowledge, which serves as a baseline; (3) GEPA Optimized Baseline: The initial prompt from the GEPA optimization process; and (4) GEPA Optimized Final: The final prompt from the GEPA optimization process. Prompts are further discussed in the Appendix, and examples are provided."
+    },
+    {
+      "heading": "4.1Benchmark Performance",
+      "text": "Prompt performance on benchmarks is displayed in Table 1 . Our first major observation is that the GEPA Optimized Final prompt achieves its most significant gains on DeepSeek-V3.2, reaching 100.00% on Algebra and 94.44% on GPQA. This confirms that the GEPA optimization process is highly effective when evaluated on the same model used during optimization. Our second major observation is that the superiority of the GEPA-optimized prompts does not reliably transfer to other models. While some models show marginal benefits \u2013 for example, GPT-5.4-mini sees an improvement in Algebra from 50.00% to 61.11% \u2013 the optimized prompt is rarely the undisputed best performer elsewhere. Notably, for GLM 5 (Algebra) and Claude Sonnet 4.6 (both benchmarks), the Hand-Crafted CoT prompts actually outperform the GEPA Optimized Final prompt.\n\nThese results suggest that the optimization process is highly model-specific, and suggests a trade-off between prompt universality and performance. Since DeepSeek was used as the optimizer, the evolved prompts likely capture patterns specific to DeepSeek\u2019s architecture that do not resonate with the internal logic of other models. This highlights a significant lack of interoperability and reinforces the brittleness of automated prompt engineering across diverse foundation models."
+    },
+    {
+      "heading": "4.2Prompt Evolution Patterns",
+      "text": "By manually analyzing the evolution of prompts over the course of GEPA optimization, we primarily find that prompts evolve from telling the model what to do to coaching it on how to do it , similar to a human expert. In the process, significant domain knowledge and best practices are often added to the context. For example, in the GEPA optimization process for the Algebra benchmark, prompts eventually referenced domain specific strategies such as using Eisenstein\u2019s Criterion for minimal polynomials. Similarly, later GPQA prompts mentioned specific strategies such as quantum field theory loop counting. Later Algebra prompts also explicitly warn against common pitfalls, especially with regard to Lean formatting. Interestingly, a robust protocol for \u201cHandling False Statements\u201d is also introduced to prevent hallucinating proofs. The Appendix contains prompt examples.\n\nThis observation is also supported by analyzing the prompt lengths over the course of optimization, as shown in Figure 1 . The final prompt turns out to be around twice as long as the initial prompt. This demonstrates that LLMs often rely on detailed prompting to fully elicit their reasoning capabilities.\n\nBy analyzing the embedding space for prompts over the optimization process, we also find that the embeddings of proposed prompts tends to drift in a consistent direction over the course of optimization. This suggests that for the same task, some regions of prompting space may offer more promising performance. A plot of this behavior is in the Appendix."
+    },
+    {
+      "heading": "6.1Ethics Statement",
+      "text": "While the discovery of effective reasoning paths could potentially be repurposed for harmful tasks, our analysis of the logic inherent in these models primarily as a vital safeguard. If we better understand how LLMs reason, we can better utilize LLMs for reasoning related tasks. Ultimately, identifying how LLMs approach reasoning tasks is essential for the development of robust, aligned, and transparent post-AGI systems.\n\nWe also agree to NOT reveal examples from our evaluation datasets in plain text or images online, to reduce the risk of leakage into foundation model training corpora."
+    },
+    {
+      "heading": "6.2Reproducibility Statement",
+      "text": "Our results are reproducible to the extent of nondeterminism in the outputs of LLMs used."
+    },
+    {
+      "heading": "A.2Prompts",
+      "text": "The 4 prompts we tested for the Algebra benchmark are listed below. For sake of brevity, we do not include the 4 GPQA prompts in this section, but they are similar in nature."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1: The length of GEPA proposed prompts increases over the course of optimization, with the final prompt often being about twice as long in characters as the initial prompt. This shows that detailed prompting is likely required to unlock better reasoning capabilities in LLMs.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28038/assets/prompt_lengths.png"
+    },
+    {
+      "caption": "Figure 2: The embeddings of GEPA proposed prompts tend to drift over the course of optimization. For both algebra and GPQA, there seems to be a significant jump in embedding space at around iteration 12. This suggests that for the same task, some regions of prompting space may offer more promising performance.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28038/assets/prompt_embeddings.png"
+    }
+  ],
+  "ar5iv_success": true
+}

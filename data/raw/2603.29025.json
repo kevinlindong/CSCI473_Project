@@ -1,0 +1,136 @@
+{
+  "paper_id": "2603.29025",
+  "title": "The Model Says Walk: How Surface Heuristics Override Implicit Constraints in LLM Reasoning",
+  "abstract": "Large language models systematically fail when a salient surface cue conflicts with an unstated feasibility constraint. We study this through a diagnose-measure-bridge-treat framework. Causal-behavioral analysis of the ``car wash problem'' across six models reveals approximately context-independent sigmoid heuristics: the distance cue exerts 8.7 to 38 times more influence than the goal, and token-level attribution shows patterns more consistent with keyword associations than compositional inference. The Heuristic Override Benchmark (HOB) -- 500 instances spanning 4 heuristic by 5 constraint families with minimal pairs and explicitness gradients -- demonstrates generality across 14 models: under strict evaluation (10/10 correct), no model exceeds 75%, and presence constraints are hardest (44%). A minimal hint (e.g., emphasizing the key object) recovers +15 pp on average, suggesting the failure lies in constraint inference rather than missing knowledge; 12/14 models perform worse when the constraint is removed (up to -39 pp), revealing conservative bias. Parametric probes confirm that the sigmoid pattern generalizes to cost, efficiency, and semantic-similarity heuristics; goal-decomposition prompting recovers +6 to 9 pp by forcing models to enumerate preconditions before answering. Together, these results characterize heuristic override as a systematic reasoning vulnerability and provide a benchmark for measuring progress toward resolving it.",
+  "authors": [
+    "Yubo Li",
+    "Lu Zhang",
+    "Tianchong Jiang",
+    "Ramayya Krishnan",
+    "Rema Padman"
+  ],
+  "date": "2026-03-30T21:36:09+00:00",
+  "url": "http://arxiv.org/abs/2603.29025v1",
+  "categories": [
+    "cs.CL",
+    "cs.AI"
+  ],
+  "primary_category": "cs.CL",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "Large language models are rapidly moving from research tools to everyday decision-support systems.\nPeople consult them for travel planning, medical triage, legal interpretation, financial advice, and moral judgment (Cheung et al. , 2025 ; Echterhoff et al. , 2024 ; Omar et al. , 2024 ) . As the scope of LLM-assisted decision-making widens, so does the potential for harm when the model\u2019s reasoning is flawed in ways that are difficult to anticipate.\nUnlike factual hallucinations, which can in principle be verified against external knowledge, reasoning errors \u2014cases where the model draws an incorrect conclusion from correctly perceived premises\u2014are harder to detect because the output sounds plausible and internally consistent.\n\nA growing body of work documents shortcut learning \u2014models exploiting surface-level statistical regularities rather than performing the intended computation (Geirhos et al. , 2020 ; Du et al. , 2023 ) \u2014across NLI (McCoy et al. , 2019 ) , QA (Ko et al. , 2020 ) , mathematical reasoning (Shi et al. , 2023 ; Mirzadeh et al. , 2024 ; Yang et al. , 2025 ) , and arithmetic (Nikankin et al. , 2024 ; Branco et al. , 2021 ) .\nCognitive-bias analogues (anchoring, framing, representativeness, content effects) further compound the problem (Suri et al. , 2024 ; Binz and Schulz, 2023 ; Bubeck et al. , 2023 ; Wang et al. , 2024 ; Malberg et al. , 2025 ; Echterhoff et al. , 2024 ; Lampinen et al. , 2024 ) , and can amplify human biases when users defer to model recommendations (Cheung et al. , 2025 ) .\nYet this literature overwhelmingly measures shortcut reliance through accuracy \u2014a binary signal that reveals that the model fails but not why .\n\nA recent viral test crystallized this gap with striking clarity. In February 2026, a Mastodon user posed a single-sentence question to four frontier LLMs (K\u00e9vin (@knowmadd), 2026 ) :\n\n\u201cI want to wash my car. The car wash is 50 meters away. Should I walk or drive?\u201d\n\nEvery model recommended walking; the correct answer is to drive, because you cannot wash a car that is not at the car wash.\nThe question went viral (Allen, 2026 ) , and a subsequent 53-model evaluation found that 42 recommended walking on a single pass, with only 5 answering correctly across ten trials (Opper AI, 2026 ) .\n\nThe problem is diagnostic because it is simple: no specialised knowledge, no multi-step arithmetic, no ambiguous premises\u2014just a conflict between a surface heuristic (short distance \u21d2 \\Rightarrow walk) and an implicit constraint (the car must be co-located with the wash).\nThis conflict structure recurs whenever an unstated prerequisite competes with a statistically dominant surface pattern, from medical triage (\u201cmild symptom \u21d2 \\Rightarrow wait\u201d) to legal reasoning (\u201cstandard clause \u21d2 \\Rightarrow sign\u201d). Jo ( 2026 ) connects the failure to the classical frame problem (McCarthy and Hayes, 1981 ) and shows that structured prompting can raise single-model accuracy from 30% to 85%, confirming that the bottleneck is not missing information but the order and structure of processing .\nHowever, no prior study has provided a systematic analysis that (i)\u00a0identifies which surface features trigger the heuristic, (ii)\u00a0measures how robustly it persists under controlled perturbation, or (iii)\u00a0characterises the reasoning traces that distinguish correct from incorrect responses."
+    },
+    {
+      "heading": "2Method",
+      "text": "Our investigation follows a diagnose\u2013measure\u2013bridge\u2013treat arc: causal-behavioral analysis of the car wash failure (\u00a7 2.1 ), systematic benchmarking across heuristic and constraint types (\u00a7 2.2 ), parametric probes testing whether the behavioral pattern generalises, and a proof-of-concept mitigation experiment.\n\u00a7 2.3 describes the experimental setup."
+    },
+    {
+      "heading": "2.2HOB: Heuristic Override Benchmark",
+      "text": "The diagnostic analysis reveals that models apply a proximity heuristic that dominates over a presence constraint.\nWe introduce HOB to test whether this extends to other heuristic types (cost, efficiency, semantic match) and constraint types (capability, validity, scope, procedural)."
+    },
+    {
+      "heading": "3.1Diagnostic Analysis",
+      "text": "We evaluate six models (Qwen3-{4B, 8B, 14B, 32B}, Qwen3.5-27B, GPT-OSS-20B) on the car wash problem (details in Appendix D ).\nAll achieve 0% accuracy: every paraphrase produces the wrong answer.\nDecision scores range from s \u00af = + 2.2 \\bar{s}=+2.2 (Qwen3.5-27B, p \u200b ( Walk ) > 0.90 p(\\textsc{Walk})>0.90 ) to + 13.8 +13.8 (Qwen3-4B, near-total Walk mass).\nScaling is non-monotonic: Qwen3-14B ( + 12.0 +12.0 ) is more confident in the wrong answer than the larger Qwen3-32B ( + 5.9 +5.9 )."
+    },
+    {
+      "heading": "3.2HOB Benchmark",
+      "text": "We evaluate 14 models on 500 HOB instances ( N = 10 N{=}10 trials, strict: correct only if all 10 pass). Table 2 summarises overall accuracy, the explicitness gradient, and minimal-pair asymmetry.\n\nStrict accuracy ranges from 49.6% (Qwen3-32B) to 74.6% (Gemini\u00a03.1\u00a0Pro); no model exceeds 75%, and half fall below 65%.\nTrial-level accuracy is substantially higher (70.3%\u201386.0%; Appendix F.1 ), indicating that models often answer correctly on individual trials but do so inconsistently\u2014the gap between trial-level and strict accuracy reflects stochastic rather than reliable constraint reasoning.\nC-pres (presence) is universally the hardest constraint family (44.4% averaged across heuristic types; individual cells range from 40.7% to 46.2%; Figure 4 ), directly validating the car wash pattern at scale; C-cap (capability) is easiest at 71.6% (per-model breakdowns in Appendix F ).\n\nNotably, stronger heuristic cues do not reliably produce lower accuracy: mean strict accuracy is 62.8% for strong, 56.2% for medium, and 59.6% for weak cues (Appendix F.5 ).\nThis non-monotonic pattern suggests the failure is not simply a matter of being overwhelmed by a strong signal; even weak heuristic cues suffice to disrupt constraint inference, consistent with the bottleneck being in activating the constraint reasoning pathway rather than in competition between heuristic and constraint signals.\n\nThe explicitness gradient reveals an inference bottleneck: accuracy jumps + 15.3 +15.3 pp on average (59.2% \u2192 \\to 74.5%) from a single subtle hint (e.g., adding emphasis: \u201cget my car washed,\u201d drawing attention to the object that must be present), suggesting models can access the relevant knowledge under facilitated conditions but fail to activate it autonomously.\nThe minimal-pair asymmetry exposes conservative bias: 12 of 14 models perform worse when the constraint is removed (drops up to \u2212 38.5 -38.5 pp), revealing that many \u201ccorrect\u201d base answers default to the harder option rather than reasoning about the constraint.\nOnly GPT-OSS-120B ( + 13.8 +13.8 ) and GPT-OSS-20B ( + 11.0 +11.0 ) improve on pairs, consistent with genuine reasoning."
+    },
+    {
+      "heading": "3.3Parametric Probes: Does the Pattern Generalise?",
+      "text": "We extend the parametric sweep to three additional H \u00d7 \\times C combinations (Appendix G ) to test whether other heuristic types produce the same sigmoid signature observed for distance.\nThe probes reveal three distinct patterns (Figure 5 ):\n\nCorrect reasoning emerges on H-cost \u00d7 \\times C-scope (cost sweep) and H-prox \u00d7 \\times C-cap (distance sweep with a sofa): conflict curves stay on the correct side regardless of cue strength, qualitatively distinct from the control sigmoid.\n\nEfficiency sigmoid failure appears on H-eff \u00d7 \\times C-cap (time-advantage sweep: carrying a 500-lb safe).\nThe conflict curve stays positive across all time advantages\u2014the model recommends a physically impossible action because the \u201cfaster\u201d heuristic dominates, replicating the distance sigmoid.\n\nSemantic sigmoid emerges on H-sem \u00d7 \\times C-scope: as a gas station description becomes more \u201ccar-related,\u201d the score transitions from correct (mechanic) to incorrect (gas station)\u2014a sigmoid over semantic similarity.\n\nThe cost probe elicits correct reasoning in 5/6 models; the efficiency and semantic probes show more failures, particularly for smaller models.\nThis confirms that constraint type matters: concrete physical constraints (weight, size) are easier to maintain than abstract scope or procedural ones, consistent with the C-cap > > C-scope hierarchy in Study\u00a02."
+    },
+    {
+      "heading": "3.4Proof-of-Concept Mitigation",
+      "text": "Since models recover substantially with a minimal hint (\u00a7 3.2 ), we test whether they can self-generate it.\nWe prepend a goal-decomposition instruction\u2014 \u201cList the necessary conditions for the stated goal, then answer\u201d \u2014and re-evaluate three models on all 500 HOB instances ( N = 10 N{=}10 ).\n\nGains are largest for models that need it most (Figure 6 ): Llama\u00a04\u00a0Scout improves from 70.3% to 79.3%, GPT-5.4 from 81.7% to 88.0%, while Gemini\u00a03.1\u00a0Pro (86.0% baseline) shows no change.\nForcing precondition enumeration effectively converts an implicit constraint into a self-generated hint, consistent with an inference-order bottleneck\u2014though other factors (e.g., inducing more deliberate processing) may also contribute (see Limitations)."
+    },
+    {
+      "heading": "6Conclusion",
+      "text": "When salient surface cues conflict with unstated feasibility constraints, LLMs systematically follow the heuristic.\nWe trace this failure from behavioral pattern (approximately context-independent sigmoid heuristics, HDR up to 38 \u00d7 \\times ) to generality (no model above 75% strict accuracy across 14 models on the 500-instance HOB benchmark).\nThe explicitness gradient suggests the bottleneck is constraint inference rather than missing knowledge; the minimal-pair asymmetry reveals that many apparent successes mask conservative bias.\nA simple goal-decomposition prompt\u2014forcing models to enumerate preconditions before answering\u2014recovers + 6 +6 \u2013 9 9 pp, consistent with the failure being in processing order and offering an initial mitigation direction for future work.\nWe release the HOB benchmark and diagnostic framework to support systematic measurement of progress on this challenge."
+    },
+    {
+      "heading": "F.1Full Leaderboard",
+      "text": "Table 9 reports strict override accuracy (correct on all 10 trials) alongside trial-level accuracy for all 14 models.\n\nThe gap between trial-level and strict accuracy reveals consistency: models like DeepSeek\u00a0R1 (83.1% trial, 64.2% strict) and GPT-OSS-20B (79.1% trial, 51.0% strict) answer correctly on many individual trials but inconsistently across the 10-trial window, indicating stochastic rather than reliable override."
+    },
+    {
+      "heading": "F.3Accuracy by Constraint Family",
+      "text": "The constraint hierarchy (Table 10 ) is consistent across models.\nC-pres instances require inferring that an object must be physically co-located with a service\u2014the same behavioral pattern identified in Study\u00a01.\nC-proc instances require inferring temporal or procedural prerequisites (e.g., a store being closed, needing an appointment), which are similarly unstated.\nC-cap instances (e.g., cannot carry a sofa on foot) involve more concrete, visualisable constraints, which models appear to handle better."
+    },
+    {
+      "heading": "F.4Accuracy by Heuristic Family",
+      "text": "Cost-based heuristics (H-cost) are the easiest to override, while proximity (H-prox) and semantic-match (H-sem) cues are the hardest.\nProximity cues may be harder because distance-to-decision mappings are highly frequent in training data (as demonstrated by the sigmoid heuristic in Study\u00a01).\nSemantic-match cues exploit category-level associations (e.g., \u201cgas station\u201d sounds car-related, so it should fix car problems), which are similarly deeply embedded in language model representations."
+    },
+    {
+      "heading": "F.5Heuristic Strength Analysis",
+      "text": "Contrary to expectation, stronger heuristic cues do not reliably produce lower accuracy (Table 12 ).\nMean strict accuracy is 62.8% for strong cues, 56.2% for medium, and 59.6% for weak\u2014a non-monotonic pattern.\nThis suggests that the failure is not simply a matter of being \u201coverwhelmed\u201d by a strong signal; even weak heuristic cues are sufficient to override constraint inference.\nThe bottleneck appears to be in activating the constraint reasoning pathway, not in the competition between heuristic and constraint signals."
+    },
+    {
+      "heading": "F.6Accuracy by Domain",
+      "text": "The domain breakdown reveals that scenarios involving specialised procedural knowledge (travel: visa requirements, booking prerequisites; medical: prescription requirements, appointment systems) are substantially harder than everyday scenarios (home, digital).\nThe 33-point gap between the easiest (home, 74.5%) and hardest (travel, 41.4%) domain underscores that constraint inference difficulty increases with domain specificity."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1: Left: Base decision scores s \u200b ( x ) s(x) . All positive (incorrect Walk preference); non-monotonic scaling. Right: Span-level occlusion heatmap. Distance columns uniformly blue ( \u0394 \u200b s < 0 \\Delta s<0 , toward Drive); goal columns near-zero or red.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.29025/assets/x1.png"
+    },
+    {
+      "caption": "Figure 2: Left: CSI vs. DSI per paraphrase (Qwen3-4B). Goal sensitivity drives HDR variation; distance sensitivity is stable. Right: Per-span \u0394 \u200b s \\Delta s heatmap (Qwen3-4B). Pattern consistent across all six models.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.29025/assets/x3.png"
+    },
+    {
+      "caption": "Figure 3: All six models\u2019 conflict curves (solid) are sigmoids tracking the control (dashed gray). No flat curve appears. Details in Appendix E .",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.29025/assets/x5.png"
+    },
+    {
+      "caption": "Figure 4: Mean strict accuracy per H \u00d7 \\times C cell (14 models). C-pres hardest; C-cap easiest. Cells marked \u201c\u2014\u201d are unpopulated (6 of 20 cells excluded for lack of natural scenarios; see Table 1 ).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.29025/assets/x6.png"
+    },
+    {
+      "caption": "Figure 5: Probe pattern classification (6 models \u00d7 \\times 4 probes). Correct : curves distinct; Partial : weak separation; Fail : sigmoid failure ( r > 0.8 r>0.8 ).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.29025/assets/x7.png"
+    },
+    {
+      "caption": "Figure 6: Goal-decomposition prompting improves weaker models substantially. Llama\u00a04\u00a0Scout gains + 9.0 +9.0 pp; GPT-5.4 gains + 6.3 +6.3 pp. Gemini\u00a03.1\u00a0Pro, already the strongest baseline, shows no change ( \u2212 0.6 -0.6 pp).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.29025/assets/x8.png"
+    },
+    {
+      "caption": "Figure 7: Token-level \u0394 \u200b s \\Delta s within the goal span (Qwen3-4B). Green bars (negative) weakly favour Drive; red bars (positive) favour Walk. Opposing effects cancel, leaving near-zero net goal influence. No token approaches the magnitude of the distance cue.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.29025/assets/x9.png"
+    },
+    {
+      "caption": "Figure 8: Monotonicity analysis: decision score s \u200b ( d ) s(d) vs. distance for conflict (orange) and control (blue) conditions across all six models. Every model produces sigmoid conflict curves that track the control curve.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.29025/assets/x10.png"
+    },
+    {
+      "caption": "Figure 9: Individual monotonicity curves. Top: Qwen3-4B (left) and Qwen3-32B (right). Bottom: GPT-OSS-20B (left) and Qwen3-14B (right, highest Walk-bias at short distances).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.29025/assets/x11.png"
+    },
+    {
+      "caption": "Figure 10: Remaining models: Qwen3-8B (left) and Qwen3.5-27B (right).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.29025/assets/x15.png"
+    },
+    {
+      "caption": "Figure 11: Strict accuracy across H \u00d7 \\times C cells for all 14 models. Cells A1 (H-prox \u00d7 \\times C-pres) and B1 (H-eff \u00d7 \\times C-pres) are consistently the hardest. Several models fall below 30% on these cells.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.29025/assets/x17.png"
+    },
+    {
+      "caption": "Figure 12: Strict accuracy by constraint family (mean \u00b1 \\pm range across 14 models). C-pres (presence) is hardest (mean: 44.4%), followed by C-proc (procedural, 52.9%). C-cap (capability, 71.6%) is easiest.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.29025/assets/x18.png"
+    },
+    {
+      "caption": "Figure 13: Parametric probes across four H \u00d7 \\times C combinations (Qwen3-4B). Orange: conflict; blue: control. Top-left: H-cost \u00d7 \\times C-scope\u2014correct reasoning (curves distinct). Top-right: H-eff \u00d7 \\times C-cap\u2014sigmoid failure (curves track). Bottom-left: H-prox \u00d7 \\times C-cap\u2014correct reasoning. Bottom-right: H-sem \u00d7 \\times C-scope\u2014semantic sigmoid.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.29025/assets/x19.png"
+    },
+    {
+      "caption": "Figure 14: H-eff \u00d7 \\times C-cap conflict curves for all six models. Qwen3-4B stays strongly positive (sigmoid failure); larger models (Qwen3-32B, Qwen3.5-27B) correctly shift negative. GPT-OSS-20B hovers near zero.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.29025/assets/x20.png"
+    },
+    {
+      "caption": "Figure 15: H-sem \u00d7 \\times C-scope conflict curves for all six models. As the gas station description becomes more \u201ccar-related\u201d (left to right), most models shift toward incorrectly recommending it for tire repair. Qwen3-4B shows the strongest semantic sigmoid; Qwen3.5-27B and Qwen3-32B remain closer to the decision boundary.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.29025/assets/x21.png"
+    }
+  ],
+  "ar5iv_success": true
+}

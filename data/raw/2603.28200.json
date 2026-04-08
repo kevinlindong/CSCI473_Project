@@ -1,0 +1,154 @@
+{
+  "paper_id": "2603.28200",
+  "title": "A Deep Reinforcement Learning Framework for Closed-loop Guidance of Fish Schools via Virtual Agents",
+  "abstract": "Guiding collective motion in biological groups is a fundamental challenge in understanding social interaction rules and developing automated systems for animal management. In this study, we propose a deep reinforcement learning (RL) framework for the closed-loop guidance of fish schools using virtual agents. These agents are controlled by policies trained via Proximal Policy Optimization (PPO) in simulation and deployed in physical experiments with rummy-nose tetras (Petitella bleheri), enabling real-time interaction between artificial agents and live individuals. To cope with the stochastic behavior of live individuals, we design a composite reward function to balance directional guidance with social cohesion. Our systematic evaluation of visual parameters shows that a white background and larger stimulus sizes maximize guidance efficacy in physical trials. Furthermore, evaluation across group sizes revealed that while the system demonstrates effective guidance for groups of five individuals, this capability markedly degrades as group size increases to eight. This study highlights the potential of deep RL for automated guidance of biological collectives and identifies challenges in maintaining artificial influence in larger groups.",
+  "authors": [
+    "Takato Shibayama",
+    "Hiroaki Kawashima"
+  ],
+  "date": "2026-03-30T09:10:02+00:00",
+  "url": "http://arxiv.org/abs/2603.28200v1",
+  "categories": [
+    "cs.RO",
+    "cs.LG",
+    "q-bio.PE"
+  ],
+  "primary_category": "cs.RO",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "Collective behavior in biological systems, such as fish schooling and bird flocking, emerges from local interactions among individuals, leading to complex and coordinated group-level patterns [ 1 , 2 , 3 , 4 , 5 ] . These behaviors allow groups to respond rapidly to environmental stimuli, such as predator threats, through the instantaneous transmission of information across the collective [ 6 , 7 , 8 , 9 ] . Understanding and guiding these dynamics are of significant interest in both fundamental biology and practical applications, such as automated aquaculture management and the development of bio-inspired underwater robotics [ 10 , 11 , 12 , 13 , 14 , 15 ] .\n\nTo influence or control the motion of a collective, researchers have developed various biomimetic agents, including robotic fish [ 16 , 17 , 18 , 19 , 20 ] and visual stimuli displayed on screens or by projection [ 21 , 22 , 23 , 24 , 25 , 26 , 27 ] . These tools allow for \u201ccausal\u201d investigations by decoupling specific social cues. Among these, closed-loop systems, where artificial agents respond in real-time to the actions of live animals, have emerged as a powerful tool for investigating social interaction mechanisms [ 16 , 17 , 18 , 19 , 25 ] .\n\nA major challenge in designing effective closed-loop controllers for biological agents lies in modeling stochastic and non-linear collective behavior. To alleviate the reliance on precise analytical models, model-free reinforcement learning (RL) has been proposed as a promising framework [ 28 ] .\nWhile prior work demonstrated the feasibility of fish guidance using Q-learning, its scope was limited to small, highly cohesive groups ( N r = 3 N_{r}=3 ) represented by a single centroid [ 28 ] . Such approaches rely on discretized state-space representations and reward structures limited to evaluating final outcomes, which may\nnot scale effectively to larger collectives.\n\nThis study expands upon this foundation by implementing an adaptive controller based on Proximal Policy Optimization (PPO), a state-of-the-art deep reinforcement learning approach [ 29 ] . As the group size increases, collective dynamics become significantly more complex, often splitting into multiple sub-groups, which makes simple discretized representations insufficient. To provide the necessary capacity for future scalability and more granular feedback control, we transition to a continuous state-space representation through PPO. To the best of our knowledge, this is one of the first studies to apply PPO-based virtual agents to the real-time closed-loop guidance of biological collectives.\n\nBy introducing a multi-objective reward function that balances group integrity with directional guidance, we facilitate the stable acquisition of interaction policies in a simulation environment.\nOur methodological approach establishes a robust bridge between computational learning and real-world biological interaction by training agents in a simulation and subsequently deploying them in physical experiments.\nWe evaluate our framework using rummy-nose tetras ( Petitella bleheri ).\n\nThe investigation is conducted in two phases.\nFirst, we utilize small groups ( N r = 3 N_{r}=3 ) to systematically evaluate and optimize the virtual agents\u2019 visual parameters, specifically background color and stimulus size, to maximize their salience to the target species.\nSecond, we evaluate the robustness and scalability of the proposed system across varying group sizes ( N r = 5 N_{r}=5 and N r = 8 N_{r}=8 ) and agent configurations.\nSpecifically, we evaluate the guidance performance under several agent configurations, including independently controlled agents, to compare their effectiveness across different group sizes.\nOur findings indicate that as group size increases, the efficacy of directional guidance faces significant challenges, likely due to interference between artificial visual stimuli and intrinsic social interactions.\nThis work highlights both the potential of deep RL for automated animal guidance and the fundamental challenges of maintaining influence within dense biological environments."
+    },
+    {
+      "heading": "2.1Experimental setup",
+      "text": "We used rummy-nose tetras ( Petitella bleheri , recently reclassified from Hemigrammus bleheri ) as the experimental subjects. This species was selected due to its strong schooling tendency and its suitability for laboratory maintenance.\n\nThe closed-loop guidance system developed in this study integrated real-time visual tracking of live fish with the application of control policies for virtual agents, as illustrated in the system architecture (Fig. 1 ). A front-facing camera captured the positions of the live fish, which were processed by a PC to determine the movements of the virtual agents based on trained reinforcement learning policies. These agents were then presented to the fish in real-time via a liquid crystal display.\nThe camera and display were aligned to be parallel to the tank surface, minimizing geometric and perspective distortions between the image and display coordinate systems.\n\nThe experimental arena consisted of an acrylic tank with internal dimensions of \\qtyproduct 389 x 213 x 89 (width \u00d7 \\times height \u00d7 \\times depth), where depth refers to the front-to-back dimension. As illustrated in the top-view schematic (Fig. 2 ), we used a \\qty 2-thick acrylic partition to divide the tank into two sections with depths of \\qty 47 and \\qty 40; the fish were placed in the \\qty 40 deep section to constrain their swimming movements to a quasi-two-dimensional plane.\nVirtual agents were presented on a liquid crystal display (221E9/11, Philips; \\qtyproduct 483 x 270) mounted flush against the rear exterior wall of the tank. This spatial configuration ensured that the swimming region for the live fish was positioned at a sufficient distance from the display to prevent\nthe stimuli from being obscured from the fish\u2019s perspective by reflections at the tank-water interface.\nA front-facing camera was used to monitor the individuals in real-time."
+    },
+    {
+      "heading": "2.2Real-time vision and coordinate mapping",
+      "text": "To achieve real-time closed-loop interaction, we implemented an automated tracking system using YOLOv10 [ 30 ] . The detection model was fine-tuned specifically to identify rummy-nose tetras within the experimental arena. The system captures the positions of all individuals at 10\u00a0fps.\n\nThe raw coordinates ( u j , v j ) (u_{j},v_{j}) of each fish j \u2208 { 1 , \u2026 , N r } j\\in\\{1,\\dots,N_{r}\\} detected in the camera frame are mapped to a normalized tank coordinate system \ud835\udc99 j ( r ) \u2208 [ 0 , 1 ] 2 \\bm{x}^{(r)}_{j}\\in[0,1]^{2} . Before the experiments, the coordinates of the top-left \ud835\udc96 tank0 = ( u tank0 , v tank0 ) \u22a4 \\bm{u}_{\\mathrm{tank}0}=(u_{\\mathrm{tank}0},v_{\\mathrm{tank}0})^{\\top} and bottom-right \ud835\udc96 tank1 = ( u tank1 , v tank1 ) \u22a4 \\bm{u}_{\\mathrm{tank}1}=(u_{\\mathrm{tank}1},v_{\\mathrm{tank}1})^{\\top} corners of the swimming region in the camera image were recorded. The normalized position \ud835\udc99 j ( r ) \\bm{x}^{(r)}_{j} is then calculated as follows: \ud835\udc99 j ( r ) = ( ( u j \u2212 u tank0 ) / ( u tank1 \u2212 u tank0 ) ( v j \u2212 v tank0 ) / ( v tank1 \u2212 v tank0 ) ) . \\bm{x}^{(r)}_{j}=\\left(\\begin{array}[]{c}(u_{j}-u_{\\mathrm{tank}0})/(u_{\\mathrm{tank}1}-u_{\\mathrm{tank}0})\\\\\n(v_{j}-v_{\\mathrm{tank}0})/(v_{\\mathrm{tank}1}-v_{\\mathrm{tank}0})\\end{array}\\right). (1)\n\nTo project the virtual agents managed in the RL environment onto the display at the correct physical locations, we establish a mapping between the camera and display coordinate systems. A set of reference spots \ud835\udcae \\mathcal{S} is projected onto the display, and their corresponding homogeneous coordinates in the camera frame, \u2131 = { ( u 1 , v 1 , 1 ) \u22a4 , \u2026 , ( u n , v n , 1 ) \u22a4 } \\mathcal{F}=\\{(u_{1},v_{1},1)^{\\top},\\dots,(u_{n},v_{n},1)^{\\top}\\} , are captured. The 2 \u00d7 3 2\\times 3 transformation matrix A A is then determined by A = \ud835\udcae \u200b \u2131 \u22a4 \u200b ( \u2131 \u200b \u2131 \u22a4 ) \u2212 1 A=\\mathcal{S}\\mathcal{F}^{\\top}(\\mathcal{F}\\mathcal{F}^{\\top})^{-1} .\n\nUsing this matrix A A , the display pixel coordinates corresponding to the corners of the swimming region, \ud835\udc85 tank \u200b k = ( d tank \u200b k , e tank \u200b k ) \u22a4 \\bm{d}_{\\mathrm{tank}k}=(d_{\\mathrm{tank}k},e_{\\mathrm{tank}k})^{\\top} (for k \u2208 { 0 , 1 } k\\in\\{0,1\\} ), are obtained by \ud835\udc85 tank \u200b k = A \u200b \ud835\udc96 ~ tank \u200b k \\bm{d}_{\\mathrm{tank}k}=A\\tilde{\\bm{u}}_{\\mathrm{tank}k} , where \ud835\udc96 ~ tank \u200b k = ( u tank \u200b k , v tank \u200b k , 1 ) \u22a4 \\tilde{\\bm{u}}_{\\mathrm{tank}k}=(u_{\\mathrm{tank}k},v_{\\mathrm{tank}k},1)^{\\top} represents the homogeneous coordinates of the corners. Finally, the normalized coordinates of a virtual agent i i , denoted as \ud835\udc99 i ( v ) \\bm{x}^{(v)}_{i} , are converted into display pixel coordinates ( d i , e i ) (d_{i},e_{i}) as follows: ( d i e i ) = \ud835\udc99 i ( v ) \u2299 ( \ud835\udc85 tank1 \u2212 \ud835\udc85 tank0 ) + \ud835\udc85 tank0 , \\left(\\begin{array}[]{c}d_{i}\\\\\ne_{i}\\end{array}\\right)=\\bm{x}^{(v)}_{i}\\odot(\\bm{d}_{\\mathrm{tank}1}-\\bm{d}_{\\mathrm{tank}0})+\\bm{d}_{\\mathrm{tank}0}, (2) where \u2299 \\odot denotes the element-wise product. This pipeline ensures that the visual stimuli are presented at precisely defined spatial positions relative to the live individuals, enabling accurate guidance based on social interactions."
+    },
+    {
+      "heading": "2.3Reinforcement learning framework",
+      "text": "To develop an autonomous control policy for virtual agents capable of guiding fish schools, we employed Proximal Policy Optimization (PPO), a policy-based deep reinforcement learning algorithm.\nIn this framework, an agent (i.e., a virtual agent presented on the display) is defined as a single policy-controlled unit that interacts with the environment at discrete time steps t = 0 , 1 , \u2026 t=0,1,\\dots to maximize rewards. Depending on the experimental configuration (see Section 2.5.2 ), the visual representation of an agent is rendered either as a single fish image or as a fixed formation of multiple fish images, where a fish image refers to an individual visual stimulus displayed on the screen.\nEach agent operates based on its own state observation and action output."
+    },
+    {
+      "heading": "3.1Policy optimization through simulation",
+      "text": "Prior to the physical experiments, we evaluated the effectiveness of the reinforcement learning framework in a simulation environment. The primary objectives were to determine the optimal weight \u03b2 \\beta for the composite reward function r \u03b2 r_{\\beta} (Eq.\u00a0( 6 )) and to ensure that the acquired policy remains robust across various levels of stochasticity in fish behavior, represented by the ignoring probability p p .\nTo account for the stochastic nature of the learning process, we performed 10 independent training runs for each parameter combination, and the mean evaluation value R \u00af \\bar{R} was calculated across these trials.\n\nFigure 5 illustrates the transition of the mean evaluation value R \u00af \\bar{R} as a function of the training steps T T . Overall, the performance generally improved as T T increased across all parameter combinations. When comparing different reward configurations, we observed that policies trained with \u03b2 = 0.1 , 0.5 , 0.7 , \\beta=0.1,0.5,0.7, and 0.9 0.9 yielded performance levels comparable to the baseline reward r base r_{\\mathrm{base}} . However, the policy trained with \u03b2 = 0.3 \\beta=0.3 demonstrated superior performance, outperforming the baseline at T = 10 6 T=10^{6} steps for all values of p p except p = 0 p=0 (where the simulated fish always react to the agent).\n\nThe results also confirmed that higher values of the ignoring probability p p generally lead to lower evaluation values R \u00af \\bar{R} , reflecting the increased difficulty of the guidance task when the school frequently ignores the virtual agent. Nevertheless, the composite reward function r \u03b2 r_{\\beta} with an appropriate hyperparameter successfully facilitated stable policy acquisition even under high-noise conditions ( p \u2265 0.6 p\\geq 0.6 ). Based on these simulation results, we adopted the policy trained with T = 10 6 T=10^{6} , p = 0.6 p=0.6 , and \u03b2 = 0.3 \\beta=0.3 as the autonomous agent controller for all subsequent physical experiments described in Section 2.5 ."
+    },
+    {
+      "heading": "3.2Experiment A: Optimization of visual parameters",
+      "text": "In Experiment A (Phase 1), we systematically evaluated stimulus salience by varying the background color and fish-image size to maximize the responsiveness of the live fish. As described in Section 2.5.2 , these trials were performed with a group of three individuals ( N r = 3 N_{r}=3 ) using a single fixed-formation agent operating in the Global mode.\n\nTable 1 summarizes the guidance performance metrics for each condition. The results for background color indicated that the white background was the most effective in biasing the school\u2019s position. The white condition yielded the highest occupancy ratio in the target area (24.23%) and the largest separability between the target and opposite areas. This trend is consistently reflected in the Bhattacharyya distance, where the white background (0.1589) markedly outperformed the black background (0.0089). The positional histograms (Fig. 6(a) ) confirm a clear shift in the school\u2019s distribution toward the target direction, particularly during leftward guidance, under the white and gray conditions. However, the distribution remained largely centered in the black condition.\n\nRegarding fish-image size, the large configuration yielded the most pronounced guidance effect. The large fish-image size ( 1.5 \u00d7 1.5\\times ) achieved a target area occupancy ratio of 22.57%, outperforming the medium (18.63%) and small (18.15%) sizes. Notably, the Bhattacharyya distance for the large size (0.1616) was markedly higher than those for the medium (0.0595) and small (0.0070) sizes. The histograms shown in Fig. 6(b) further illustrate that the large size induced a more robust and consistent bias in the individuals\u2019 horizontal positions.\n\nOverall, the results of Experiment A demonstrate that a white background and a large fish-image size maximize behavioral responsiveness in our physical environment. Consequently, these optimal visual parameters were standardized for all subsequent trials in Experiment B."
+    },
+    {
+      "heading": "3.3Experiment B: Performance of the closed-loop guidance",
+      "text": "In Experiment B (Phase 2), we evaluated the guidance performance focusing on the influence of agent configurations and group sizes ( N r = 5 , 8 N_{r}=5,8 ). Based on the findings from Experiment A, all trials were conducted using a white background and the large fish-image size."
+    },
+    {
+      "heading": "4.1Effectiveness of the multi-objective reward design",
+      "text": "A key component of our reinforcement learning framework is the multi-objective formulation of the guidance task, which balances directional guidance and social cohesion.\nThese objectives are integrated into a single scalar reward through a weighted combination, resulting in a composite reward function for policy learning.\nSimulation results (Fig. 5 ) show that this formulation enables stable policy acquisition even under stochastic behavioral conditions,\nand the physical experiments indicate that the learned policy transfers effectively to real-world settings.\nThese findings suggest that appropriately balancing competing objectives is important for achieving robust closed-loop guidance of biological collectives."
+    },
+    {
+      "heading": "4.2Optimization of visual stimuli for collective guidance",
+      "text": "The results of Experiment A showed that a white background and a large fish-image size yielded the most effective conditions for guiding rummy-nose tetras. The effectiveness of the white background likely arises from the high visual contrast it provides, which enhances the saliency of the virtual agents against the experimental environment. In contrast, under the black background condition, the school remained mainly in the intermediate area (the region between the target and opposite areas) (Table 1 , Fig. 6(a) ). This suggests that the low ambient brightness of the black environment may have suppressed the fish\u2019s general activity or exploratory behavior toward the edges of the tank, thereby diminishing the overall guidance efficacy.\n\nRegarding the influence of fish-image size, the largest individual fish size, corresponding to approximately 1.5 times that of real individuals, yielded the highest guidance efficacy (Table 1 ).\nWhile this might suggest that larger-than-real stimuli are more effective, direct size comparisons should be interpreted with caution, as the virtual agents are presented on a screen with a minimum separation of approximately 47 mm from the fish.\nNevertheless, the comparison across the three tested sizes (small, medium, and large) revealed a clear performance trend (Fig. 6(b) ), indicating that larger stimuli provide a more salient cue that promotes collective directional changes."
+    },
+    {
+      "heading": "4.3Group-size dependent limitations of visual guidance",
+      "text": "Guidance performance markedly degraded as the group size increased from N r = 5 N_{r}=5 to N r = 8 N_{r}=8 (Table 2 , Fig. 7 ).\nThis decline indicates that the influence of external visual signals is not absolute but competes with internal social forces.\nAs group size increases, social interactions such as alignment and attraction to neighbors likely outweigh the visual cues provided by the virtual agents.\n\nFurthermore, sensory competition may contribute to this limitation.\nWhile our system provides visual feedback, real fish also rely on the lateral line system to sense hydrodynamic changes [ 20 , 32 ] .\nAs group size increases and the effective density rises, hydrodynamic cues from nearby individuals become more pronounced, potentially attenuating visual information from the screen.\nThis limitation underscores a fundamental challenge: integrating multi-modal stimuli to maintain influence over larger, more cohesive groups."
+    },
+    {
+      "heading": "4.4Challenges in multi-agent control and coordination",
+      "text": "The independent multi-agent configuration ( N v = 2 , 3 N_{v}=2,3 ) did not outperform the fixed-formation baseline (Global mode) (Table 2 ).\nThis difference may be explained by several factors.\nFirst, the fixed-formation baseline utilized four fish images controlled as a single unit, whereas the independent configurations used only two or three fish images (Section 2.5.2 ).\nThis larger number of visual stimuli in the baseline likely increased overall salience, providing a more robust and easily recognizable directional signal.\n\nBeyond stimulus strength, the lack of coordination among agents may have been detrimental.\nSince each agent\u2019s policy was trained in isolation, their uncoordinated movements likely appeared as \u201csocial noise\u201d to the school, which may requires a coherent signal to maintain collective motion.\nAdditionally, the frequent switching of target clusters in the Cluster-assignment mode likely caused abrupt changes in agent trajectories, potentially confusing the real fish rather than inducing stable following behavior.\nThese results indicate that individual optimization is insufficient; guiding fragmented or heterogeneous groups may require cooperative multi-agent reinforcement learning (MARL) [ 33 ] , where agents learn a joint policy to provide a unified guidance signal."
+    },
+    {
+      "heading": "4.5Environmental asymmetry and technical constraints",
+      "text": "Although the closed-loop system achieved the desired guidance, we observed a slight positional bias toward the left side of the tank. This asymmetry likely stems from subtle environmental factors within the experimental setup, such as inhomogeneous lighting or feeding habituation. While these factors do not undermine the overall effectiveness of the system, the cause of this bias should be further investigated and mitigated in future studies to ensure a more balanced and controlled experimental environment.\n\nIn addition to these environmental factors, technical constraints also remain, such as the 2D nature of the stimuli and the lack of hydrodynamic feedback. Future research will explore the implementation of cooperative MARL and the integration of physical robotic agents to overcome these limitations and extend guidance capabilities to even larger and more complex schools."
+    },
+    {
+      "heading": "5Conclusion",
+      "text": "In this study, we proposed and evaluated a deep reinforcement learning framework for the real-time, closed-loop guidance of fish schools.\nBy employing Proximal Policy Optimization (PPO) and a composite reward function that balances directional guidance with social cohesion, we developed an autonomous controller capable of guiding biological collectives.\nOur methodology demonstrates a bridge between simulation-based training and real-world application, achieving effective zero-shot transfer to physical experiments with rummy-nose tetras.\n\nOur findings reveal important factors governing the efficacy of artificial social influence.\nWe found that the salience of visual stimuli, specifically background contrast and stimulus size, plays a significant role in maximizing the responsiveness of the fish school.\nFurthermore, our evaluation across group sizes and agent configurations highlights a fundamental trade-off: while virtual agents can effectively guide smaller groups, their influence is challenged by intensifying intrinsic social interactions and potential sensory competition in larger groups.\nThe superiority of fixed formations over uncoordinated independent agents further emphasizes that coherent collective signals are more effective social stimuli than individually optimized but unaligned behaviors.\n\nThis work establishes a scalable foundation for the automated guidance of biological groups. Future research will focus on implementing cooperative multi-agent reinforcement learning (MARL) to facilitate the coordination of agent actions in response to diverse group dynamics, including fragmented sub-groups. Such coordination will be necessary to provide a coherent and robust social signal and, alongside the integration of multi-modal stimuli such as hydrodynamic feedback, to maintain influence in dense and complex biological environments."
+    },
+    {
+      "heading": "Ethics",
+      "text": "All animal experiments were conducted with the approval of the Graduate School of Information Science University of Hyogo (Approval No. UHIS-EC-2024-004)."
+    },
+    {
+      "heading": "Conflicts of interest",
+      "text": "The authors declare no personal or financial competing interests."
+    },
+    {
+      "heading": "Funding",
+      "text": "This study was supported by the JSPS KAKENHI Grant Number JP21H05302."
+    },
+    {
+      "heading": "Acknowledgments",
+      "text": "The authors are grateful to Yusuke Nishii for developing the foundational framework [ 28 ] upon which this study builds."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1 : Schematic diagram of the closed-loop system architecture. The positions of the live fish are monitored by a front-facing camera and processed by a PC to apply the learned agent policies, which are then rendered as virtual agents on the display.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28200/assets/x1.png"
+    },
+    {
+      "caption": "Figure 2 : Top-view schematic of the experimental setup. The hatched area indicates the \\qty 40 deep (front-to-back distance) section where the live fish were constrained. The partition ensures two-dimensional movement and visibility of the displayed virtual agents by avoiding reflections at the tank-water interface from the fish\u2019s perspective.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28200/assets/x2.png"
+    },
+    {
+      "caption": "Figure 3 : Conceptual diagram of the multi-objective reward design. The cohesion term r school r_{\\mathrm{school}} encourages the virtual agents to maintain proximity to the real fish, while r direction r_{\\mathrm{direction}} rewards the progress of the virtual agents toward the target area.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28200/assets/x3.png"
+    },
+    {
+      "caption": "(a) Rightward guidance",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28200/assets/x4.png"
+    },
+    {
+      "caption": "(a) Rightward guidance",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28200/assets/x4.png"
+    },
+    {
+      "caption": "(b) Leftward guidance",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28200/assets/x5.png"
+    },
+    {
+      "caption": "Figure 5 : Learning curves showing the transition of the mean evaluation value R \u00af \\bar{R} across different training steps T T and reward weights \u03b2 \\beta . Each data point represents the average of 10 independent training trials for the corresponding parameter combination. The baseline represents the policy trained using only the horizontal coordinate of the school\u2019s centroid ( r base r_{\\mathrm{base}} ). Each plot compares different ignoring probabilities p p for the simulated fish.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28200/assets/x6.png"
+    },
+    {
+      "caption": "(a) Effect of background color",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28200/assets/x7.png"
+    },
+    {
+      "caption": "(a) Effect of background color",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28200/assets/x7.png"
+    },
+    {
+      "caption": "(b) Effect of fish-image size",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28200/assets/x10.png"
+    },
+    {
+      "caption": "(a) Group size N r = 5 N_{r}=5",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28200/assets/x13.png"
+    },
+    {
+      "caption": "(a) Group size N r = 5 N_{r}=5",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28200/assets/x13.png"
+    },
+    {
+      "caption": "(b) Group size N r = 8 N_{r}=8",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28200/assets/x16.png"
+    },
+    {
+      "caption": "(a) Fixed formation (baseline)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28200/assets/x19.png"
+    },
+    {
+      "caption": "(a) Fixed formation (baseline)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28200/assets/x19.png"
+    },
+    {
+      "caption": "(b) Independent agents ( N v = 3 N_{v}=3 )",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28200/assets/x23.png"
+    }
+  ],
+  "ar5iv_success": true
+}

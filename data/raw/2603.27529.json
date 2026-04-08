@@ -1,0 +1,144 @@
+{
+  "paper_id": "2603.27529",
+  "title": "Cross-attentive Cohesive Subgraph Embedding to Mitigate Oversquashing in GNNs",
+  "abstract": "Graph neural networks (GNNs) have achieved strong performance across various real-world domains. Nevertheless, they suffer from oversquashing, where long-range information is distorted as it is compressed through limited message-passing pathways. This bottleneck limits their ability to capture essential global context and decreases their performance, particularly in dense and heterophilic regions of graphs. To address this issue, we propose a novel graph learning framework that enriches node embeddings via cross-attentive cohesive subgraph representations to mitigate the impact of excessive long-range dependencies. This framework enhances the node representation by emphasizing cohesive structure in long-range information but removing noisy or irrelevant connections. It preserves essential global context without overloading the narrow bottlenecked channels, which further mitigates oversquashing. Extensive experiments on multiple benchmark datasets demonstrate that our model achieves consistent improvements in classification accuracy over standard baseline methods.",
+  "authors": [
+    "Tanvir Hossain",
+    "Muhammad Ifte Khairul Islam",
+    "Lilia Chebbah",
+    "Charles Fanning",
+    "Esra Akbas"
+  ],
+  "date": "2026-03-29T05:43:29+00:00",
+  "url": "http://arxiv.org/abs/2603.27529v3",
+  "categories": [
+    "cs.LG",
+    "cs.AI"
+  ],
+  "primary_category": "cs.LG",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "Oversquashing [ alon2020bottleneck ] is a critical limitation of GNNs that limits their applications in diverse graph domains. It occurs when GNNs capture local signals effectively but struggle to model long-range dependencies. For growing size of the n n -hop neighborhood with respect to path distance leads to excessive message propagation through limited edges and narrow channels. Therefore, meaningful multi-hop information becomes bottlenecked, compressed or lost, thereby leading to oversquashing problem of GNNs.\n\nMany studies have been proposed to understand and quantify oversquashing using node sensitivity [ topping2021understanding ] , effective resistance [ black2023understanding ] , and commute time [ di2023over ] . The most common approach to alleviate this issue is rewiring, adding edges to reduce bottlenecks, but often causes high complexity [ karhadkar2022fosr , topping2021understanding , nguyen2023revisiting , chen2022redundancy ] . Moreover, the majority of these methods rely on computationally intensive techniques, such as spectral decomposition [ karhadkar2022fosr ] and optimal transport [ nguyen2023revisiting ] .\n\nReal-world networks often preserve critical information within tightly connected dense regions. In presence of weak ties among regions, uniform message aggregation across these neighborhoods causes oversquashing. Dense regions dominate message passing, forcing long-range dependencies through narrow bottlenecks. Graph Decomposition offers a potential remedy by isolating structurally significant regions. However, the nondeterministic nature of traditional algorithms [ blondel2008fast , karypis1997metis ] often results in suboptimal graph partitions. To address this issue, cohesion-aware graph decomposition operates hierarchically, preserving subgraphs\u2019 semantic concerning the original network. Besides, these algorithms can be executed in parallel [ chen2024parallel , chu2022hierarchical ] , causing negligible decomposition overhead.\n\nFurthermore, applying GNNs to these subgraphs allows capturing considerable task-relevant information for vertices in downstream graph analytics. We conduct a pilot study (in section 2.2 ) that illustrates cohesion-sensitive graph partition shortens long-range dependencies while preserving homophily within subgraphs. Furthermore, pooling over these subgraphs enhances homophilic characteristics. Preserving homophily facilitates effective representation learning in graph-based models [ gu2023homophily ] . Nonetheless, focusing solely on the densely connected regions may compromise long-range connectivity. Cross-attention [ vaswani2017attention ] addresses this limitation by enabling interactions between distant nodes, connecting relevant representations even when they are positionally unaligned.\n\nOur Work. We propose a novel graph learning framework, that utilizes C ross- a ttentive Co hesive S ubgraph E mbeddings ( CaCoSE ) (\\texttt{CaCoSE}) to alleviate oversquashing issue in GNNs. This CaCoSE framework begins by a leveraging k k -core [ malliaros2020core ] algorithm to compute the edges\u2019 cohesiveness scores based on their membership in k k -level regions. Using these scores, it constructs edge-induced subgraphs guided by structural closure and feed them into GNNs to learn node representations.\n\nAfter getting nodes representations within each subgraph, it applies graph pooling, followed by cross-subgraph attention mechanism. By graph pooling, CaCoSE selectively filters out noisy or irrelevant connections while preserving task-relevant structures and critical global information. Moreover, the attention module acts a learnable interfaces between vertices to capture their mutual relations that provides more expressivity in representations.\n\nFinally, the enriched subgraphs\u2019 representations are combined with the embeddings of nodes present in those subgraphs to capture long range global information. This enhances message aggregation and maintains essential local and global connectivity in representations, even in large-scale heterophilic networks. Throughout the paper, we refer to the CaCoSE framework as our model for simplicity. The contributions of our model is as follows:\n\n\u2022 The pilot study opens up a new viewpoint to understand the reasons for oversquashing prior to the experiment. Closure-guided k k -core decomposition benefits cohesive awareness among vertices, which removes noisy pathways and provides essential locality for GNNs operations. Moreover, pooling enhances network\u2019s homophily to attain meaningful subgraph representations. \u2022 The cross-subgraph attention mechanism encodes essential global relations among all subgraphs. Merging node representations with enriched subgraph embeddings maintains both local and global connectivity, helping to alleviate the oversquahing problem in GNNs. \u2022 In an extensive experiment on multiple datasets, CaCoSE outperforms the standard baselines in both node (NC) and graph classification (GC) tasks."
+    },
+    {
+      "heading": "2Methodology",
+      "text": "In this section, we first describe the primary components of CaCoSE . Then, we present a pilot study that motivates the design choices of our model. Finally, we provide details of CaCoSE architecture and describe the representation learning procedure to address the oversquashing problem in GNNs."
+    },
+    {
+      "heading": "2.2Pilot Study",
+      "text": "Oversquashing occurs because GNNs struggle to learn long-range dependencies due to the bottleneck effects in graph structure [ alon2020bottleneck ] . Cohesion-aware graph decomposition not only reduces burdens on bottlenecked channels, but also preserves essential structural properties. However, in heterophilic networks, selecting task-relevant neighbors remains challenging due to cross-class mixing. This pilot study demonstrates that applying k k -core decomposition, followed by SAGPooling, preserves essential class-consistency among vertices even in heterophilic graphs. That enables GNNs to aggregate more reliable signals, producing stable node representations.\n\nFig. 1 presents a pilot study on Cora (homophilic) and Chameleon (heterophilic) datasets to examine how well subgraph decomposition preserves assortativity and disassortativity. According to definitions 1 and 2 , we first compute edge scores and extract edge-induced dense subgraphs for top-three k \u2212 k- core values. Form Cora k \u2208 { 2 , 3 , 4 } k\\in\\{2,3,4\\} and from Chameleon k \u2208 { 61 , 62 , 63 } k\\in\\{61,62,63\\} . Next, we compute the average number of paths (ANP) for vertices at hop distances n \u2208 { 4 , 5 } n\\in\\{4,5\\} across original graphs, subgraphs and their homophilic counterparts H = { ( u , v ) \u2208 E : y u = y v } H=\\{(u,v)\\in E:y_{u}=y_{v}\\} . The measures are presented in bar graphs.\n\nAccording to Figs. 1(a) and 1(c) , the subgraphs in both datasets retain the homophilic and heterophilic ( y u \u2260 y v ) (y_{u}\\neq y_{v}) properties of their original graphs. While this preservation is often sufficient for homophilic networks to maintain task-relevant features, it becomes more challenging for heterophilic graphs like Chameleon. To extend the study, we apply SAGPool to each subgraph and repeat the ANP evaluation on pooled subgraphs (PS-ANP). Interestingly, in the Chameleon dataset (Fig. 1(d) ), the pooled subgraphs exhibit a higher ratio of homophilic paths to the total average number of paths per node compared to the initial evaluation. That facilitates effective representation learning in graph models [ gu2023homophily ] .\nBesides, it increases the ratio for the homophilic dataset."
+    },
+    {
+      "heading": "2.3Model Architecture",
+      "text": "In Figure 2 , the model architecture is comprised of four modules. Module (1) works as the graph pre-processor, while module (2) trains the decomposed subgraphs with GNNs. On the other hand, module (3) functions as a feature post-processor, whereas module (4) operates for the final evaluation."
+    },
+    {
+      "heading": "3Related Works",
+      "text": "Graph Decompositions. Numerous graph decomposition algorithms are applied to improve GNNs\u2019 effectiveness. At the earlier stage of GNNs, spectral clustering [ zhang2021spectral , bianchi2020spectral ] methods were much more popular along with the hierarchical [ ying2018hierarchical ] and modularity-based [ tsitsulin2023graph ] clustering models. However, due to expensive eigenvalue decomposition and clustering assignment steps, these methods encounter relatively higher time complexity.\n\nCohesion-sensitive Decompositions. These algorithms are mostly applied to determine the interconnectedness between nodes in multiple network regions for solving different domain problems: graph compression [ akbas2017truss ] , high-performance computing [ liu2024parallel ] , analyzing social networks [ chen2024breaking ] , etc. Only a few methods utilize these algorithms to enhance the effectiveness of GNNs. TGS [ hossain2024tackling ] utilizes the k k -truss algorithm for edge scoring and sparsifies noisy edges to mitigate oversmoothing in GNNs. Another model, CTAug [ wu2024graph ] , utilizes k k -truss and k k -core algorithms to provide cohesive subgraph awareness and improve graph contrastive learning (GCL). Nonetheless, due to repetitive edge filtering for sparsification and GCL\u2019s resource-expensive nature, both models require longer runtime.\n\nOversquashing. Prior work [ alon2020bottleneck ] illustrates that due to bottlenecks in the graph, long-range neighborhood signals are distorted, which downgrades GNNs\u2019 performance in downstream graph learning tasks. SDRF [ topping2021understanding ] proposed a curvature-based graph rewriting to detect edges responsible for the information bottleneck. FoSR [ karhadkar2022fosr ] applies systematic edge addition operations in graphs in accordance with spectral expansion, while BORF [ nguyen2023revisiting ] demonstrates the impacts of curvature signs for oversquashing and oversmoothing. However, due to dependency on intermediate layer output and subgraph matching with optimal transport, these models show inconsistency in large-scale graphs\u2019 operations. Another approach, GTR [ black2023understanding ] , uses effective resistance and a repeated edge addition technique to reduce the impact of oversquashing in GNN. However, this method focuses on the entire graph\u2019s information for edge rewiring, which increases complexity in executing larger graphs. Recently, GOKU [ liang2025mitigating ] utilizes spectrum-preserving graph rewiring, first densifying the network and subsequently applying structure-aware graph sparsification. In contrast, LASER [ barbero2023locality ] adopts locality aware sequential rewiring while considering multiple graph snapshots. GraphViT [ he2023generalization ] leverages the Vision Transformers combined with MLP mixing mechanism to model long-range dependencies in graphs. On the other hand, LRGB [ dwivedi2022long ] addresses the limitations of benchmark GNNs and Transformers in analyzing long-range vertex interactions. However, both approaches primarily focus on relatively ordered and structurally regular datasets. In contrast, our work concentrates on reducing oversquashing in complex, irregular real-world and social networks."
+    },
+    {
+      "heading": "4Experiment Results",
+      "text": "This section covers CaCoSE \u2019s experiment outcomes\u2019 information. First, it discusses the datasets and baselines. Then, it describes the experimental setup and, finally, presents the model\u2019s results compared to other baselines with various experiments. Note that, Prior works [ dwivedi2022long , alon2020bottleneck ] experiment on synthetic datasets (tree neighbors-match, ring transfer, etc.) are unsuitable for k k -core due to their fixed structure. Hence, our experiment mostly focuses on real-world complex networks."
+    },
+    {
+      "heading": "5Conclusion",
+      "text": "In a nutshell, our CaCoSE model successfully demonstrates its efficacy that facilitates graph representation learning to overcome long-range dependency in GNNs. Through closure-aware cohesive graph decomposition, it provides essential locality to the vertices. Besides, the SAGPool filters out noisy connections in networks and the attention mechanism provides crucial global information across subgraphs. Extensive experiments on benchmark datasets illustrate its consistency over the standard graph learning models. We expect this technique will open up some new research directions: subgraph-wise graph rewiring, regional graph super-resolution and parallel subgraph learning to develop robust graph representation learning models."
+    },
+    {
+      "heading": "0.A.1Proof through Ollivier-Ricci Curvature",
+      "text": "Olliver-Ricci curvature [ nguyen2023revisiting ] \u2014denoted by \u03ba \u200b ( u , v ) \\kappa(u,v) \u2014is a measure of the local similarity of the neighborhoods of two vertices, typically by means of random walk measures centered at those vertices. This value is positive or negative when the overlap between the probability distributions of random walkers between N \u200b ( u ) N(u) and N \u200b ( v ) N(v) is large or small, respectively.\n\nLet G = ( V G , E G ) G=\\left(V_{G},E_{G}\\right) be a simple graph with shortest path distance d \u200b ( u , v ) d(u,v) for all u , v \u2208 V G u,v\\in V_{G} . Let \u03a0 \u200b ( \u03bc u , \u03bc v ) \\Pi(\\mu_{u},\\mu_{v}) be the family of joint probability distributions of \u03bc u \\mu_{u} and \u03bc v \\mu_{v} , and take \u03bc u \\mu_{u} to be the 1 1 -step random walk measure given by\n\n\u03bc u \u200b ( v ) = { 1 d \u200b e \u200b g \u200b ( u ) if \u200b v \u2208 N \u200b ( u ) 0 otherwise. \\mu_{u}(v)=\\begin{cases}\\frac{1}{deg(u)}&\\text{if }v\\in N(u)\\\\\n0&\\text{otherwise.}\\end{cases} Then define the L 1 L^{1} -Wasserstein distance as W 1 \u200b ( \u03bc u , \u03bc v ) = inf \u03c0 \u2208 \u03a0 \u200b ( \u03bc u , \u03bc v ) ( \u2211 ( p , q ) \u2208 V G 2 \u03c0 \u200b ( p , q ) \u200b d \u200b ( p , q ) ) , W_{1}\\left(\\mu_{u},\\mu_{v}\\right)=\\inf_{\\pi\\in\\Pi\\left(\\mu_{u},\\mu_{v}\\right)}\\left(\\sum_{(p,q)\\in V_{G}^{2}}\\pi(p,q)d(p,q)\\right), which measures the minimum distance random walks between u u and v v must take to meet each other. The Ollivier-Ricci curvature is then \u03ba \u200b ( u , v ) = 1 \u2212 W 1 \u200b ( \u03bc u , \u03bc v ) d \u200b ( u , v ) . \\kappa(u,v)=1-\\frac{W_{1}(\\mu_{u},\\mu_{v})}{d(u,v)}. This carries the interpretation that whenever two random walkers are unlikely to meet, we have \u03ba \u200b ( u , v ) < 0 . \\kappa(u,v)<0.\n\nThus, Theorem 0.A.1 shows that the edges removed by the C \u200b a \u200b E \u200b F CaEF in algorithm have non-positive Ollivier-Ricci curvature; in other words, they correspond with bottlenecks. This approach can then be said to mitigate oversquashing by removing the message passing pathways associated with this class of bottlenecks."
+    },
+    {
+      "heading": "0.A.2Representation Learning byCaCoSE",
+      "text": "Algorithm 1 presents the execution of the CaCoSE model for k k -core decomposition. In lines ( 1 - 1 ), at first, the input graph is decomposed with the k k -core algorithm, where nodes achieve their coreness score. Next, CaCoSE explores all the edges and assigns the coreness scores as the edge weight. Additionally, it utilizes edge filtering ( C \u200b a \u200b E \u200b F ) (CaEF) to update specific narrow channels edge scores. In the next stage (lines 1 - 1 ), the CaCoSE extracts edge-induced subgraphs from the input graph based on the coreness scores. Note that, the k k -core algorithm [ malliaros2020core ] iteratively removes the nodes with degree less than k k as k k increases. Thus, in each node removal stage, the ( k \u2212 1 ) (k-1) value is assigned to the removed nodes.\n\nThen, on the partitioned subgraphs, it concurrently applies G \u200b C \u200b N GCN for node representation learning as well as S \u200b A \u200b G \u200b P \u200b o \u200b o \u200b l SAGPool to encode the entire subgraph\u2019s information. In the next step (line 1 ), CaCoSE utilizes the attention mechanism across the subgraphs\u2019 embeddings to capture the mutual information among them. Next, it takes the average of all the subgraph embeddings that represent the final representation of the graph (line 1 ). In the context of node embeddings (lines 1 - 1 ), each subgraph\u2019s cross-attentive embeddings are concatenated with its node representations, while the shared nodes are mapped and their combined features are summed up in the vertices\u2019 global feature matrix."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "(a) ANP Cora",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27529/assets/Images/Introduction/Cora_comparison_bar_chart.png"
+    },
+    {
+      "caption": "(a) ANP Cora",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27529/assets/Images/Introduction/Cora_comparison_bar_chart.png"
+    },
+    {
+      "caption": "(b) PS-ANP in Cora",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27529/assets/Images/Introduction/Cora_SAG_comparison_bar_chart.png"
+    },
+    {
+      "caption": "(c) ANP in Chameleon",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27529/assets/Images/Introduction/Chameleon_comparison_bar_chart.png"
+    },
+    {
+      "caption": "(d) PS-ANP in Chameleon",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27529/assets/Images/Introduction/Chameleon_SAG_comparison_bar_chart.png"
+    },
+    {
+      "caption": "Figure 2 : Architecture of CaCoSE \u200b ( \u03b4 = 3 ) \\texttt{CaCoSE}\\penalty 10000\\ (\\delta=3) .",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27529/assets/x1.png"
+    },
+    {
+      "caption": "(a) NC (PR)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27529/assets/Images/Sensitivity/NC_sensitivity_pooling_ratio_k-core.png"
+    },
+    {
+      "caption": "(a) NC (PR)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27529/assets/Images/Sensitivity/NC_sensitivity_pooling_ratio_k-core.png"
+    },
+    {
+      "caption": "(b) NC (NH)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27529/assets/Images/Sensitivity/NC_senitivity_num_heads_k-core.png"
+    },
+    {
+      "caption": "(c) GC (PR)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27529/assets/Images/Sensitivity/GC_sensitivity_pooling_ratio_k-core.png"
+    },
+    {
+      "caption": "(d) GC (NH)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27529/assets/Images/Sensitivity/GC_senitivity_num_heads_k-core.png"
+    },
+    {
+      "caption": "(a) Chm (1976,473)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27529/assets/Images/Extended_Pilot_Study/Chameleon_bridge_1976_473.drawio.png"
+    },
+    {
+      "caption": "(a) Chm (1976,473)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27529/assets/Images/Extended_Pilot_Study/Chameleon_bridge_1976_473.drawio.png"
+    },
+    {
+      "caption": "(b) Chm-k ( 1976 , 473 ) 1 {{}_{1}}_{(1976,473)}",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27529/assets/Images/Extended_Pilot_Study/Chameleon_bridge_1976_473_in_Core_1.drawio.png"
+    },
+    {
+      "caption": "(c) Sqr (4799,358)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27529/assets/Images/Extended_Pilot_Study/Squirrel_bridge_4799_358.drawio.png"
+    },
+    {
+      "caption": "(d) Sqr-k ( 4799 , 358 ) 1 {{}_{1}}_{(4799,358)}",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27529/assets/Images/Extended_Pilot_Study/Squirrel_bridge_4799_358_in_Core_1.drawio.png"
+    },
+    {
+      "caption": "(a)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27529/assets/Images/Decom_Methods/Cora_CiteSeer_styled.png"
+    },
+    {
+      "caption": "(a)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27529/assets/Images/Decom_Methods/Cora_CiteSeer_styled.png"
+    },
+    {
+      "caption": "(b)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27529/assets/Images/Decom_Methods/Chameleon_Squirrel_styled.png"
+    },
+    {
+      "caption": "(c)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27529/assets/Images/Decom_Methods/IMDB_MUTAG_styled.png"
+    },
+    {
+      "caption": "Figure 6 : Scalability Test. This figure presents the maximum core value K m \u200b a \u200b x K_{max} along the y y -axis for networks generated with various combinations of graph size ( # \u200b N \u200b o \u200b d \u200b e \u200b s ) (\\#Nodes) and density ( p ) (p) . The value of K m \u200b a \u200b x K_{max} is corresponds to the maximum number of subgraphs that can be extracted through k k -core decomposition.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27529/assets/Images/Scalability_Test/scalability_test.png"
+    }
+  ],
+  "ar5iv_success": true
+}

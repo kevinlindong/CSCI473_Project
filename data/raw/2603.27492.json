@@ -1,0 +1,92 @@
+{
+  "paper_id": "2603.27492",
+  "title": "Copilot-Assisted Second-Thought Framework for Brain-to-Robot Hand Motion Decoding",
+  "abstract": "Motor kinematics prediction (MKP) from electroencephalography (EEG) is an important research area for developing movement-related brain-computer interfaces (BCIs). While traditional methods often rely on convolutional neural networks (CNNs) or recurrent neural networks (RNNs), Transformer-based models have shown strong ability in modeling long sequential EEG data. In this study, we propose a CNN-attention hybrid model for decoding hand kinematics from EEG during grasp-and-lift tasks, achieving strong performance in within-subject experiments. We further extend this approach to EEG-EMG multimodal decoding, which yields substantially improved results. Within-subject tests achieve PCC values of 0.9854, 0.9946, and 0.9065 for the X, Y, and Z axes, respectively, computed on the midpoint trajectory between the thumb and index finger, while cross-subject tests result in 0.9643, 0.9795, and 0.5852. The decoded trajectories from both modalities are then used to control a Franka Panda robotic arm in a MuJoCo simulation. To enhance trajectory fidelity, we introduce a copilot framework that filters low-confidence decoded points using a motion-state-aware critic within a finite-state machine. This post-processing step improves the overall within-subject PCC of EEG-only decoding to 0.93 while excluding fewer than 20% of the data points.",
+  "authors": [
+    "Yizhe Li",
+    "Shixiao Wang",
+    "Jian K. Liu"
+  ],
+  "date": "2026-03-29T03:12:08+00:00",
+  "url": "http://arxiv.org/abs/2603.27492v1",
+  "categories": [
+    "cs.RO",
+    "cs.AI",
+    "cs.HC",
+    "cs.LG"
+  ],
+  "primary_category": "cs.RO",
+  "sections": [
+    {
+      "heading": "IIntroduction",
+      "text": "Electroencephalography (EEG) is a fundamental tool in neuroscience, offering the potential for controlling external devices directly through brain activity, bypassing the neuromuscular pathway [ 21 ] . This concept is realized through brain\u2013computer interfaces (BCIs). The central nervous system (CNS) typically generates movement in response to external stimuli, acting on effectors such as muscles or glands [ 6 , 23 ] . BCIs introduce an alternative pathway for this interaction by leveraging digital technologies. They can utilize signals from task-related brain regions to enhance, monitor, or even partially replace traditional CNS\u2013effector communication [ 20 ] .\n\nWhile BCIs can theoretically use any brain-derived signal as input, practical limitations exist, such as random mental activity or external noise. Designing an effective BCI paradigm is therefore critical. By using various types of stimuli and tasks, a mapping can be established between specific inputs and corresponding brain activity patterns [ 24 ] . Current BCI systems are primarily built on paradigms like motor imagery, event-related potentials, and steady-state visually evoked potentials, all of which heavily rely on non-invasive EEG for data acquisition [ 14 ] .\n\nDecoding algorithms are another crucial component, translating measured brain signals into executable control commands. However, this step is particularly challenging due to the inherent properties of EEG. Scalp EEG represents a summation of currents from multiple local field potentials, reflecting broad brain activity [ 5 , 16 ] . Furthermore, interference between current sources complicates spatial localization, and signal transmission through various tissue layers results in a very low signal-to-noise ratio.\nThe advent of deep learning models, such as Shallow ConvNet and EEGNet, has demonstrated superiority over traditional handcrafted feature methods [ 9 , 3 , 13 ] . Transformers have further shown powerful capabilities in handling long sequences, overcoming limitations of CNNs and RNNs [ 1 , song2021transformerbasedspatialtemporalfeaturelearning , 8 ] . Consequently, hybrid models combining these architectures are increasingly applied to classification tasks [ 17 , 4 ] . Despite these advances, most kinematic trajectory prediction tasks using movement-related EEG, beyond the core paradigm classifications, still rely on filter-based, linear, or CNN/RNN approaches [ 12 ] and continue to struggle with decoding accuracy [ 18 ] .\n\nThis work proposes a CNN\u2013attention hybrid model for EEG-based hand kinematics reconstruction. We further investigate EEG\u2013EMG multimodal decoding, reconstruct motion trajectories in a MuJoCo robotic arm simulation, and design a copilot algorithm to refine decoding points through secondary evaluation."
+    },
+    {
+      "heading": "IIRelated Work",
+      "text": "EEG-based kinematics decoding aims to reconstruct continuous limb movement trajectories (e.g., position, velocity) from non-invasive EEG signals. Prior studies have targeted various body parts, including ankle plantar flexion [ 2 ] , hand kinematics [ 10 ] , finger movements [ 15 ] , and even saccadic eye movements [ 11 ] . These tasks are closely linked to the temporal\u2013spectral dynamics of EEG and have been explored in both motor imagery and motor execution paradigms [ 7 , EratK\u00fcbra2024ErwE ] . Among these, hand-movement decoding is the most extensively studied.\n\nEarly work often assumed EEG lacked sufficient information for complex hand movement representation, a notion later challenged by [ BradberryTrentJ2010RTHM ] . [ OfnerPatrick2017Ulmc ] further elucidated the role of contralateral motor cortical regions in upper-limb movement control. These studies laid the foundation for hand-kinematics decoding and advanced understanding beyond simple single-region activation models.\n\nDeep learning models have demonstrated superior performance in capturing nonlinear relationships between EEG features and motor parameters, especially when combined with time\u2013frequency or spatial\u2013spectral preprocessing. A CNN\u2013LSTM model decoded hand kinematics from cortical sources with a mean correlation value (CV) of 0.62\u00b10.08 [ 10 ] . For other body parts, biceps curl trajectory estimation reached a PCC of 0.7 [ SainiManali2024BPEN ] , and a multi-directional CNN-BiLSTM network for 3D arm tasks achieved a grand-averaged correlation coefficient (CC) of 0.47 [ JeongJi-Hoon2020BRAS ] . A comparison in [ JainAnant2024EESI ] showed deep learning models (rEEGNet, rDeepConvNet, rShallowConvNet) significantly outperformed mLR, with mean PCCs reaching 0.78\u20130.79 for x/y axes and 0.62\u20130.64 for the z-axis.\n\nDespite progress, emerging technologies offer new solutions. Hybrid CNN\u2013transformer architectures have shown strong capabilities in EEG decoding tasks, such as EEGformer [ WanZhijiang2023EAtb ] , EASM [ SinghMadan2025EAeA ] , EEG-TCNTransformer [ signals5030034 ] , and EEG-ConvTransformerNetwork [ bagchi2021eegconvtransformersingletrialeegbased ] . Given that most kinematics decoding models remain CNN- or RNN-based, the success of the AI copilot framework in [ 0Brain ] motivated our exploration of hybrid modeling and trajectory optimization for non-invasive EEG-based hand decoding.\n\nThe contributions of this study are as follows:\n(1) We propose a CNN\u2013attention hybrid model to predict 3D coordinates of the index finger and thumb from EEG. The model achieves an overall PCC of 0.8728 in within-subject experiments (0.8376, 0.9229, 0.7208 for X, Y, Z axes), reaching up to 0.8916 with a larger input window.\n(2) We investigate EEG\u2013EMG multimodal fusion for kinematics decoding. The best within-subject PCC is 0.9707 (0.9854, 0.9946, 0.9065 for X, Y, Z), and the best cross-subject total PCC reaches 0.9063 (0.9643, 0.9795, 0.5852 for X, Y, Z).\n(3) We reconstruct hand movement trajectories in a MuJoCo robotic arm simulator and design a copilot framework based on a state machine and knowledge graph to filter unreliable decoding points."
+    },
+    {
+      "heading": "III-ADataset Description[luciw_jarocka_edin_2014]",
+      "text": "The WAY-EEG-GAL (Wearable interfaces for hand function recovery EEG grasp and lift) dataset contains scalp EEG recordings from a grasp-and-lift task designed to decode sensory, intentional, and motor-related signals. Twelve participants each performed 328 trials, totaling 3,936 trials.\n\nEach trial required participants to: (1) reach for a small object upon cue, (2) grasp it with the thumb and index finger, (3) lift and hold it briefly, (4) place it back, and (5) return the hand to the start position. The dataset includes 32-channel EEG, electromyography (EMG) from five muscles, and contact force/torque and 3D position data for the hand (index finger, thumb, wrist) and the object."
+    },
+    {
+      "heading": "III-BData Preprocessing",
+      "text": "EEG preprocessing was performed using MNE-Python. Raw data were band-pass filtered between 0.1 and 40 Hz with an infinite impulse response (IIR) filter to remove low-frequency drifts and high-frequency noise. Common average referencing (CAR) was then applied across all electrodes to reduce spatially distributed artifacts and enhance localized neural activity.\n\nEMG preprocessing involved two steps. First, a 4th-order Butterworth band-pass filter (20\u2013450 Hz), implemented in second-order sections (SOS) for stability, removed high-frequency noise and baseline drift. Second, EMG data were downsampled from 4000 Hz to 500 Hz to match the EEG sampling rate.\n\nFinally, kinematic data were scaled via min\u2013max normalization, mapping the processed data to the range [0, 1] as K \u200b [ t ] = k \u200b [ t ] \u2212 k min k max \u2212 k min . K[t]=\\frac{k[t]-k_{\\text{min}}}{k_{\\text{max}}-k_{\\text{min}}}."
+    },
+    {
+      "heading": "III-DModality Fusion",
+      "text": "As shown in Fig. 1 , EMG signals undergo the same multi-convolution and SE block processing as EEG. Fusion of EEG and EMG signals occurs within the embedding module."
+    },
+    {
+      "heading": "III-ECopilot Framework",
+      "text": "As depicted in Fig. 3 , the copilot module integrates three components:\n(1) a decoding model that predicts spatial coordinates,\n(2) a label prediction model (identical structure) that classifies motion states, and\n(3) a critic model that estimates confidence scores for each decoded point.\nA knowledge graph interacts with external sensor information to drive state transitions within a finite state machine."
+    },
+    {
+      "heading": "IV-AExperiment Design",
+      "text": "EEG and EMG signals from each grasp-and-lift trial served as decoding inputs. Considering MRCP latency and the transformer\u2019s sequence modeling capability, various window sizes (50\u20131000 samples) and delays (100\u2013700 ms) were evaluated. Model input was a 3D tensor (batch \u00d7 \\times channel \u00d7 \\times time points), with outputs being min\u2013max normalized 3D coordinates for the index finger and thumb (6 values total). The dataset was split following [ JainAnant2024EESI ] : For each participant, we randomly selected 30 trials as the validation set and another 30 non-overlapping trials as the test set, the rest for training, using MSELoss.\n\nFor evaluating window sizes and delays, data from participant 4 was used. All delays and slicing were applied post-preprocessing to avoid artifact spread from filtering boundaries; segments with mismatched EEG and kinematics data after delay were discarded.\n\nFor within-subject model comparisons, the proposed model was tested against EEGNet, DeepConvNet, TCN, and a transformer baseline (EEG-only). The modified rEEGNet and rDeepConvNet from [ JainAnant2024EESI ] were used. The multimodal version of our model used combined EEG\u2013EMG input. Tests used a 250-sample window and 200 ms delay. Within-subject tests involved participants 3, 4, 5, 7, 9; cross-subject tests decoded participant 1\u2019s data using models trained on these five. Ablation studies validated model components.\n\nDecoded trajectories were simulated on a 7-DOF Franka Panda robotic arm in MuJoCo. For each trial, the midpoint of decoded index finger/thumb trajectories was mapped to the arm workspace, converted to joint angles via inverse kinematics, and interpolated for continuous motion."
+    },
+    {
+      "heading": "IV-BCopilot Implementation",
+      "text": "EEG preprocessing for the copilot was identical to previous experiments. The dataset was split differently: We reused the same trial-level train/validation/test split as previously for training the critic model, motion stage classifier, and state transition model."
+    },
+    {
+      "heading": "V-BHand Kinematics Reconstruction on a Robotic Arm",
+      "text": "As shown in Fig. 6 , EEG-only decoding occasionally produced trajectory reversals during all movement phases\u2014particularly in grasping/return (participants 3, 7) and lift-hold stages (participants 3, 4, 9). Fluctuations during holding indicate residual precision limitations. Incorporating EMG significantly reduced the magnitude of reversals, especially for participants 3 and 4.\n\nWhile the trajectories in Fig. 6 appear relatively complete, this applies only to trials with very high PCC ( > > 0.9). For most trajectories (PCC 0.83\u20130.88), reversals are more common and pronounced. To address this, we introduced the copilot filtering module, whose effect is shown in Fig. 7 .\n\nThe graph shows that PCC continuously increased as the retention ratio decreased, up to a threshold. When the retained points dropped to 27.88% (672/2410), performance metrics (including PCC) changed significantly and irregularly. This indicates that applying an appropriate confidence threshold in the copilot can enhance decoding quality, but excessive filtering is detrimental. The peripheral trajectory plots demonstrate that obvious reversals are filtered out, resulting in a clearer grasp-and-lift movement profile.\n\nIn summary, copilot-filtered, EEG-based decoding trajectories can roughly reconstruct the grasp-and-lift motion and generate a stable robotic arm trajectory. However, for low-accuracy trajectories, the copilot currently cannot correct points\u2014it can only filter unreliable ones. Higher-precision trajectory reconstruction from non-invasive EEG still requires more robust decoding models and potentially improved hardware."
+    },
+    {
+      "heading": "VIConclusion and Future Work",
+      "text": "This paper proposed a CNN\u2013attention hybrid model for predicting hand kinematic trajectories from movement-related EEG or combined EEG\u2013EMG signals.\nWe also designed a copilot framework to filter decoding points, improving the quality of EEG-only trajectories. Future work will integrate additional sensors to provide assistance tailored to different motion patterns and explore more advanced methods for decoding EEG and controlling arms in a more robust fashion [ 22 ] ."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1 : Structure of the decoding model.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27492/assets/graph/model.png"
+    },
+    {
+      "caption": "Figure 2 : Structure of the multi-convolution block (top). Structure of the self-attention block (bottom).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27492/assets/graph/Mcov.png"
+    },
+    {
+      "caption": "Figure 3 : Structure of the copilot and decoding point filtering workflow. The grasp-and-lift movement is segmented into five states (SEARCHING, LIFTING, HOLDING, PUTTING, RETURNING), each with different confidence thresholds. UNRELY is a virtual state representing points misclassified as belonging to the current state, which are assigned a higher decoding threshold for filtering.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27492/assets/graph/copilot_drawio.png"
+    },
+    {
+      "caption": "Figure 4 : (Left) Within-subject decoding performance for different models (EEGNet, DeepConvNet, Transformer, EEG-TCN, EEG-only, and EMG\u2013EEG fusion). (Right) Within-subject and cross-subject decoding performance for EEG-only and EMG\u2013EEG fusion models.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27492/assets/graph/model2.png"
+    },
+    {
+      "caption": "Figure 5 : (Left) Model performance with varying input window sizes (50\u20131000 samples) for participant 4 with a 200 ms delay. Step size for the sliding window was one-fifth of the window length. (Right) Model performance with varying kinematic data delays (50\u2013350 samples) for participant 4 with a fixed input length of 250 samples.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27492/assets/graph/Fig1.png"
+    },
+    {
+      "caption": "Figure 6 : MuJoCo robotic arm simulation (top). Trials with relatively clear trajectories (high PCC) from participants 3, 4, 5, 7, and 9, reconstructing the grasp-and-lift movement. For participant 3, the trajectory was rotated 180\u00b0 around the z-axis to resolve visual overlap (bottom).",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27492/assets/graph/Mujoco_T.png"
+    },
+    {
+      "caption": "Figure 7 : Performance of the test dataset for participant 4 after copilot filtering, showing the proportion of retained points (bottom-left graph). Peripheral plots show trajectory changes before/after filtering for a randomly selected trial, compared to the ground truth. The red box indicates the overall PCC for a single filtered trial.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27492/assets/graph/Copilot_F.png"
+    }
+  ],
+  "ar5iv_success": true
+}

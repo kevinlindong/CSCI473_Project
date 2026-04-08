@@ -1,0 +1,137 @@
+{
+  "paper_id": "2603.28458",
+  "title": "HISA: Efficient Hierarchical Indexing for Fine-Grained Sparse Attention",
+  "abstract": "Token-level sparse attention mechanisms, exemplified by DeepSeek Sparse Attention (DSA), achieve fine-grained key selection by scoring every historical key for each query through a lightweight indexer, then computing attention only on the selected subset. While the downstream sparse attention itself scales favorably, the indexer must still scan the entire prefix for every query, introducing an per-layer bottleneck that grows prohibitively with context length. We propose HISA (Hierarchical Indexed Sparse Attention), a plug-and-play replacement for the indexer that rewrites the search path from a flat token scan into a two-stage hierarchical procedure: (1) a block-level coarse filtering stage that scores pooled block representations to discard irrelevant regions, followed by (2) a token-level refinement stage that applies the original indexer exclusively within the retained candidate blocks. HISA preserves the identical token-level top-sparse pattern consumed by the downstream Sparse MLA operator and requires no additional training. On kernel-level benchmarks, HISA achieves up to speedup at 64K context. On Needle-in-a-Haystack and LongBench, we directly replace the indexer in DeepSeek-V3.2 and GLM-5 with our HISA indexer, without any finetuning. HISA closely matches the original DSA in quality, while substantially outperforming block-sparse baselines.",
+  "authors": [
+    "Yufei Xu",
+    "Fanxu Meng",
+    "Fan Jiang",
+    "Yuxuan Wang",
+    "Ruijie Zhou",
+    "Zhaohui Wang",
+    "Jiexi Wu",
+    "Zhixin Pan",
+    "Xiaojuan Tang",
+    "Wenjie Pei",
+    "Tongxuan Liu",
+    "Di Yin",
+    "Xing Sun",
+    "Muhan Zhang"
+  ],
+  "date": "2026-03-30T13:59:51+00:00",
+  "url": "http://arxiv.org/abs/2603.28458v3",
+  "categories": [
+    "cs.LG",
+    "cs.AI"
+  ],
+  "primary_category": "cs.LG",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "Serving large language models (LLMs) (OpenAI, 2026 ; Anthropic, 2026 ; Google DeepMind, 2025 ; Meta, 2025 ; Qwen, 2026 ; DeepSeek-AI, 2024 ; MiniMax et al. , 2025 ; Moonshot AI, 2025 ) over long contexts remains a central systems challenge. As context windows grow from 128K to 1M tokens and beyond\u2014driven by demands for agentic multi-turn reasoning, long-document understanding, and native multimodal processing\u2014the quadratic cost of self-attention becomes a dominant bottleneck in both prefill latency and memory consumption (Dao et al. , 2022 ; Dao, 2023 ) .\n\nA productive line of work tackles this challenge through sparse attention : instead of attending to all key\u2013value pairs, each query selects a small subset of the most relevant tokens and computes attention only over that subset. DeepSeek-V3.2 (DeepSeek-AI, 2025 ) adopts a token-level sparse attention paradigm, in which a lightweight indexer scores every historical token for each query, selects the top- k k highest-scoring keys, and forwards only those keys to a downstream Sparse Multi-Head Latent Attention (Sparse MLA). This design has also been adopted in GLM-5 (GLM-5-Team, 2026 ) and provides strictly finer-grained selection than block-level methods such as MoBA (Lu et al. , 2025 ) and Native Sparse Attention (Yuan et al. , 2025 ) .\n\nHowever, the token-level sparse paradigm introduces a subtler bottleneck. Although the downstream attention is sparse and cheap, the indexer itself must score every token in the prefix for every query. Concretely, if the prefix length is L L and the indexer runs once per query per layer, the per-layer indexing cost is \ud835\udcaa \u200b ( L 2 ) \\mathcal{O}(L^{2}) \u2014the same asymptotic scaling as dense attention. As context lengths push toward 128K or 1M tokens, the indexer can transition from a negligible overhead into the dominant cost component.\n\nThis observation motivates a natural question: can we reduce the indexer\u2019s search cost without changing the final sparse attention pattern it produces? In other words, can we rewrite the search path while preserving the search result ?\n\nWe answer affirmatively with HISA ( H ierarchical I ndexed S parse A ttention). HISA replaces the flat, full-prefix token scan with a two-stage hierarchical search (shown in Figure 1 ): 1. Block-level coarse filtering. The prefix is partitioned into contiguous blocks of size B B . A pooled representative vector is computed for each block via mean pooling over its constituent indexing keys. The query scores all \u2308 L / B \u2309 \\lceil L/B\\rceil block representatives and retains only the top- m m blocks, immediately pruning the majority of the prefix from further consideration. 2. Token-level refinement. The token-level indexer then scores at most m \u200b B mB tokens from the candidate blocks using the same scoring mechanism as the original DSA indexer, except that the candidate pool is restricted to the tokens within the selected blocks rather than the full set of L L tokens considered in DSA. The final top- k k token set is then selected from this reduced candidate pool.\n\nCrucially, HISA produces outputs with the same structure as the original DSA indexer: for each query, a set of k k token indices. As a result, the downstream Sparse MLA operator remains entirely unchanged.\nHISA is therefore a drop-in replacement that requires no retraining, no architectural changes to the attention mechanism, and no modification to the KV cache layout.\nThe per-query indexing complexity drops from \ud835\udcaa \u200b ( L ) \\mathcal{O}(L) to \ud835\udcaa \u200b ( L / B + m \u200b B ) \\mathcal{O}(L/B+mB) , and the per-layer cost drops from \ud835\udcaa \u200b ( L 2 ) \\mathcal{O}(L^{2}) to \ud835\udcaa \u200b ( L 2 / B + L \u200b m \u200b B ) \\mathcal{O}(L^{2}/B+LmB) .\n\nOur contributions are as follows: \u2022 We identify the indexer as an emerging bottleneck in token-level sparse attention systems and formalize the problem of search-path optimization for sparse indexers. \u2022 We propose HISA, a hierarchical block-to-token indexing strategy that is training-free, operator-compatible, and asymptotically faster than the flat indexer. \u2022 We provide optimized TileLang GPU kernel implementations for both stages of HISA and demonstrate 2 2 \u2013 4 \u00d7 4\\times kernel-level speedup at 64K contexts. \u2022 We empirically validate that HISA achieves performance comparable to the original DSA on the Needle-in-a-Haystack and LongBench benchmarks."
+    },
+    {
+      "heading": "3Preliminary",
+      "text": "We briefly review DeepSeek Sparse Attention (DSA) as used in DeepSeek-V3.2 (DeepSeek-AI, 2025 ) . DSA consists of two components: a token-wise Indexer and Sparse MLA ."
+    },
+    {
+      "heading": "4.1HISA: Hierarchical Indexed Sparse Attention",
+      "text": "As shown in Figure 1 , HISA replaces the flat prefix scan with a two-stage coarse-to-fine search. The final output remains an identical per-query token set \ud835\udcaf t H \\mathcal{T}_{t}^{\\mathrm{H}} of size k k , consumed by the original Sparse MLA operator."
+    },
+    {
+      "heading": "4.2Complexity Analysis",
+      "text": "Assuming that the pooled representative keys are maintained incrementally, the per-query indexing cost of HISA consists of scoring \u2308 L / B \u2309 \\lceil L/B\\rceil block representatives (Stage\u00a01) and scoring at most m \u200b B mB candidate tokens (Stage\u00a02): \ud835\udcaa \u200b ( L B + m \u200b B ) . \\mathcal{O}\\!\\left(\\frac{L}{B}+mB\\right). (10) Summing over all L L queries within a layer yields: \ud835\udcaa \u200b ( L 2 B + L \u200b m \u200b B ) , \\mathcal{O}\\!\\left(\\frac{L^{2}}{B}+LmB\\right), (11) compared to \ud835\udcaa \u200b ( L 2 ) \\mathcal{O}(L^{2}) for the original DSA indexer. The design introduces a clear trade-off: larger B B reduces the cost of coarse-filtering stage but makes each block a coarser proxy; smaller m m improves efficiency but increases the risk of missing relevant blocks. When m \u226a M m\\ll M and B \u226a L B\\ll L \u2014the regime of ultra-long contexts with a selective coarse filter\u2014the reduction is substantial. Conversely, as m m approaches M M , HISA degrades gracefully toward the DSA baseline.\n\nAs modern LLMs increasingly adopt context windows of 128K or even 1M tokens to support advanced agent capabilities and native multimodal reasoning, HISA\u2019s asymptotic advantage translates directly into practical speedups."
+    },
+    {
+      "heading": "5Experiments",
+      "text": "We evaluate HISA along five axes: (1) kernel-level latency, (2) retrieval accuracy on Needle-in-a-Haystack, (3) downstream task performance on LongBench, (4) visualization of attention scores, and (5) hyperparamenter sensitivity. Throughout the evaluation, we compare three indexing strategies:\n\n\u2022 DSA (original) : the full-prefix token-level indexer as described in Section 3 . \u2022 Block-Sparse : a block-level-only baseline that selects top- m m blocks and attends to all tokens within those blocks (i.e., Stage\u00a01 only, without token-level refinement). \u2022 HISA : the hierarchical block-to-token indexer proposed in this work. Both HISA and Block-Sparse are training-free : they are applied at inference time by replacing the indexer module, with no fine-tuning or architectural modification."
+    },
+    {
+      "heading": "5.1Kernel-Level Speedup",
+      "text": "Figure 2 compares the indexer kernel latency of the original DSA and HISA across context lengths from 8K to 64K tokens. Both implementations use TileLang (Wang et al. , 2025 ) kernels, with DSA following the official reference implementation. 1 1 1 https://github.com/tile-ai/tilelang/tree/main/examples/deepseek_v32 The HISA kernel is decomposed into two stages: block-level filtering and token-level refinement within the selected candidate blocks. The configuration is as follows: query lens = 1024 =1024 , final top- k = 2048 k=2048 tokens, block size B = 128 B=128 , and two choices for the maximum number of selected blocks. All comparisons are conducted on an NVIDIA A100 GPU. These results are measured at the indexer kernel level and do not directly reflect end-to-end serving throughput, which also depends on the sparse MLA operator, KV cache management, and other system components.\n\nWith 2048 selected tokens, the sparse MLA operator consistently costs about 1.6 ms, while the indexer reaches 5.6 ms at 64K context length. This suggests that the main performance bottleneck in DSA lies in the indexer rather than in sparse MLA itself. Accordingly, we restrict the comparison to indexer overhead.\nAt 64K context length, HISA delivers an approximately 2.16 \u00d7 2.16\\times speedup with a 4:1 first-stage compression ratio (corresponding to a 16K candidate budget), and up to 3.75 \u00d7 3.75\\times speedup under a fixed 8K budget. Although HISA adds a block-level filtering stage, this stage operates only on pooled block summaries of size \u2308 L / B \u2309 \\lceil L/B\\rceil , which is far smaller than the full token sequence. Moreover, under a fixed 8K budget, the second-stage cost remains nearly constant because both the input and output lengths are fixed, making the computation graph easier to optimize and further improving inference speed."
+    },
+    {
+      "heading": "5.2Needle-in-a-Haystack",
+      "text": "The Needle-in-a-Haystack (NIAH) test (Kamradt, 2023 ) evaluates a model\u2019s ability to retrieve a specific fact (the \u201dneedle\u201d) embedded at a controlled position within a long distractor context (the \u201dhaystack\u201d). We evaluate DeepSeek-V3.2 with its original DSA indexer replaced by HISA (4:1 ratio) and block indexer, without any additional training, over context lengths ranging from 8K to 648K tokens and needle insertion depths ranging from 0% (beginning) to 100% (end).\n\nFigure 3 presents the retrieval accuracy heatmaps. The original DSA achieves near-perfect retrieval across all context lengths and needle positions (Figure 3(a) ). HISA closely matches this performance (Figure 3(c) ), with only marginal degradation at extreme lengths and depths, suggesting that the our HISA rarely discards blocks containing the target information. In contrast, the Block-Sparse baseline (Figure 3(b) ) exhibits noticeable accuracy degradation, particularly when the needle is located in the middle of the context where block-level selection is least reliable. This result underscores the value of hierarchical selection. Block-sparse methods often waste budget on unimportant tokens within selected blocks while overlooking truly critical tokens. HISA, in contrast, refines the selection at the token level after block retrieval, allowing it to preserve important tokens more accurately and achieve efficient token-wise sparsity."
+    },
+    {
+      "heading": "5.3LongBench Evaluation",
+      "text": "LongBench (Bai et al. , 2024 ) is a comprehensive benchmark for long-context understanding, covering single-document QA, multi-document QA, summarization, few-shot learning, and synthetic retrieval tasks. We evaluate DeepSeek-V3.2 (DeepSeek-AI, 2025 ) and GLM-5 (GLM-5-Team, 2026 ) under three configurations: the original DSA indexer, HISA, and Block-Sparse Attention.\nFor a fair comparison, all three configurations ultimately retain 2048 tokens for computation. Specifically, Block-Sparse Attention directly selects 16 blocks of size 128 (i.e., 128 \u00d7 16 = 2048 128\\times 16=2048 tokens). HISA first selects 64 blocks of size 128 (i.e., 128 \u00d7 64 = 8192 128\\times 64=8192 tokens), and then further refines them through token-level selection to 2048 tokens.\n\nTable 1 summarizes the results. Across both models and all task categories, HISA achieves performance very close to that of the original DSA. Notably, HISA consistently surpasses DSA on the Synthetic tasks, and on GLM-5 it even attains a higher average score.\nBy contrast, the Block-Sparse baseline, which does not include token-level refinement, exhibits a substantially larger performance gap. This is particularly apparent on the Synthetic tasks for GLM-5, where its score declines by 8.35%."
+    },
+    {
+      "heading": "5.4Visualization of Attention Scores",
+      "text": "To analyze the structural properties of attention in long-context generation, we conduct a visualization study on a representative sample from the code task of LongBench. We generate the first output token using DeepSeek-V3.2 and extract the full attention distributions at each layer. We visualize the attention weights over all context tokens as a 2D heatmap, where the x-axis denotes token positions and the y-axis denotes layer indices.\n\nThe visualization reveals a pattern: tokens with high attention weights tend to form contiguous spans rather than appearing as isolated points in a considerable number of tasks. These high-density regions often correspond to semantically coherent segments (e.g.,code blocks,mathematical formulas and derivations) and persist across multiple layers. Outside these spans,attention scores are negligible.\nThis observation suggests that attention mass may be naturally concentrated in block-wise regions. Therefore,block-level sparsification can retain most of the informative attention distribution while avoiding the fine-grained selection overhead of token-wise top-k methods. The results provide empirical support for the two-stage hierarchical structure of HISA."
+    },
+    {
+      "heading": "5.5Hyperparameter Sensitivity",
+      "text": "We investigate the sensitivity of HISA to its two key hyperparameters\u2014block size B B and block-level top- m m \u2014by comparing three HISA configurations that share the same candidate pool size, m \u200b B = 8192 mB=8192 , but different coarse-to-fine trade-offs: ( B = 64 , m = 128 ) (B{=}64,m{=}128) , ( B = 128 , m = 64 ) (B{=}128,m{=}64) , and ( B = 256 , m = 32 ) (B{=}256,m{=}32) . We further include the original DSA as an upper bound and Block-Sparse ( B = 128 , m = 16 ) (B{=}128,m{=}16) as a lower bound. All configurations use k = 2048 k{=}2048 for the final token selection. Results are evaluated on DeepSeek-V3.2 and GLM-5 across five LongBench task categories.\n\nFigure 5 reveals several key findings. First, all three HISA configurations closely track DSA performance across all five task categories. This result confirms that our two-stage hierarchical indexer recovers nearly the same set of important tokens as the exhaustive flat scan.\nSecond, among the three HISA variants, the intermediate configurations ( B = 64 B{=}64 and B = 128 B{=}128 ) perform better than B = 256 B{=}256 . This suggests that finer-grained selection is important for accurately identifying the most relevant tokens.\nThird, Block-Sparse consistently underperforms all HISA configurations. This gap underscores the importance of token-level refinement: even under the same block-level selection mechanism, the ability to prune low-relevance tokens within selected blocks yields measurable quality gains."
+    },
+    {
+      "heading": "6Conclusion and Future Directions",
+      "text": "To address the emerging bottleneck caused by the O \u200b ( L 2 ) O(L^{2}) complexity of the DSA indexer, we propose HISA, a hierarchical indexing approach. Specifically, HISA first uses a hardware-friendly block indexer to efficiently filter out a large number of irrelevant tokens, and then applies token-level reranking over the remaining candidates to construct the final cache for sparse attention computation. At the kernel level, HISA delivers a 3.75 \u00d7 3.75\\times speedup over the DSA kernel.\nAs a plug-and-play module, HISA can directly replace the token indexer in DeepSeek-V3.2 and GLM-5. Without any additional training, it maintains nearly unchanged performance on LongBench. On NIAH, it also performs significantly better than the corresponding block-sparse baseline.\n\nSeveral avenues remain open: (1) Reducing information loss in coarse filtering : the current block-level stage represents each block with a single pooled vector, which can fail when a block crosses a semantic boundary and the pooled representation does not reflect the most important token. Potential mitigations include overlapping blocks, adaptive block boundaries, or replacing mean pooling with max pooling to better preserve salient outlier directions. (2) Training-aware HISA : while HISA currently operates as a training-free inference-time replacement, jointly training the block scoring stage may improve the coarse filter\u2019s accuracy, particularly for such boundary cases. (3) End-to-end system integration : integrating HISA into a full inference serving stack (e.g., with continuous batching and speculative decoding) and measuring throughput and latency under realistic workloads."
+    },
+    {
+      "heading": "B.1Long-context Benchmarks",
+      "text": "We evaluated the long-context performance using the Needle In A Haystack (NIAH) test and the LongBench benchmark. We tested two models: DeepSeek-V3.2 and GLM-5 . Both models were deployed using the vLLM online serving framework with FP8 precision."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "(a) Original DSA: token-wise indexer.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28458/assets/x1.png"
+    },
+    {
+      "caption": "(a) Original DSA: token-wise indexer.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28458/assets/x1.png"
+    },
+    {
+      "caption": "(b) Our HISA: block-to-token indexer.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28458/assets/x2.png"
+    },
+    {
+      "caption": "(a) Budget = 8192",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28458/assets/x3.png"
+    },
+    {
+      "caption": "(a) Budget = 8192",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28458/assets/x3.png"
+    },
+    {
+      "caption": "(b) Compression Ratio = 4:1",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28458/assets/x4.png"
+    },
+    {
+      "caption": "(a) DSA (original)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28458/assets/x5.png"
+    },
+    {
+      "caption": "(a) DSA (original)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28458/assets/x5.png"
+    },
+    {
+      "caption": "(b) Block-Sparse",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28458/assets/x6.png"
+    },
+    {
+      "caption": "(c) HISA (ours)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28458/assets/x7.png"
+    },
+    {
+      "caption": "Figure 4: Visualization of Attention Distribution.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28458/assets/imgs/att-visual.png"
+    },
+    {
+      "caption": "(a) Ablation study on DeepSeek-V3.2.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28458/assets/x8.png"
+    },
+    {
+      "caption": "(a) Ablation study on DeepSeek-V3.2.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28458/assets/x8.png"
+    },
+    {
+      "caption": "(b) Ablation study on GLM-5.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28458/assets/x9.png"
+    }
+  ],
+  "ar5iv_success": true
+}

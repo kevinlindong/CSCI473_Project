@@ -1,0 +1,194 @@
+{
+  "paper_id": "2603.27476",
+  "title": "PeopleSearchBench: A Multi-Dimensional Benchmark for Evaluating AI-Powered People Search Platforms",
+  "abstract": "AI-powered people search platforms are increasingly used in recruiting, sales prospecting, and professional networking, yet no widely accepted benchmark exists for evaluating their performance. We introduce PeopleSearchBench, an open-source benchmark that compares four people search platforms on 119 real-world queries across four use cases: corporate recruiting, B2B sales prospecting, expert search with deterministic answers, and influencer/KOL discovery. A key contribution is Criteria-Grounded Verification, a factual relevance pipeline that extracts explicit, verifiable criteria from each query and uses live web search to determine whether returned people satisfy them. This produces binary relevance judgments grounded in factual verification rather than subjective holistic LLM-as-judge scores. We evaluate systems on three dimensions: Relevance Precision (padded nDCG@10), Effective Coverage (task completion and qualified result yield), and Information Utility (profile completeness and usefulness), averaged equally into an overall score. Lessie, a specialized AI people search agent, performs best overall, scoring 65.2, 18.5% higher than the second-ranked system, and is the only system to achieve 100% task completion across all 119 queries. We also report confidence intervals, human validation of the verification pipeline (Cohen's kappa = 0.84), ablations, and full documentation of queries, prompts, and normalization procedures. Code, query definitions, and aggregated results are available on GitHub.",
+  "authors": [
+    "Wei Wang",
+    "Tianyu Shi",
+    "Shuai Zhang",
+    "Boyang Xia",
+    "Zequn Xie",
+    "Chenyu Zeng",
+    "Qi Zhang",
+    "Lynn Ai",
+    "Yaqi Yu",
+    "Kaiming Zhang",
+    "Feiyue Tang"
+  ],
+  "date": "2026-03-29T02:21:09+00:00",
+  "url": "http://arxiv.org/abs/2603.27476v1",
+  "categories": [
+    "cs.AI",
+    "cs.LG"
+  ],
+  "primary_category": "cs.AI",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "People search\u2014the task of finding individuals who match a specific combination of role, skills, location, and domain expertise\u2014is a common workflow in recruiting, sales, and marketing. As AI-powered platforms increasingly automate this process, comparing their effectiveness has become important but remains difficult. Despite rapid adoption, there is still no widely accepted methodology for evaluating people-search systems in a rigorous and reproducible manner. Existing benchmarks for information retrieval [ thakur2021beir , yu2025cotextor ] and question answering [ kwiatkowski2019natural ] do not adequately address this setting, where outputs are real individuals, valid answers are often non-exhaustive, and key profile attributes require independent verification.\n\nThe challenge extends beyond the absence of a labeled dataset to the evaluation methodology itself. Standard benchmarks typically rely on pre-defined relevance labels, while holistic LLM-as-judge approaches often depend on subjective overall assessments [ zheng2023judging ] . Neither is fully adequate for people search. Most queries admit many correct answers, and practical utility depends not only on retrieving relevant individuals, but also on returning enough qualified candidates with verifiable and navigable profile information to support immediate downstream action. As a result, evaluation must account for multiple criteria and support factual verification against external evidence.\n\nWe introduce PeopleSearchBench, an open-source benchmark containing 119 queries in four languages (English, Portuguese, Spanish, Dutch) grouped into four commercially relevant scenarios: Recruiting (30 queries), B2B Prospecting (32), Expert/Deterministic Search (28), and Influencer/KOL Discovery (29). Evaluation is conducted through our Criteria-Grounded Verification pipeline, which breaks down each query into explicit checkable criteria and verifies each result against those criteria through live web search. This produces binary factual judgments instead of subjective quality scores, making the evaluation process more reproducible and less prone to bias.\n\nWe apply our evaluation framework to four platforms that represent distinct architectural approaches to people search: a specialized AI search agent, a structured search API, an AI-powered recruiting platform, and a general-purpose AI agent. The results reveal that Lessie, the specialized AI people search agent, achieves the highest overall score (65.2) with an 18.5% lead over the second-ranked platform, and is the only system that maintains 100% task completion across all 119 queries. Performance varies substantially across query types: recruiting queries are relatively competitive for platforms with access to large professional databases, while influencer discovery shows the widest performance gap between systems. The original conference version of this work presented the core benchmark design and main experimental results.\n\nIn this extended technical report, we address the need for greater reproducibility and statistical rigor by adding several key contributions: (1) bootstrap confidence intervals and paired significance tests for all scores; (2) human validation of the verification pipeline on 200 person-query pairs (Cohen\u2019s \u03ba \\kappa = 0.84); (3) the complete set of 119 queries with metadata and the normalization schema; (4) all evaluation prompts and execution protocols; (5) cost and latency analysis; (6) systematic error analysis with case studies; and (7) ablation studies on the qualified-result threshold, dimension weights, top-K, and partial credit. We believe these additions make this benchmark a valuable resource for the research community as AI-powered people search continues to evolve."
+    },
+    {
+      "heading": "2Related Work",
+      "text": "This section surveys four areas that inform our benchmark design and identifies the specific gap each leaves open for people search evaluation."
+    },
+    {
+      "heading": "3Methodology",
+      "text": "This section describes the benchmark dataset (Section 3.1 ), our\nCriteria-Grounded Verification pipeline (Section 3.2 ), and the three\nevaluation dimensions we use to measure performance (Section 3.3 )."
+    },
+    {
+      "heading": "3.1Benchmark Dataset",
+      "text": "Our benchmark consists of 119 queries that were designed to reflect the actual needs\nof practitioners across four commercially important scenarios. Table 1 provides an overview of the query distribution."
+    },
+    {
+      "heading": "3.2Criteria-Grounded Verification",
+      "text": "Our approach to evaluation differs fundamentally from traditional LLM-as-judge\nmethods that assign holistic subjective scores. Instead, we decompose the evaluation\nprocess into a sequence of explicit, verifiable factual judgments. The pipeline runs\nin three stages, which we describe below."
+    },
+    {
+      "heading": "3.3Evaluation Dimensions",
+      "text": "Each platform is scored on three independently computed dimensions, all scaled to\nthe 0\u2013100 range. These dimensions are then combined via equal-weight averaging to\nproduce an overall score."
+    },
+    {
+      "heading": "4.1Platforms Evaluated",
+      "text": "We evaluate four platforms that represent diverse architectural approaches to AI-powered\npeople search. Table 3 summarizes their characteristics.\n\nLessie is a specialized AI people search agent that autonomously searches\nacross professional networks, social platforms, academic databases, and public\nregistries. Exa is an AI-powered search API that returns structured entity\nresults from its proprietary database. Juicebox (PeopleGPT) is an AI\nrecruiting platform with access to 800 million+ professional profiles from 60\ndifferent sources. Claude Code is Anthropic\u2019s general-purpose AI coding agent\n(Claude Sonnet 4.6) that produces text-based search reports with variable result counts."
+    },
+    {
+      "heading": "4.2Evaluation Configuration",
+      "text": "We evaluate up to 15 results per query per platform to ensure consistent comparison.\nThe verification pipeline uses Gemini 3 Flash Preview via OpenRouter for all LLM\njudgments, and the Tavily Search API (advanced depth) for all web-based fact-checking.\nThe same model and configuration are applied identically to all platforms, and the\nverification agent has no information about which platform produced each result to\navoid any bias."
+    },
+    {
+      "heading": "4.3Statistical Methodology",
+      "text": "To provide rigorous statistical guarantees, we use bootstrap resampling with 1000\niterations to estimate 95% confidence intervals for all reported mean scores. For\npairwise comparisons between platforms, we use paired bootstrap tests to assess\nstatistical significance, following the procedure described in efron1994introduction .\nWe also report query-level win/tie/loss statistics to provide a granular view of\nperformance differences."
+    },
+    {
+      "heading": "5Main Results",
+      "text": "The overall benchmark results of the four platforms are shown in Table 4 , with 95% confidence intervals estimated via bootstrap.\n\nLessie ranks first overall (65.2 \u00b1 \\pm 1.5), followed by Exa (55.0 \u00b1 \\pm 1.8), Claude Code (46.0 \u00b1 \\pm 2.1), and Juicebox (45.8 \u00b1 \\pm 1.9). Lessie leads in all three dimensions and is the only platform with 100% task completion (Table 5 ). All differences between the top-ranked and second-ranked platform are statistically significant ( p < 0.05 p<0.05 , paired bootstrap)."
+    },
+    {
+      "heading": "5.1Scenario Analysis",
+      "text": "The performance of each platform across the four query scenarios is shown in Table 7 , with per-dimension breakdowns for Relevance Precision, Effective Coverage, and Information Utility in Tables 8 \u2013 10 respectively."
+    },
+    {
+      "heading": "5.2Cross-Scenario Consistency",
+      "text": "Lessie is the only platform that maintains consistent Relevance Precision across\nall query categories, with a range of 62.8\u201379.0 (coefficient of variation: 9.7%).\nOther platforms show significantly wider variance: Juicebox ranges from 26.6 to 66.1\n(CV: 35.2%), Exa from 37.4 to 66.2 (CV: 22.8%), and Claude Code from 43.0 to 69.6\n(CV: 19.1%). This suggests that multi-source architectures are less sensitive to query type, whereas platforms built around a single data domain show sharper performance drops outside that domain."
+    },
+    {
+      "heading": "5.3Architectural Tradeoffs",
+      "text": "Our results reveal clear tradeoffs between different architectural approaches to\npeople search."
+    },
+    {
+      "heading": "6Verification Pipeline Validation",
+      "text": "A core contribution of this benchmark is the Criteria-Grounded Verification pipeline\nitself. To ensure that this pipeline produces reliable and reproducible results, we\nconducted extensive validation experiments."
+    },
+    {
+      "heading": "6.1Human Validation Study",
+      "text": "We conducted a human validation study on a stratified random sample of 200 person-query\npairs, with 50 pairs selected from each of the four scenarios."
+    },
+    {
+      "heading": "6.2Criteria Extraction Stability",
+      "text": "To assess the stability of the criteria extraction step, we ran the extraction prompt\nfive times on each of 30 randomly selected queries with temperature set to 0.7.\nAcross the 150 extractions (30 queries \u00d7 \\times 5 runs), we find: \u2022 Number of criteria extracted: mean = 2.73, standard deviation = 0.41, range = 2\u20134 \u2022 Semantic equivalence of criteria sets (assessed by GPT-4): 94.7% of runs produced\nsemantically equivalent criteria sets \u2022 Exact string match: 78.0% (this is a lower bound since paraphrasing is acceptable) These results indicate that the criteria extraction process is stable across runs\neven with non-zero temperature."
+    },
+    {
+      "heading": "6.3Judge Model Sensitivity",
+      "text": "We tested the verification pipeline with alternative judge models on a subset of\n50 queries (200 person-query pairs) to assess how sensitive results are to the\nchoice of judge model.\n\nAll models show high agreement ( \u03ba > 0.75 \\kappa>0.75 ) with the primary Gemini model,\nwhich indicates that the pipeline is robust to the choice of judge model. Platform\nrankings remain consistent across all judge models."
+    },
+    {
+      "heading": "6.4Prompt Robustness",
+      "text": "We tested three prompt variants on 50 queries to assess how sensitive results are to\nprompt design: \u2022 Original : The production prompt used in our main experiments \u2022 Simplified : Removed examples and detailed instructions \u2022 Enhanced : Added explicit chain-of-thought reasoning steps\n\nThe simplified prompt shows acceptable agreement but slightly lower reliability.\nThe enhanced prompt with chain-of-thought shows the highest agreement but at the\ncost of increased latency. In all cases, platform rankings remain stable."
+    },
+    {
+      "heading": "7Cost and Latency Analysis",
+      "text": "To provide a complete picture of benchmark feasibility for other researchers who\nwish to replicate or extend our work, we report the computational cost and latency\nof running the full evaluation."
+    },
+    {
+      "heading": "7.1Cost Breakdown",
+      "text": "The total cost of evaluating all four platforms across 119 queries is shown in Table 14 ."
+    },
+    {
+      "heading": "7.2Latency Analysis",
+      "text": "The average latency per query, broken down by platform and pipeline stage, is shown in Table 15 .\n\nWeb verification dominates latency because each criterion requires an independent\nweb search. The entire pipeline is easily parallelizable: running verification on\neight concurrent workers reduces the total evaluation time from 4.9 hours to about\n1.2 hours."
+    },
+    {
+      "heading": "8Error Analysis",
+      "text": "We conducted a systematic error analysis to understand the typical failure modes\nacross different platforms and query types."
+    },
+    {
+      "heading": "8.1Error Taxonomy",
+      "text": "We manually reviewed all queries with at least one error (task failure or below-threshold\nresults) and categorized errors into four main types:"
+    },
+    {
+      "heading": "8.3Case Studies",
+      "text": "To illustrate the typical failure modes we observed, we present three case studies:"
+    },
+    {
+      "heading": "9Ablation and Sensitivity Studies",
+      "text": "We conducted ablation studies to validate the key design choices we made in developing\nthe benchmark."
+    },
+    {
+      "heading": "9.1Qualified Threshold Sensitivity",
+      "text": "Our primary results use rel \u200b ( p i ) \u2265 0.5 \\text{rel}(p_{i})\\geq 0.5 as the threshold for defining a\nqualified result. We tested three different thresholds to assess how this choice\naffects platform rankings.\n\nRankings are stable across all tested thresholds. Lessie and Exa maintain positions\n1\u20132 regardless of the threshold. Juicebox and Claude Code swap positions at the\n0.7 threshold, which reflects Juicebox\u2019s higher precision but lower recall compared\nto Claude Code."
+    },
+    {
+      "heading": "9.2Top-KKSensitivity",
+      "text": "We evaluated the impact of using different values of K K for the nDCG calculation:\n\nRankings remain stable for all K \u2208 { 5 , 10 , 15 } K\\in\\{5,10,15\\} . The choice of K = 10 K=10 balances\ngranularity with practical relevance, since users typically review the top 10 results\nfor a given query."
+    },
+    {
+      "heading": "9.3Dimension Weighting Sensitivity",
+      "text": "We tested whether the overall score ranking is sensitive to changes in the dimension\nweights:\n\nRankings are robust to weight changes. Lessie ranks first under all tested weighting\nschemes. The \u201cOptimized\u201d column shows weights learned via grid search to maximize\ncorrelation with human preference judgments on a held-out set of 30 queries, and the\nrankings remain unchanged."
+    },
+    {
+      "heading": "9.4Partial Credit Ablation",
+      "text": "We tested removing the \u201cpartially_met\u201d (0.5) score and using only binary met/not_met:\n\nRemoving partial credit lowers all scores proportionally but does not change rankings.\nIncluding partial credit provides finer-grained discrimination without affecting\nrelative comparisons."
+    },
+    {
+      "heading": "9.5Information Utility Ablation",
+      "text": "We tested computing the overall score without including the Information Utility\ndimension:\n\nWithout Information Utility, Juicebox drops below Claude Code in the rankings.\nThis reflects Juicebox\u2019s strong profile completeness (which benefits its Information\nUtility score) despite lower Relevance Precision. The Information Utility dimension\nclearly captures value that is not reflected in relevance alone, which justifies its\ninclusion in the overall score."
+    },
+    {
+      "heading": "11Conclusion",
+      "text": "PeopleSearchBench provides an open-source benchmark with a Criteria-Grounded\nVerification pipeline for evaluating AI-powered people search platforms. Scoring\nresults from four architecturally diverse platforms on 119 queries across four\nscenarios, the benchmark finds that Lessie achieves the highest overall score\n(65.2 \u00b1 \\pm 1.5) with 100% task completion, followed by Exa (55.0 \u00b1 \\pm 1.8),\nClaude Code (46.0 \u00b1 \\pm 2.1), and Juicebox (45.8 \u00b1 \\pm 1.9). The evaluation reveals\nthat multi-source data fusion and per-result match explanations provide significant\nadvantages across diverse query types. We release all code, queries, and aggregated\nscores to support reproducible comparison as the landscape of AI-powered people search\ncontinues to evolve."
+    },
+    {
+      "heading": "Ethics Statement",
+      "text": "All queries in this work target publicly available professional information; we do\nnot scrape private data. The benchmark publishes aggregated platform scores, not\nunderlying personal records. All evaluation was conducted using only publicly\navailable profile information. All human annotation for validation was conducted\nwith informed consent, and annotators were compensated at rates exceeding local\nminimum wage requirements. We recognize that people-search technology can be misused,\nand we encourage adopters of this benchmark to pair it with responsible data-handling\npolicies."
+    },
+    {
+      "heading": "A.4Cross-Case Synthesis",
+      "text": "Table 25 summarizes the key findings across all case studies.\n\nThe case studies reveal that: 1. Query type matters: No single platform dominates all scenarios. Specialized queries (influencer discovery) favor platforms with diverse data sources. 2. Constraint complexity: Multi-constraint queries expose weaknesses in keyword-matching approaches. Platforms with semantic understanding perform better. 3. Data freshness: Location and role information can become outdated. Platforms that verify current employment status have an advantage."
+    },
+    {
+      "heading": "D.1Criteria Extraction Prompt",
+      "text": "You are a query analyzer. Given a people search query, extract\nexplicit, independently verifiable criteria.\nQuery: {query}\nInstructions:\n1. Identify all constraints in the query (role, company, location,\n   skills, experience level, etc.)\n2. Each criterion must be independently verifiable via web search\n3. Output as a JSON list of criterion objects\nOutput format:\n{\n  \"criteria\": [\n    {\"id\": \"c1\", \"description\": \"...\", \"type\": \"role\"},\n    ...\n  ]\n}\nExample:\nQuery: \"Find senior ML engineers at Google in Bay Area\"\nOutput:\n{\n  \"criteria\": [\n    {\"id\": \"c1\", \"description\": \"Role is Senior ML Engineer or equivalent\",\n     \"type\": \"role\"},\n    {\"id\": \"c2\", \"description\": \"Currently employed at Google\",\n     \"type\": \"company\"},\n    {\"id\": \"c3\", \"description\": \"Located in San Francisco Bay Area\",\n     \"type\": \"location\"}\n  ]\n}"
+    },
+    {
+      "heading": "D.2Verification Prompt",
+      "text": "You are a fact-checker. Given a person and a criterion, verify\nwhether the person meets the criterion using web search.\nPerson: {person_data}\nCriterion: {criterion_description}\nInstructions:\n1. Search for evidence about this person using web search\n2. Evaluate whether the criterion is met based on evidence\n3. Output one of: \"met\", \"partially_met\", \"not_met\"\n4. Provide brief justification with source URLs\nOutput format:\n{\n  \"judgment\": \"met|partially_met|not_met\",\n  \"justification\": \"...\",\n  \"sources\": [\"url1\", \"url2\"]\n}"
+    },
+    {
+      "heading": "D.3Information Utility Scoring Prompt",
+      "text": "You are evaluating the information utility of a people search result.\nGiven the person data and the original query, score three dimensions:\n1. Structural Completeness (0-1): Does the result include name, title,\n   company, contact info, work history, education?\n2. Query-Specific Evidence (0-1): Does it explain WHY this person matches?\n3. Actionability (0-1): Can the user take action (contact, shortlist)?\nPerson: {person_data}\nQuery: {query}\nOutput format:\n{\n  \"structural_completeness\": 0.0-1.0,\n  \"query_specific_evidence\": 0.0-1.0,\n  \"actionability\": 0.0-1.0,\n  \"utility\": 0.0-1.0\n}"
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1 : Overview of the PeopleSearchBench evaluation pipeline. Queries are\nexecuted across all platforms, results are normalized to a unified schema, and each\nperson is independently verified against extracted criteria using web search.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27476/assets/figures/fig1.png"
+    },
+    {
+      "caption": "Figure 2 : Overall benchmark results decomposed by dimension with 95% confidence intervals.\nLessie leads across all three dimensions and achieves the highest overall score.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27476/assets/x1.png"
+    },
+    {
+      "caption": "Figure 3 : Heatmap of overall scores by query scenario and platform. Lessie leads\nin all four scenarios, with the largest margin in the Influencer/KOL discovery scenario.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27476/assets/x2.png"
+    },
+    {
+      "caption": "Figure 4 : Cross-scenario Relevance Precision. Lessie maintains the most consistent\nperformance across all four scenarios (range: 62.8\u201379.0, coefficient of variation:\n9.7%). Other platforms exhibit wider variance: Juicebox ranges from 26.6 to 66.1,\nExa from 37.4 to 66.2.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27476/assets/x3.png"
+    },
+    {
+      "caption": "Figure 5 : Task completion rate versus Relevance Precision. Bubble size indicates\noverall score. Lessie is the only platform that achieves both 100% task completion\nand the highest relevance.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27476/assets/x4.png"
+    }
+  ],
+  "ar5iv_success": true
+}

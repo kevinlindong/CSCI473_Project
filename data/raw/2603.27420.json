@@ -1,0 +1,125 @@
+{
+  "paper_id": "2603.27420",
+  "title": "CarbonEdge: Carbon-Aware Deep Learning Inference Framework for Sustainable Edge Computing",
+  "abstract": "Deep learning applications at the network edge lead to a significant growth in AI-related carbon emissions, presenting a critical sustainability challenge. The existing edge computing frameworks optimize for latency and throughput, but they largely ignore the environmental impact of inference workloads. This paper introduces CarbonEdge, a carbon-aware deep learning inference framework that extends adaptive model partitioning with carbon footprint estimation and green scheduling apabilities. We propose a carbon-aware scheduling algorithm that extends traditional weighted scoring with a carbon efficiency metric, supporting a tunable performance--carbon trade-off (demonstrated via weight sweep). Experimental evaluations on Docker-simulated heterogeneous edge environments show that CarbonEdge-Green mode achieves a 22.9% reduction in carbon emissions compared to monolithic execution. The framework achieves 1.3x improvement in carbon efficiency (245.8 vs 189.5 inferences per gram CO2) with negligible scheduling overhead (0.03ms per task). These results highlight the framework's potential for sustainable edge AI deployment, providing researchers and practitioners a tool to quantify and minimize the environmental footprint of distributed deep learning inference.",
+  "authors": [
+    "Guilin Zhang",
+    "Wulan Guo",
+    "Ziqi Tan",
+    "Chuanyi Sun",
+    "Hailong Jiang"
+  ],
+  "date": "2026-03-28T21:41:58+00:00",
+  "url": "http://arxiv.org/abs/2603.27420v2",
+  "categories": [
+    "cs.DC",
+    "cs.AI",
+    "cs.LG"
+  ],
+  "primary_category": "cs.DC",
+  "sections": [
+    {
+      "heading": "IIntroduction",
+      "text": "The rapid deployment of artificial intelligence (AI) at the network edge has revolutionized applications ranging from autonomous vehicles to smart healthcare systems [ 1 ] . Edge computing enables real-time deep learning inference by processing data closer to its source, reducing latency and bandwidth consumption [ 2 , 3 ] . And this growth of edge AI comes with a significant and often overlooked environmental cost: the carbon footprint of distributed inference workloads [ 4 ] . Recent studies have shown the substantial energy consumption and carbon emissions related to AI systems [ 5 ] . Training large language models can emit as much carbon as five cars over their lifetimes [ 6 ] , and inference workloads contribute approximately 60% of Google\u2019s machine learning energy consumption due to their cumulative scale [ 7 , 8 ] . As edge AI deployments grow exponentially, addressing the environmental impact becomes an important research challenge aligned with global sustainability goals [ 9 ] .\n\nSome existing edge computing frameworks aim to solve above issues, like our prior work AMP4EC [ 10 ] . These frameworks have provided improvements in inference latency and throughput through adaptive model partitioning and intelligent task scheduling [ 11 , 12 ] . However, they optimize purely for performance metrics, remaining uncertain to the carbon intensity of the computational resources that they use [ 13 ] . This means a missed opportunity: edge networks cross regions with different levels of carbon intensity in the power grid, from coal-heavy regions above 800 gCO2/kWh to renewable energy regions below 100 gCO2/kWh [ 14 , 15 ] .\n\nTo address it, this paper introduces CarbonEdge , a carbon-aware deep learning inference framework. This framework extends adaptive model partitioning with comprehensive carbon footprint estimation and green scheduling capabilities. The framework has a Carbon Monitor module that provides carbon footprint. The footprint is tracking by integrating with CodeCarbon for host-level energy measurement and estimating per-node emissions, which is based on regional grid carbon intensity data. And it represents a Carbon-Aware Scheduling Algorithm that extends traditional weighted scoring mechanisms with a carbon efficiency metric ( S C S_{C} ), enabling operators to tune the performance-carbon trade-off via configurable weight parameters. Furthermore, we develop a Green Partitioning Strategy that considers both computational cost and carbon implications when distributing workloads across heterogeneous edge nodes. Comprehensive experimental validation demonstrates 22.9% carbon reduction in Green mode with comparable latency, achieving 1.3 \u00d7 \\times improvement in carbon efficiency [ 16 , 17 ] .\n\nThe remainder of this paper is organized as follows: Section II reviews related work in edge computing and carbon-aware computing. Section III presents the CarbonEdge framework architecture. Section IV details experimental results. Section V discusses limitations and future directions. Section VI concludes the paper."
+    },
+    {
+      "heading": "II-AEdge Computing for Deep Learning Inference",
+      "text": "Edge computing enables real-time deep learning inference by processing data closer to its source [ 2 , 1 ] . Model partitioning distributes DNN workloads across multiple edge nodes through techniques including layer-wise partitioning [ 18 , 19 ] , cooperative inference [ 20 ] , and hierarchical partitioning [ 21 , 22 , 23 ] . Our prior work AMP4EC [ 10 ] achieved up to 78% latency reduction through adaptive partitioning. However, these approaches focus exclusively on performance optimization, ignoring environmental implications."
+    },
+    {
+      "heading": "II-BCarbon Footprint of AI Systems",
+      "text": "The environmental impact of AI has gained significant attention [ 6 , 7 ] . Patterson et al. revealed that inference accounts for approximately 60% of ML-related energy consumption at Google. Tools like CodeCarbon [ 24 ] estimate hardware electricity consumption and calculate carbon emissions based on regional grid carbon intensity, providing the foundation for carbon-aware system design."
+    },
+    {
+      "heading": "II-CCarbon-Aware Computing",
+      "text": "Carbon-aware computing represents an emerging paradigm that incorporates carbon emissions into system optimization objectives. Clover [ 25 ] proposed a carbon-aware machine learning scheduler that exploits spatial and temporal variations in grid carbon intensity. EcoServe [ 26 ] introduced a holistic approach to AI system design that balances performance, energy efficiency, and carbon footprint. Recent work on sustainable edge computing [ 27 ] highlights the challenges and opportunities in this domain, while Ma et al. [ 28 ] demonstrate carbon reduction through renewable energy integration."
+    },
+    {
+      "heading": "II-DResearch Gap",
+      "text": "Despite progress in edge computing optimization and carbon-aware computing, a critical gap exists at their intersection. Edge computing frameworks [ 10 , 18 ] optimize for latency but ignore carbon emissions. Carbon-aware systems [ 25 , 26 ] primarily target cloud-based training, failing to address edge-specific challenges: device heterogeneity, geographic distribution, and latency constraints. CarbonEdge addresses this gap by combining online carbon tracking (given static grid intensity scenarios) with carbon-aware scheduling for distributed edge inference."
+    },
+    {
+      "heading": "II-ECarbon Intensity Variation",
+      "text": "Electricity grid carbon intensity varies significantly across regions and time periods. Regions relying heavily on coal-fired power plants may exceed 800 gCO2/kWh, while areas with abundant renewable energy can achieve intensities below 50 gCO2/kWh. China\u2019s national average is approximately 530 gCO2/kWh, with significant regional variation\u2014from over 700 gCO2/kWh in coal-dependent northern provinces to under 200 gCO2/kWh in hydropower-rich Yunnan [ 29 ] .\n\nThis variation creates opportunities for carbon-aware scheduling: by preferentially routing workloads to nodes in low-carbon regions or deferring non-urgent tasks to low-carbon time periods, systems can substantially reduce their environmental footprint. CarbonEdge exploits this heterogeneity through its Carbon-Aware Scheduling Algorithm."
+    },
+    {
+      "heading": "IIIDesign and Implementation",
+      "text": "This section provides the design and implementation of CarbonEdge, which integrates adaptive model partitioning to carbon-aware scheduling capabilities. The framework is based on the AMP4EC architecture [ 10 ] , and adding a Carbon Monitor module and incorporating carbon efficiency into the scheduling algorithm."
+    },
+    {
+      "heading": "III-ASystem Architecture",
+      "text": "CarbonEdge comprises four key components: (A) Carbon Monitor, (B) Carbon-Aware Scheduler, (C) Model Partitioner, and (D) Model Deployer. Figure 1 illustrates the system architecture."
+    },
+    {
+      "heading": "III-BCarbon Monitor Module",
+      "text": "The Carbon Monitor uses traditional resource monitoring with energy consumption tracking and carbon emission calculation. It integrates with CodeCarbon [ 24 ] for hardware power measurement and uses regional carbon intensity data to estimate emissions."
+    },
+    {
+      "heading": "III-CCarbon-Aware Scheduling Algorithm",
+      "text": "The Carbon-Aware Scheduler adopts the Node Selection Algorithm (NSA) from AMP4EC with a carbon efficiency score. The total node score is computed as:\n\nS t \u200b o \u200b t \u200b a \u200b l = w R \u22c5 S R + w L \u22c5 S L + w P \u22c5 S P + w B \u22c5 S B + w C \u22c5 S C S_{total}=w_{R}\\cdot S_{R}+w_{L}\\cdot S_{L}+w_{P}\\cdot S_{P}+w_{B}\\cdot S_{B}+w_{C}\\cdot S_{C} (3)\n\nThe score components include resource availability ( S R S_{R} ), load balance ( S L S_{L} ), performance ( S P S_{P} ), fairness/balance ( S B S_{B} ), and the newly introduced carbon efficiency score ( S C S_{C} ). Each component is normalized to the [0,1] range and weighted according to the operational mode."
+    },
+    {
+      "heading": "III-DNode Selection Algorithm",
+      "text": "Algorithm 1 presents the carbon-aware node selection procedure."
+    },
+    {
+      "heading": "III-EModel Partitioner",
+      "text": "The Model Partitioner analyzes deep learning models layer-by-layer and divides them into segments suitable for distributed execution [ 20 , 30 ] . For each layer, computational cost is estimated based on layer type:\n\nC \u200b o \u200b s \u200b t \u200b ( l ) = { k h \u00d7 k w \u00d7 C i \u200b n \u00d7 C o \u200b u \u200b t Conv2D N i \u200b n \u00d7 N o \u200b u \u200b t Linear p \u200b a \u200b r \u200b a \u200b m \u200b s \u200b _ \u200b c \u200b o \u200b u \u200b n \u200b t others Cost(l)=\\begin{cases}k_{h}\\times k_{w}\\times C_{in}\\times C_{out}&\\text{Conv2D}\\\\\nN_{in}\\times N_{out}&\\text{Linear}\\\\\nparams\\_count&\\text{others}\\end{cases} (5)\n\nPartition boundaries are determined to balance workload across nodes while minimizing communication overhead."
+    },
+    {
+      "heading": "III-FImplementation",
+      "text": "CarbonEdge is implemented in Python using PyTorch for deep learning operations. Docker containers simulate heterogeneous edge nodes with configurable resource constraints. Source code will be made available upon publication."
+    },
+    {
+      "heading": "IVExperiments and Evaluation",
+      "text": "This section presents experimental evaluation of CarbonEdge across multiple dimensions: carbon footprint reduction, performance trade-offs, and scheduling behavior analysis."
+    },
+    {
+      "heading": "IV-BCarbon Footprint Analysis",
+      "text": "In general, our evaluation reveals three key findings. CarbonEdge-Green achieves significant carbon reduction (14.8%\u201332.2%) compared to monolithic execution while maintaining comparable latency. The carbon-aware scheduling effectively routes tasks to nodes with lower carbon intensity scenarios. The framework generalizes across different model architectures. These findings establish the viability of carbon-aware scheduling for sustainable edge AI.\n\nTable II presents the detailed carbon emission results for MobileNetV2 across different configurations, serving as the primary benchmark for evaluating scheduling mode effectiveness.\n\nThe results demonstrate that CarbonEdge-Green achieves a 22.9% reduction in carbon emissions compared to the monolithic baseline. This reduction is achieved by preferentially routing inference tasks to nodes configured with lower carbon intensity (380 gCO2/kWh vs. 530 gCO2/kWh average). This result falls within the range reported by recent carbon-aware scheduling work: Rajashekar et al. [ 16 ] report up to 35% reduction for LLM inference, while prior work reports up to 24% energy savings in DRL-based schedulers (summarized in [ 17 ] ).\n\nNotably, Performance and Balanced modes show increased carbon emissions because they prioritize high-performance nodes configured with higher carbon intensity. This trade-off illustrates the importance of carbon-aware scheduling for sustainable edge AI."
+    },
+    {
+      "heading": "IV-CPerformance-Carbon Trade-off",
+      "text": "Figure 2 illustrates the relationship between inference latency and carbon efficiency across scheduling modes, revealing that carbon reduction can be achieved with minimal latency impact.\n\nThe results reveal several key findings. Regarding carbon efficiency, CarbonEdge-Green achieves 245.8 inferences per gram of CO2, compared to 189.5 for monolithic execution\u2014a 1.30 \u00d7 \\times improvement. In terms of latency, all CarbonEdge modes maintain comparable response times (approximately 271ms), with less than 7% overhead compared to monolithic execution. The trade-off analysis shows that Performance mode sacrifices carbon efficiency (149.6 inf/gCO2) for optimal node selection, while Green mode prioritizes environmental impact."
+    },
+    {
+      "heading": "IV-DComparison with Related Work",
+      "text": "Table III compares CarbonEdge with recent carbon-aware systems, contextualizing our results within the broader research landscape.\n\nCarbonEdge\u2019s 22.9% reduction is comparable to reductions reported by recent carbon-aware scheduling work in related domains. Direct comparisons are approximate due to different workloads and carbon accounting methods."
+    },
+    {
+      "heading": "IV-EMulti-Model Evaluation",
+      "text": "Table IV presents carbon footprint comparison across three lightweight architectures to demonstrate CarbonEdge\u2019s generalizability.\n\nThe results demonstrate consistent carbon reduction (14.8%\u201332.2%) across architectures, confirming CarbonEdge\u2019s generalizability."
+    },
+    {
+      "heading": "IV-FScheduling Behavior Analysis",
+      "text": "Table V shows the node selection distribution for each scheduling mode.\n\nThe scheduling reflects the weighted scoring: Performance mode ( w C = 0.05 w_{C}=0.05 ) prioritizes fast nodes, while Green mode ( w C = 0.50 w_{C}=0.50 ) selects low-carbon nodes. Balanced mode ( w C = 0.30 w_{C}=0.30 ) exhibits similar behavior to Performance because S C S_{C} has limited differentiation (range 0.054) compared to S P S_{P} (range 0.166). A weight sweep (Figure 3 ) reveals the transition threshold at w C \u2265 0.50 w_{C}\\geq 0.50 \u2014achieving 22.9% carbon reduction with minimal latency increase. Scheduling overhead is negligible: 0.03 ms per task with under 1% CPU utilization."
+    },
+    {
+      "heading": "V-ALimitations and Future Work",
+      "text": "Several limitations should be acknowledged. Our experiments used Docker containers to simulate edge devices; CodeCarbon estimates energy at the host level with per-container values apportioned via resource quotas (not direct measurement). The current implementation uses static carbon intensity scenarios; real-time temporal dynamics are not exploited. Balanced mode ( w C = 0.30 w_{C}=0.30 ) exhibits similar node selection to Performance mode because S C S_{C} has limited differentiation when per-inference emissions are small ( \u223c \\sim 0.001 gCO2)\u2014future work should explore per-decision min-max normalization or constraint-based optimization. The evaluation focuses on task-level routing; cross-node distributed inference remains for future work.\n\nFuture directions include real-time carbon intensity integration via APIs (e.g., Electricity Maps), energy-aware model partitioning, multi-tenant optimization with carbon budgets, and embodied carbon accounting."
+    },
+    {
+      "heading": "V-BPractical Implications",
+      "text": "CarbonEdge provides practitioners with tools to quantify and minimize the environmental impact of edge AI deployments. Organizations can use the framework to report carbon emissions for sustainability compliance, make informed trade-offs between performance and environmental impact, and optimize infrastructure placement based on carbon intensity."
+    },
+    {
+      "heading": "VIConclusion",
+      "text": "This paper presented CarbonEdge, a carbon-aware deep learning inference framework for sustainable edge computing. By extending adaptive model partitioning with carbon footprint estimation and green scheduling capabilities, CarbonEdge enables operators to balance performance and environmental impact in distributed edge AI deployments.\n\nThe results highlight the potential for carbon-aware optimization in edge computing. As edge AI deployments continue to proliferate, frameworks like CarbonEdge provide essential tools for sustainable development, helping organizations meet environmental goals without sacrificing the benefits of distributed inference.\n\nFuture work will focus on dynamic carbon intensity integration, energy-aware partitioning, and extension to diverse accelerator platforms. We believe carbon-aware computing represents a critical evolution in edge system design, and CarbonEdge provides a foundation for sustainable edge AI."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1: CarbonEdge system architecture showing the integration of carbon monitoring with adaptive scheduling.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27420/assets/x1.png"
+    },
+    {
+      "caption": "Figure 2: Trade-off between inference latency and carbon efficiency. CarbonEdge-Green achieves the highest carbon efficiency (245.8 inf/gCO2) with minimal latency impact.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27420/assets/x2.png"
+    },
+    {
+      "caption": "Figure 3: Weight sweep showing carbon-latency trade-off. Transition occurs at w C \u2265 0.50 w_{C}\\geq 0.50 .",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27420/assets/x3.png"
+    }
+  ],
+  "ar5iv_success": true
+}

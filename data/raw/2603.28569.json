@@ -1,0 +1,135 @@
+{
+  "paper_id": "2603.28569",
+  "title": "CirrusBench: Evaluating LLM-based Agents Beyond Correctness in Real-World Cloud Service Environments",
+  "abstract": "The increasing agentic capabilities of Large Language Models (LLMs) have enabled their deployment in real-world applications, such as cloud services, where customer-assistant interactions exhibit high technical complexity and long-horizon dependencies, making robustness and resolution efficiency critical for customer satisfaction. However, existing benchmarks for LLM-based agents largely rely on synthetic environments that fail to capture the diversity and unpredictability of authentic customer inputs, often ignoring the resolution efficiency essential for real-world deployment. To bridge this gap, we introduce CirrusBench, a novel evaluation framework distinguished by its foundation in real-world data from authentic cloud service tickets. CirrusBench preserves the intricate multi-turn logical chains and realistic tool dependencies inherent to technical service environments. Moving beyond execution correctness, we introduce novel Customer-Centric metrics to define agent success, quantifying service quality through metrics such as the Normalized Efficiency Index and Multi-Turn Latency to explicitly measure resolution efficiency. Experiments utilizing our framework reveal that while state-of-the-art models demonstrate strong reasoning capabilities, they frequently struggle in complex, realistic multi-turn tasks and fail to meet the high-efficiency standards required for customer service, highlighting critical directions for the future development of LLM-based agents in practical technical service applications. CirrusBench evaluation framework is released at: https://github.com/CirrusAI",
+  "authors": [
+    "Yi Yu",
+    "Guangquan Hu",
+    "Chenghuang Shen",
+    "Xingyan Liu",
+    "Jing Gu",
+    "Hangyi Sun",
+    "Junzhuo Ma",
+    "Weiting Liu",
+    "Jianfeng Liu",
+    "Mingyue Pu",
+    "Yu Wang",
+    "Zhengdong Xiao",
+    "Rui Xie",
+    "Longjiu Luo",
+    "Qianrong Wang",
+    "Gurong Cui",
+    "Honglin Qiao",
+    "Wenlian Lu"
+  ],
+  "date": "2026-03-30T15:26:00+00:00",
+  "url": "http://arxiv.org/abs/2603.28569v1",
+  "categories": [
+    "cs.LG",
+    "cs.AI",
+    "cs.IR",
+    "cs.PF"
+  ],
+  "primary_category": "cs.LG",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "The rapid advancement of Large Language Models (LLMs) has enabled their deployment as autonomous agents in complex, real-world applications [ 23 , 30 , 24 ] . For instance, Cloud service represents a typical domain of significant difficulty and commercial importance. Interactions in this setting are characterized by high technical complexity, long-horizon dependencies, and a need for sophisticated tool use. Consequently, the agent\u2019s robustness and efficiency are critical determinants of customer satisfaction [ 3 ] .\n\nRecent progress in evaluating LLM agents has been substantial, with benchmarks establishing standards for execution correctness and tool-selection capabilities [ 4 , 17 , 22 ] . However, current evaluation methodologies suffer from two critical limitations that impede progress toward real-world viability. First, they largely rely on synthetic environments or role-playing simulations [ 8 , 21 , 29 ] . While controllable, these settings fail to capture the diversity, unpredictability, and \"noise\" of authentic customer-assistant interactions, leading to an overestimation of agent performance in practical scenarios. Second, existing evaluations prioritize task completion, often ignoring the resolution efficiency paramount to service quality. In Cloud service, a correct solution delivered through a prolonged and tedious interaction is a failure from the customer\u2019s perspective [ 3 ] .\n\nTo bridge this gap between academic benchmarks and real-world requirements, we introduce CirrusBench , a novel evaluation framework grounded in the reality of Cloud service technical support. CirrusBench is constructed from a large corpus of authentic cloud service tickets, preserving the intricate multi-turn dialogues, complex tool schemas, and genuine customer inputs inherent to this domain. This foundation allows for a more realistic assessment of agent capabilities.\n\nCirrusBench introduces an evaluation framework that assesses both single-turn subtask evaluation and dynamic multi-turn task evaluation. Crucially, moving beyond the metrics such as success rate (SR) and Task Progression Rate (TPR) quantifying correctness, we introduce novel Customer-Centric Metrics, including Logical Jump (LJ) , Normalized Efficiency Index (NEI) , Single-Turn Latency (STL) and Multi-Turn Latency (MTL) , to quantify the customer satisfactory. These metrics explicitly measure the responsiveness and efficiency that define a successful customer interaction. Our main contributions are: 1. A new benchmark, CirrusBench , built from real-world cloud service data, featuring realistic multi-turn interactions and complex tool dependencies. 2. A suite of Customer-Centric Metrics (LJ, NEI, STL, MTL) designed to measure the operational efficiency and service quality of LLM agents, supplementing traditional correctness-based evaluations.\n\nExperimental analysis reveals a significant gap between SOTA LLMs and real-world Cloud service demands, particularly due to bottlenecks in tool integration. \"Thinking\" models often incur high latency without proportional improvements in problem solving, while long-horizon interactions suffer from error accumulation and logical fragility. And the knowledge embedding shows importance for agent in Cloud service tasks. Additionally, agents exhibit a tendency toward premature closure, consistently failing to ask necessary clarifying questions during inquiry tasks. Consequently, future development must prioritize resolution efficiency and multi-turn robustness over isolated accuracy metrics."
+    },
+    {
+      "heading": "2Related Work",
+      "text": "Our work is situated at the intersection of LLM agent benchmarking, tool-use evaluation, and customer service automation.\n\nAgent Benchmarks and Realism. The evaluation of LLM agents has evolved from interactions in static web environments like Webshop [ 28 ] and WebArena [ 31 ] to more complex domains like software engineering in SWE-bench [ 13 ] . To assess general capabilities, Agentbench [ 17 ] proposed evaluating agents across multiple distinct environments. A persistent challenge, however, is benchmark realism. Most multi-turn benchmarks rely on synthetic data generation via templates [ 26 , 5 ] or LLM role-playing [ 8 , 21 , 10 , 32 ] . While scalable, these methods often lack the noisy, diverse, and unpredictable nature of genuine human interactions. A notable exception is the ABCD dataset [ 6 ] , which uses expert live chats. However, it does not incorporate the complex tool-use essential for technical support. CirrusBench addresses this gap by providing a benchmark derived from real-world technical tickets that inherently couples authentic multi-turn dialogue with complex tool integration.\n\nTool Utilization in Multi-turn Interactions. A significant body of work focuses on evaluating an agent\u2019s ability to use tools. Benchmarks like ToolBench [ 22 ] , Metatool [ 12 ] , and the \u03c4 \\tau -bench series [ 29 , 2 ] have systematically assessed tool selection and parameterization. Others, such as ToolSandbox [ 18 ] , introduce stateful environments where tool calls dynamically alter the world state. Recent efforts have aimed to embed tool use within conversational contexts [ 8 , 25 , 10 ] . While these works advance the evaluation of tool-augmented conversation, they are typically built on simulated interactions. In contrast, CirrusBench evaluates an agent\u2019s ability to navigate realistic tool dependencies as they organically arise in authentic, long-horizon customer support dialogues.\n\nEvaluation Metrics and Customer Satisfaction. Early evaluation methodologies centered on execution accuracy and keyword matching [ 33 , 9 ] . Recognizing the limitations of simple accuracy, researchers have explored LLM-based judges for more nuanced evaluation [ 19 , 7 ] . In the specific context of customer service, recent work has begun to formalize metrics for customer satisfaction [ 15 , 11 ] . Moreover, foundational work in cloud service benchmarking has long emphasized that efficiency and latency are critical performance indicators [ 3 ] . CirrusBench builds upon these ideas by operationalizing customer satisfaction through concrete, objective metrics, such as NEI and MTL, thereby creating the first framework to directly measure the resolution efficiency of LLM agents in a realistic technical support setting."
+    },
+    {
+      "heading": "3CirrusBench",
+      "text": "To create a benchmark that not only assesses the correctness of an LLM agent but also its efficiency and alignment with real-world customer service workflows, we develop a novel Multi-Turn Task Evaluation framework. Our approach is grounded in the analysis of historical Cloud service tickets and comprises two core components: the metrics measuring correctness and metrics measuring resolution efficiency, reflecting customer satisfactory."
+    },
+    {
+      "heading": "3.1Data Definition",
+      "text": "CirrusBench consists of 1,500 rigorously curated tasks without tool-call requirement and 425 tasks with tool-call requirement, systematically derived and refined from authentic dialogue logs obtained from real-world Cloud service operations. These tasks span 20 distinct service categories, including SMS-based support, email correspondence, online technical assistance, and other prototypical service scenarios, thereby ensuring broad coverage of practical inquiry patterns and operational contexts. This diversity of domains enhances the representativeness and ecological validity, providing a robust empirical basis for assessing model performance across heterogeneous service environments."
+    },
+    {
+      "heading": "3.2Data Construction",
+      "text": "We began by filtering a large volume of real historical tickets, applying multiple layers of screening through the following steps, and finally converting them into the CirrusBench task-set format. The overall process of construction is shown in Fig. 1 .\n\nData Collection\n\nThe dataset employed in CirrusBench was systematically constructed from authentic conversational tickets between customers and service assistant, obtained from Cloud service environments. In these live service contexts, customer\u2013assistant interactions typically conform to a canonical problem-resolution schema: customer formulate domain-specific inquiries, and assistant respond with targeted, solution-oriented guidance.\n\nThe tasks were rigorously derived from tickets with a successful resolution. Each task instance encapsulates an entire interaction cycle, extending from the initial customer query to the final confirmation of the solution, such that every ticket corresponds to a genuine, closed-loop service case with explicitly identifiable problem-resolution outcomes.\n\nThis extraction methodology preserves both the structural integrity and contextual authenticity of real-world service exchanges while simultaneously yielding well-defined, self-contained evaluation units that are suitable for systematic and reproducible model assessment."
+    },
+    {
+      "heading": "4.1Evaluation Settings",
+      "text": "We conduct experiments on CirrusBench , which comprises the Qwen series [ 27 ] , GPT series [ 1 ] and DeepSeek series [ 16 ] . All LLMs are evaluated via corresponding APIs."
+    },
+    {
+      "heading": "4.2Evaluation Metrics",
+      "text": "The evaluation metrics are average of the multi-turn task evaluation metrics, including: (1) Average Task Progression Rate (ATPR) , the average of TPR on the dataset. (2) Average Logical Jump (ALJ) , the average of LJ on the dataset. (3) Average Normalized Efficiency Index (ANEI) , the average of NEI on the dataset. (4) Average Multi-Turn Latency (AMTL) , the average of MTL on the dataset. And we also include (5)\nSuccess Rate (SR) , the rate of successfully resolved multi-turn tasks, which is evaluated on both pass@1 score and pass@2 score."
+    },
+    {
+      "heading": "4.3Reliability of Evaluator",
+      "text": "For the evaluator used in the single-turn subtask evaluation to judge whether the agent-generated response covers the key informations of ground truth response, we leverage DeepSeek-V3.2 and a carefully engineered prompt. As shown in Table. 7 , the evaluator achieves an accuracy of 91.49% on a validation set of 141 annotations provided by human experts, demonstrating the reliability of the proposed judge. For stability of altering judge\u2019s base model, we altering the base model with GPT-5, DeepSeek-R1, GPT-5.2, Gemini-3-pro, the difference on accuracy of those base models are within 3%. For the benefit of cost, we adopt DeepSeek-V3.2 as our evaluator\u2019s base model."
+    },
+    {
+      "heading": "5Conclusion",
+      "text": "In this work, we introduced CirrusBench, the first evaluation framework systematically derived from authentic, real-world cloud service tickets. Unlike previous benchmarks that rely on synthetic environments or role-playing, CirrusBench preserves the high entropy, long-horizon dependencies, and complex tool usage inherent in actual technical service interactions. By shifting the evaluation paradigm from simple execution correctness to Customer-Centric Metrics, including metrics such as TPR, NEI, and MTL, we provide a more rigorous standard for assessing an agent\u2019s practical viability.\n\nOur experimental analysis highlight a substantial gap between the current capabilities of state-of-the-art LLMs and the rigorous demands of real-world cloud service support. While models exhibit strong reasoning potential, they face a critical bottleneck in tool integration, where performance suffers a sharp decline compared to pure conversational tasks. The study further reveals a complex trade-off regarding \"thinking\" models; while explicit reasoning capabilities can be beneficial, they frequently introduce prohibitive latency penalties without yielding proportional improvements in problem solving, effectively compromising the efficiency required for customer satisfaction. And the knowledge embedding shows importance for agent in Cloud service tasks. Additionally, models demonstrated significant fragility in long-horizon interactions, with problem solving metrics dropping as the number of checkpoints increased due to error accumulation and a failure to maintain logical consistency. This is compounded by a tendency toward premature closure, as agents consistently underperformed in \"Inquiry\" tasks, failing to proactively ask necessary clarifying questions before attempting a solution. Ultimately, these findings indicate that future development must move beyond isolated accuracy metrics to prioritize resolution efficiency, multi-turn robustness, and responsive information-gathering strategies.\n\nUltimately, CirrusBench underscores that for LLM agents to succeed in cloud service support, future research must move beyond optimizing for accuracy in isolation. It is imperative to develop agents that are not only factually correct and proficient in tool use but also responsive and efficient enough to maintain customer trust before patience is exhausted. We hope this benchmark serves as a catalyst for the development of next-generation agents that truly align with the dynamic needs of human customers."
+    },
+    {
+      "heading": "6Acknowledgments",
+      "text": "To Zhiqiang Liu, Aiyu Chen, Ning Zhang of Alibaba Group, for translating the original Cloud Service tickets into English."
+    },
+    {
+      "heading": "Impact Statement",
+      "text": "This paper introduces a benchmark aimed at advancing research on Large Language Models (LLMs) agent in the application of Cloud Service environment. It is important to acknowledge that our experiments and evaluations rely heavily on LLMs, but this study does not fully explore or mitigate potential biases inherent in their outputs. Addressing these biases and ensuring model alignment with social values remain critical challenges. This underscores the importance of conducting comprehensive evaluations that consider diverse dimensions of human society and their implications, none of which we feel must be specifically highlighted here."
+    },
+    {
+      "heading": "A.1Single-Turn Evaluation Metrics",
+      "text": "For single-turn evaluation, we define the following metrics:\n\nTool Invocation Awareness ( T \u200b I \u200b A TIA ): Describes the correctness of the agent\u2019s decision regarding the necessity of a tool call. We define T \u200b I \u200b A = 1 TIA=1 if the agent correctly invokes a tool when required, or correctly abstains from calling a tool when none is needed; otherwise, T \u200b I \u200b A = 0 TIA=0 . Tool Selection Accuracy ( T \u200b S \u200b A TSA ): Evaluates whether the agent selected the correct tool from the available toolset when a tool was required. This tests the agent\u2019s ability to differentiate between tool functionalities. If the tool selection is correct, T \u200b S \u200b A = 1 TSA=1 ; otherwise, T \u200b S \u200b A = 0 TSA=0 . Tool Execution Validity ( T \u200b E \u200b V TEV ): Measures the agent\u2019s ability to correctly format the inputs for the selected tool, ensuring successful execution. If the tool invocation is successful, T \u200b E \u200b V = 1 TEV=1 ; otherwise, T \u200b E \u200b V = 0 TEV=0 . Reply Resolvability ( R \u200b R RR ): Determines whether the agent\u2019s natural language response contains the key information, conclusions, or instructions necessary to resolve the user\u2019s query at that specific step. Single-Turn Latency ( S \u200b T \u200b L STL ) \u2193 \\downarrow : Quantifies the latency based on the computational cost of the response. We define S \u200b T \u200b L STL as the count of output tokens generated for the specific subtask."
+    },
+    {
+      "heading": "A.2Multi-Turn Evaluation Metrics",
+      "text": "A multi-turn task consists of a sequence of single-turn subtasks arranged chronologically. For multi-turn evaluation, we define the following metrics:\n\nTask Progression Rate ( T \u200b P \u200b R TPR ) \u2191 \\uparrow : Describes the proportion of successfully resolved single-turn subtasks within a multi-turn task. It is defined as: T \u200b P \u200b R = number of successfully resolved single-turn subtasks total number of single-turn subtasks in the multi-turn task TPR=\\frac{\\text{number of successfully resolved single-turn subtasks}}{\\text{total number of single-turn subtasks in the multi-turn task}} Logical Jump ( L \u200b J LJ ) \u2191 \\uparrow : Represents the number of skipped single-turn subtasks before the evaluation of the multi-turn task terminates. It takes a value in { 0 , \u2026 , k \u2212 1 } \\{0,\\dots,k-1\\} , where k k is the total number of subtasks successfully processed until termination. Normalized Efficiency Index ( N \u200b E \u200b I NEI ) \u2191 \\uparrow : Evaluates the agent\u2019s efficiency in resolving the multi-turn task, defined as the ratio of the Logical Jump ( L \u200b J LJ ) to the total number of subtasks successfully processed ( k k ). Specifically, if the evaluation terminates after successfully processed k k subtasks: N \u200b E \u200b I = { L \u200b J k \u2212 1 if \u200b k > 1 1 if \u200b k = 1 0 otherwise NEI=\\begin{cases}\\frac{LJ}{k-1}&\\text{if }k>1\\\\\n1&\\text{if }k=1\\\\\n0&\\text{otherwise}\\end{cases} Multi-Turn Latency ( M \u200b T \u200b L MTL ) \u2193 \\downarrow : Defined as the average of the Single-Turn Latency ( S \u200b T \u200b L STL ) across all successfully processed single-turn subtasks within the multi-turn task."
+    },
+    {
+      "heading": "A.3Dataset Evaluation Metrics",
+      "text": "A dataset consists of multiple multi-turn tasks. For the evaluation of the dataset, we define the following metrics:\n\nAverage Task Progression Rate ( A \u200b T \u200b P \u200b R ATPR ) \u2191 \\uparrow : The average T \u200b P \u200b R TPR across all multi-turn tasks in the dataset, taking a value in [ 0 , 1 ] [0,1] . Average Logical Jump ( A \u200b L \u200b J ALJ ) \u2191 \\uparrow : The average L \u200b J LJ across all multi-turn tasks where at least one subtask was successfully resolved. Formally: A \u200b L \u200b J = \u2211 tasks with successful subtasks L \u200b J number of tasks with successful subtasks ALJ=\\frac{\\sum_{\\text{tasks with successful subtasks}}LJ}{\\text{number of tasks with successful subtasks}} Average Normalized Efficiency Index ( A \u200b N \u200b E \u200b I ANEI ) \u2191 \\uparrow : The average N \u200b E \u200b I NEI across all multi-turn tasks where at least one subtask was successfully resolved. Formally: A \u200b N \u200b E \u200b I = \u2211 tasks with successful subtasks N \u200b E \u200b I number of tasks with successful subtasks ANEI=\\frac{\\sum_{\\text{tasks with successful subtasks}}NEI}{\\text{number of tasks with successful subtasks}} Success Rate ( S \u200b R SR ) \u2191 \\uparrow : Describes the proportion of multi-turn tasks that are completely resolved (i.e., tasks where T \u200b P \u200b R = 1 TPR=1 ). We define: S \u200b R = count of completely resolved tasks total count of tasks in the dataset SR=\\frac{\\text{count of completely resolved tasks}}{\\text{total count of tasks in the dataset}} Average Multi-Turn Latency ( A \u200b M \u200b T \u200b L AMTL ) \u2193 \\downarrow : Describes the average Multi-Turn Latency across all multi-turn tasks in the dataset where at least one subtask was successfully resolved. We define: A \u200b M \u200b T \u200b L = \u2211 tasks with successful subtasks M \u200b T \u200b L number of tasks with successful subtasks AMTL=\\frac{\\sum_{\\text{tasks with successful subtasks}}MTL}{\\text{number of tasks with successful subtasks}}"
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1: The construction of CirrusBench. The process comprises four core phases: Phase 1: Data Collection ; Phase 2: Preprocessing (Steps 1\u20135); Phase 3: Knowledge-Grounded Annotation (Step 6); Phase 4: Quality Assurance (Step 7).\nThe final benchmark supports both single-turn subtask evaluation and multi-turn task evaluation.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28569/assets/x1.png"
+    },
+    {
+      "caption": "Figure 2: Distribution of the count of conversational turns in preprocessed tickets",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28569/assets/x2.png"
+    },
+    {
+      "caption": "Figure 2: Distribution of the count of conversational turns in preprocessed tickets",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28569/assets/x2.png"
+    },
+    {
+      "caption": "Figure 3: Distribution of the count of checkpoints in processed tickets.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28569/assets/x3.png"
+    },
+    {
+      "caption": "Figure 4: The evaluation framework of CirrusBench. The evaluation of a multi-turn task proceeds as a sequence of single-turn subtask sessions.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28569/assets/x4.png"
+    },
+    {
+      "caption": "Figure 5: Overall Success Rate results on CirrusBench.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28569/assets/x5.png"
+    },
+    {
+      "caption": "Figure 6: Pass@1, pass@2 success rate and AMTL by different reply types .",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28569/assets/x6.png"
+    },
+    {
+      "caption": "Figure 7: Case Study of Customer\u2019s High-Entropy Input. A real-world example where a customer supplements a blocked-website report with a raw screenshot. The image contains significant stochastic noise, such as signal strength and timestamps, orthogonal to the issue, requiring the agent to filter visual noise and extract relevant error context.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28569/assets/x7.png"
+    },
+    {
+      "caption": "Figure 7: Case Study of Customer\u2019s High-Entropy Input. A real-world example where a customer supplements a blocked-website report with a raw screenshot. The image contains significant stochastic noise, such as signal strength and timestamps, orthogonal to the issue, requiring the agent to filter visual noise and extract relevant error context.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28569/assets/x7.png"
+    },
+    {
+      "caption": "Figure 8: Impact of Latency on User Sentiment. A transcript illustrating the dependency between inference latency and customer agitation. The interaction demonstrates how delayed responses and rigid scripting cause a functional inquiry to devolve into an expression of dissatisfaction, validating the need for latency and sentiment-aware evaluation metrics.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28569/assets/x8.png"
+    }
+  ],
+  "ar5iv_success": true
+}

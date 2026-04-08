@@ -1,0 +1,32 @@
+{
+  "paper_id": "2603.29041",
+  "title": "A Latent Risk-Aware Machine Learning Approach for Predicting Operational Success in Clinical Trials based on TrialsBank",
+  "abstract": "Clinical trials are characterized by high costs, extended timelines, and substantial operational risk, yet reliable prospective methods for predicting trial success before initiation remain limited. Existing artificial intelligence approaches often focus on isolated metrics or specific development stages and frequently rely on variables unavailable at the trial design phase, limiting real-world applicability. We present a hierarchical latent risk-aware machine learning framework for prospective prediction of clinical trial operational success using a curated subset of TrialsBank, a proprietary AI-ready database developed by Sorintellis, comprising 13,700 trials. Operational success was defined as the ability to initiate, conduct, and complete a clinical trial according to planned timelines, recruitment targets, and protocol specifications through database lock. This approach decomposes operational success prediction into two modeling stages. First, intermediate latent operational risk factors are predicted using more than 180 drug- and trial-level features available before trial initiation. These predicted latent risks are then integrated into a downstream model to estimate the probability of operational success. A staged data-splitting strategy was employed to prevent information leakage, and models were benchmarked using XGBoost, CatBoost, and Explainable Boosting Machines. Across Phase I-III, the framework achieves strong out-of-sample performance, with F1-scores of 0.93, 0.92, and 0.91, respectively. Incorporating latent risk drivers improves discrimination of operational failures, and performance remains robust under independent inference evaluation. These results demonstrate that clinical trial operational success can be prospectively forecasted using a latent risk-aware AI framework, enabling early risk assessment and supporting data-driven clinical development decision-making.",
+  "authors": [
+    "Iness Halimi",
+    "Emmanuel Piffo",
+    "Oumnia Boudersa",
+    "Yvan Marcel Carre Vilmorin",
+    "Melissa Ait-ikhlef",
+    "Karima Kone",
+    "Andy Tan",
+    "Augustin Medina",
+    "Juliette Hernando",
+    "Sheila Ernest",
+    "Vatche Bartekian",
+    "Karine Lalonde",
+    "Mireille E Schnitzer",
+    "Gianolli Dorcelus"
+  ],
+  "date": "2026-03-30T22:12:21+00:00",
+  "url": "http://arxiv.org/abs/2603.29041v1",
+  "categories": [
+    "cs.LG",
+    "cs.AI",
+    "cs.DB"
+  ],
+  "primary_category": "cs.LG",
+  "sections": [],
+  "figures": [],
+  "ar5iv_success": false
+}

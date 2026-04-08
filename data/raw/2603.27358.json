@@ -1,0 +1,69 @@
+{
+  "paper_id": "2603.27358",
+  "title": "Not Worth Mentioning? A Pilot Study on Salient Proposition Annotation",
+  "abstract": "Despite a long tradition of work on extractive summarization, which by nature aims to recover the most important propositions in a text, little work has been done on operationalizing graded proposition salience in naturally occurring data. In this paper, we adopt graded summarization-based salience as a metric from previous work on Salient Entity Extraction (SEE) and adapt it to quantify proposition salience. We define the annotation task, apply it to a small multi-genre dataset, evaluate agreement and carry out a preliminary study of the relationship between our metric and notions of discourse unit centrality in discourse parsing following Rhetorical Structure Theory (RST).",
+  "authors": [
+    "Amir Zeldes",
+    "Katherine Conhaim",
+    "Lauren Levine"
+  ],
+  "date": "2026-03-28T18:09:16+00:00",
+  "url": "http://arxiv.org/abs/2603.27358v1",
+  "categories": [
+    "cs.CL"
+  ],
+  "primary_category": "cs.CL",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "Judging how important a proposition is to the contents of a text or conversation is important for a range of tasks in information retrieval, summarization and text mining Narayan et al. ( 2018 ); Nguyen and Le ( 2024 ); Dwivedi et al. ( 2025 ) . In extractive summarization in particular, it is implied that the most important propositions in a document will be selected for inclusion in summaries. However, little work has been done to explain which propositions should be considered salient, and what the operationalization of salience should be, or how it could be measured.\n\nBy contrast, salience annotation for entities has been studied more extensively. While some papers have shown that manual annotation of salient entities exhibits low agreement Dojchinovski et al. ( 2016 ); Trani et al. ( 2018 ) , an alternative paradigm leveraging document summaries Dunietz and Gillick ( 2014 ) has been more successful in delivering a consistent operationalization by equating salience with summary worthiness : since it is difficult to summarize a document without mentioning its most salient entities, entities mentioned in a summary can be considered salient.\n\nTwo main criticisms of this approach have been recently addressed by Lin and Zeldes ( 2025 ) : 1. that summaries themselves are subjective, meaning different summaries will result in different salience annotations; and 2. that the resulting annotations are binary (mentioned/not-mentioned in the summary). Lin and Zeldes address this by obtaining five summaries for each document, which allows for a gradient metric (entities mentioned in 5 summaries are more salient than those mentioned in 2 or 3), and controls for summary subjectivity by obtaining multiple judgments.\n\nIn this paper, we aim to test the same methodology to the concept of proposition salience. Specifically, we will define a gradient salience metric for propositions based on how many summaries mention a proposition . With the data at hand, we will provide some first insights on characteristics of salient propositions, and in particular, determine the extent to which the metric correlates with an existing notion of discourse unit centrality in the tradition of RST discourse parsing. The main contributions of this paper are:\n\n\u2022 Definition and evaluation of a summary-based approach to graded proposition salience \u2022 A pilot dataset of salient propositions aligned to summaries with additional annotations \u2022 Analysis of the correlation between our approach and RST centrality \u2022 An annotation interface for the task"
+    },
+    {
+      "heading": "2Previous work",
+      "text": "Previous work on extractive summarization has focused on identifying the most relevant sentences for inclusion using supervised approaches including tree-based methods leveraging semantic annotations Fang et al. ( 2016 ) , end-to-end representation learning in embedding space Chen et al. ( 2018 ) , and more recently using LLM prompting Parmar et al. ( 2024 ) . Studies using annotated data have relied either on direct annotation of important sentences, or on their derivation from extractive summarization datasets, both of which suffer from instability. The most similar previous work to the present paper is Lin and Zeldes ( 2025 ) , which uses a summary-based methodology to rank salient entities based on the number of summaries they appear in. Below we apply analogous methods to ranking salient propositions."
+    },
+    {
+      "heading": "3Data",
+      "text": "The data used by Lin and Zeldes ( 2025 ) comes from the freely available GUM corpus Zeldes ( 2017 ) , which includes five summaries per document. We re-use that data for this pilot study, annotating the test set, which comprises 32 documents from 16 genres of spoken and written English with ~30K tokens and 3,800 propositions (see Table 1 ). Coupled with 5 summaries per document (and therefore per proposition), our data consists of close to 19K proposition annotations (alignments).\n\nAdditionally, the original corpus contain discourse trees following Rhetorical Structure Theory (RST, Mann and Thompson 1988 ), which we use below to identify proposition boundaries. Additionally, since RST trees can be used to assess the centrality of discourse units based on their nesting depth relative to the tree root, we can evaluate and compare our salience annotations based on the nesting depth data from the trees."
+    },
+    {
+      "heading": "4Annotation",
+      "text": "Given a text and summaries, our annotation task involves three steps: identifying propositions, aligning them to summaries, and categorizing properties of the alignment."
+    },
+    {
+      "heading": "5Evaluation",
+      "text": "Because most propositions are not salient (around 90%, depending on the genre/document), we anticipate that % agreement (propositions two annotators assign the same label) is an optimistic quality metric; we therefore also report Cohen\u2019s kappa, which takes into account the probability of chance agreement. We measure agreement in four increasingly lenient scenarios: 1. exact agreement, incl. all EDUs; 2. strictly literal agreement, disregarding disagreements involving components; 3. strictly matching agreement, the same but disregarding approximates; and 4. strictly matching agreement, the same as 3. but treating \u2018duplicate\u2019 units as interchangeable (annotators agree if they both flag one in a set as salient, or both flag none).\n\nTable 2 show that strict agreement is only moderate. Tolerating interchangeable duplicate units (several ways of mentioning \u2018the same thing\u2019) substantially raises agreement (5.9% micro \u03ba \\kappa ). Component alignments are responsible for the most disagreements (8.6% micro \u03ba \\kappa ), much more than non-component approximates add (3.98%).\n\nQualitatively we note cases where annotators focus more on lexical overlap than identical reference. For example for a summary mentioning \u2018a memory of the last time they saw a \"yellow man\"\u2019, one annotator selected \u2018I remembered the only \"yellow man\" I had ever seen\u2019, while another omitted \u2018I had ever seen\u2019, which references \u2018seeing\u2019, but may mean the specific seeing event or experience in general. Fragment component mentions also posed difficulties: one summary mentions a \u2018family\u2019, but the text enumerates only the members including two EDUs for the mother: \u2018my mother twisting her hands\u2019 and \u2018my father\u2019s wife with red eyes\u2019. Different annotators preferred each of these: one argued for the first based on text order, while the other preferred the second since it did not include a superfluous verb \u2018twisting\u2019, a proposition that did not appear in the summary."
+    },
+    {
+      "heading": "6Analysis",
+      "text": "Figure 2 shows the salience score distribution. Unlike summary-based entity salience scores, which follow a U-shaped distribution Lin and Zeldes ( 2025 ) , proposition scores follow a descending histogram. Whereas, based on previous work, most entities are not in summaries, but the next biggest groups are entities appearing in all summaries, the largest amount of salient propositions are mentioned in only one summary. This suggests inter-summary variance is higher at the level of proposition selection than is the case for participants.\n\nSince we have RST trees for our data, we can also examine how our scores correspond to centrality in RST, i.e. how far an EDU is from the root of the tree. We operationalize this distance as a proportion from 0 (the unit is the root) to 1 (the unit has the maximum distance in its document; see Appendix A and Figure 3 for details).\n\nWe find that RST centrality is significantly correlated with salience ( r 2 = \u2212 0.287 , p < 0.0001 r^{2}=-0.287,p<0.0001 ) though the correlation is diminished by many confounds: longer EDUs are more likely to overlap with summaries, as are complete sentences compared to clauses. RST relations, which indicate the discourse role of each unit (expressing purpose , cause etc., see Appendix B ) are also likely to influence salience, as does the EDU\u2019s position in the document: the earlier a unit appears, the more likely it is to be more salient ( r 2 = \u2212 0.119 , p < 0.0001 r^{2}=-0.119,p<0.0001 ). A mixed effects model with the document as a random effect confirms that centrality is the most significant predictor of salience when these confounds are accounted for (Table 3 ).\n\nCentrality is the strongest featuere (max AIC difference), followed by the relation type and length. However the model still achieves only a weak fit to the data (marginal r 2 = 0.128 r^{2}=0.128 , conditional r 2 = 14.99 r^{2}=14.99 ) and a binary classification accuracy of just 73.98% over a majority baseline of 72.33% (always predicting salience=0)."
+    },
+    {
+      "heading": "7Conclusion and outlook",
+      "text": "This paper presented a first effort to annotate gradient proposition salience based on alignment of discourse units with multiple summaries, adapting a methodology already in use for entities to the realm of predicates. Our evaluation shows that while the task is challenging, agreement is far above chance, and we plan to apply lessons from our adjudication process to refining our guidelines.\n\nWe also intend to annotate the rest of the corpus, with manual annotation of the dev set and NLP/LLM-assisted annotation of the train set. The test set created here will be used to evaluate models for the task and develop prompting approaches for LLM ensembles to approach human performance. We hope that this data will enable detailed analyses of what makes propositions more or less salient, and that our publicly released annotation guidelines and interface will be useful for the community."
+    },
+    {
+      "heading": "Limitations",
+      "text": "This pilot study covers only the test set of one corpus, limited to contemporary English. Although we believe the quality of both the EDU segmentation and the summaries in GUM is high, our annotations are by definition only as good as these underlying sources of information. The error analysis in this short paper is limited to a few examples due to space, and more can and should be discussed in our presentation (and, given more space, in the final version of this paper). We also recognize that agreement on the proposition alignment task is still far from perfect, and are using our experiences from this study to refine guidelines for the final adjudicated data release. We look forward to feedback from reviewers and workshop participants on ways to make the data as consistent and reproducible as possible."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1: Annotation interface for summary-wise salient proposition alignment.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27358/assets/x1.png"
+    },
+    {
+      "caption": "Figure 2: Distribution of salience scores.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27358/assets/x2.png"
+    },
+    {
+      "caption": "Figure 3: RST centrality example. Graph distance from the root is indicated in blue, e.g. [ [ d=1 ] ] means one horizontal edge away from the root, which is unit [ [ 2 ] ] .",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27358/assets/x3.png"
+    },
+    {
+      "caption": "Figure 4: Fragment of an RST tree with units shaded by salience: a score of 5=red, 3=orange, 1=yellow.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27358/assets/x4.png"
+    }
+  ],
+  "ar5iv_success": true
+}

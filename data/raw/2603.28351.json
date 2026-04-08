@@ -1,0 +1,127 @@
+{
+  "paper_id": "2603.28351",
+  "title": "Not All Subjectivity Is the Same! Defining Desiderata for the Evaluation of Subjectivity in NLP",
+  "abstract": "Subjective judgments are part of several NLP datasets and recent work is increasingly prioritizing models whose outputs reflect this diversity of perspectives. Such responses allow us to shed light on minority voices, which are frequently marginalized or obscured by dominant perspectives. It remains a question whether our evaluation practices align with these models' objectives. This position paper proposes seven evaluation desiderata for subjectivity-sensitive models, rooted in how subjectivity is represented in NLP data and models. The desiderata are constructed in a top-down approach, keeping in mind the user-centric impact of such models. We scan the experimental setup of 60 papers and show that various aspects of subjectivity are still understudied: the distinction between ambiguous and polyphonic input, whether subjectivity is effectively expressed to the user, and a lack of interplay between different desiderata, amongst other gaps.",
+  "authors": [
+    "Urja Khurana",
+    "Michiel van der Meer",
+    "Enrico Liscio",
+    "Antske Fokkens",
+    "Pradeep K. Murukannaiah"
+  ],
+  "date": "2026-03-30T12:21:32+00:00",
+  "url": "http://arxiv.org/abs/2603.28351v1",
+  "categories": [
+    "cs.CL"
+  ],
+  "primary_category": "cs.CL",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "For several NLP tasks, such as answering general knowledge questions, there is a factual or correct response that is generally accepted. However, for some tasks, the \u201ctruth\u201d depends on the context or individual interpretation. Consider, for example, the task of determining whether an online comment is offensive. There is no universally agreed notion of offensiveness or hate speech ( vidgen-etal-2019-challenges ; fortuna-etal-2020-toxic ; leonardelli-etal-2021-agreeing ; khurana-etal-2022-hate ) . Instead, the sociocultural background and experiences of the readers influence their judgments ( sap-etal-2022-annotators ; toxicity-goyal-2022 ) . Similarly, judgments depend on a personal interpretation in many other tasks such as for natural language inference ( pavlick-kwiatkowski-2019-inherent ; nie-etal-2020-learn ) , semantic annotation ( sommerauer-etal-2020-describe ) , and understanding indirect answers ( damgaard-etal-2021-ill ) . We refer to such tasks that have multiple plausible labels rather than a single valid ground-truth as subjective .\n\nAs language models are integrated into societal applications, they increasingly engage with subjective concepts such as values, norms, and arguments ( forbes-etal-2020-social ; lourie2021scruples ; liscio-etal-2023-text ; van-der-meer-etal-2024-empirical ) . Therefore, their behavior must align with varying human preferences ( sorensen2024position ) and reflect multiple viewpoints ( cabitza2023toward ; plank-2022-problem ) . Yet, such models have been shown to collapse to a specific view ( hayati-etal-2024-far ) , typically as a consequence of how labels are presented (aggregated to a single majority label) or due to prevalent preference-tuning paradigms (such as RLHF ( rlhfpaper ) and DPO ( dpopaper ) ) that optimize for the majority vote or general preference ( casper2023open ) .\nObfuscating minority or diverging viewpoints is problematic when deploying models in real-world settings, running the risk of further disenfranchising marginalized communities ( xu-etal-2021-detoxifying ) .\n\nSubjectivity-sensitive models reflect variation in judgment and enable the representation of minority perspectives.\nAs the NLP field pushes for such models ( ovesdotter-alm-2011-subjective ; basile-etal-2021-need ; plank-2022-problem ; cabitza2023toward ; wang-etal-2025-perspective ) , a critical look at their evaluation practices is necessary.\nSeveral aspects affect the evaluation of subjectivity-sensitive models, including the ideals we outline, the extent to which subjective evaluation metrics capture overall trends or fine-grained model behavior ( chen-etal-2024-seeing ; rizzi-etal-2024-soft ) , and the type of task (classification vs. generation). To this end, we address the following question: which aspects of subjectivity should evaluation metrics capture?\n\nTo address this question, we first review how subjectivity is represented in the data and incorporated into NLP models, highlighting a previously underexplored aspect: the distinction between ambiguity and polyphony. These insights further drive our top-down approach, in which we propose a set of sequential desiderata to evaluate subjectivity-sensitive models (outlined in Figure 1 ). We identify aspects not yet addressed in the literature by drawing on insights from related fields. Finally, we map these desiderata onto current evaluation practices, revealing gaps and opportunities for future work.\n\nOur key contributions are threefold: (1) the desiderata for evaluating subjectivity-sensitive models, (2) the systematic categorization of current evaluation metrics, and (3) the gaps and opportunities we identify."
+    },
+    {
+      "heading": "2Subjectivity in Data",
+      "text": "To establish a fitting evaluation paradigm, we start by describing how subjectivity and related concepts are interpreted in the NLP field. Next, we discuss what the sources of subjectivity are. Finally, we reflect on the types of information to incorporate in a subjectivity-sensitive dataset."
+    },
+    {
+      "heading": "2.1Subjectivity and Related Concepts",
+      "text": "Subjectivity pertains to the existence of multiple valid ground-truths ( vardomskaya2018sources ; rottger-etal-2022-two ; plank-2022-problem ) . NLP literature also discusses other concepts related to subjectivity. Perspectivism ( cabitza2023toward ; frenda2025perspectivist ) recognizes that the ground-truth depends on individual perspectives. This has taken shape in the form of a perspectivist framework that enables representing different perspectives in data; weak when taking multiple perspectives into account only during the annotation stage and strong when extending this to incorporating multiple perspectives in the model output as well. Subjective interpretations can lead to disagreement ( uma2021learning ) when different individuals have opposing views on a specific input. plank-2022-problem uses the term human label variation to refer to instances with different plausible perspectives, since disagreement could imply that at least one judgment is incorrect. Disagreement can also arise in factual matters. This captures annotator errors , either from misunderstanding (genuine misinformation or misinterpreting explicit annotation guidelines) or attention drifts during annotation."
+    },
+    {
+      "heading": "2.2Sources of Subjectivity",
+      "text": "Where do multiple viewpoints or beliefs that lead to disagreement stem from? aroyo2015truth suggest three potential sources of subjectivity in their Triangle of Reference framework that maps out the process of interpreting an input: task ambiguity , input ambiguity , and annotator attitude . 1 1 1 We adopt the terminology for these three sources from jiang-marneffe-2022-investigating and liu-etal-2023-afraid ."
+    },
+    {
+      "heading": "2.3Incorporating Subjectivity in Data",
+      "text": "To train and evaluate models that can handle subjectivity, adequate datasets should be available. The conventional approach to building datasets in NLP is to collect n n annotations per sample and aggregate them into a single \u201cgold\u201d label, e.g., through majority voting. However, when there is variation in annotator response, this results in a loss of information on human disagreement. This has led to calls for the release of raw annotations ( prabhakaran-etal-2021-releasing ; cabitza2023toward ; pandita2025forest ) , with recent work showing the importance of having a large number of annotations per sample ( khurana2024crowdcalibrator ; gruber-etal-2024-labels ) ."
+    },
+    {
+      "heading": "3Dimensions of Subjective Input",
+      "text": "What do the sources of subjectivity mean for a subjectivity-sensitive model? Where task ambiguity plays an overarching role when collecting ground-truth labels across multiple samples, input ambiguity and annotator attitude can primarily occur at a sample level. These two sources require the model to handle subjectivity differently, an aspect that has not yet been addressed in previous research. We characterize model behavior when dealing with different sources of subjectivity on two dimensions: ambiguity and polyphony (Figure 2 ).\n\nWhen an input is non-ambiguous and monophonic, a model can directly incorporate the objective ground-truth. However, modeling scenarios involving subjective factors is more challenging as the following subsections illustrate."
+    },
+    {
+      "heading": "3.1Ambiguous\u2194\\leftrightarrowNon-Ambiguous",
+      "text": "An input is ambiguous when it can warrant different interpretations because the information (e.g., context) needed to make a judgment is incomplete. Inputs that can be interpreted without filling information gaps are non-ambiguous ."
+    },
+    {
+      "heading": "3.2Polyphonic\u2194\\leftrightarrowMonophonic",
+      "text": "Independent of ambiguity, certain inputs may not have an agreed-upon ground truth, allowing for judgments based on an individual\u2019s interpretation. Personal taste, demographics, background, experience, and other factors influence this interpretation. We consider such cases to be polyphonic : different perspectives co-existing. Where there is unanimity, we consider that to be monophonic ."
+    },
+    {
+      "heading": "3.3Ambiguous and Polyphonic",
+      "text": "Ambiguity and polyphony can be intertwined. Consider an input that lacks context and warrants multiple perspectives, e.g., \u201cWow, they are such a great community\u201d . Here, the ambiguity lies in the sentiment of the sentence and the polyphony in the gravity of the (potential) negative sentiment. In such a scenario, a model is expected to capture the appropriate disambiguation and clarification questions, and the different possible perspectives."
+    },
+    {
+      "heading": "4Subjectivity in Models",
+      "text": "How a model expresses subjectivity influences its evaluation. Thus, we discuss ways of expressing and instilling subjectivity in models, considering both classification and free-text generation objectives."
+    },
+    {
+      "heading": "4.1Expressing Subjectivity",
+      "text": "To move away from rigid responses in line with the majority preference, the model\u2019s output should reflect the spectrum of different perspectives or be aligned to an individual\u2019s perspective."
+    },
+    {
+      "heading": "4.2Instilling Subjectivity",
+      "text": "We distinguish between approaches that introduce the notion of subjectivity at inference, when training or fine-tuning, and when aligning the models."
+    },
+    {
+      "heading": "5Desiderata for Subjective Models",
+      "text": "After outlining the desired model output when facing a subjective input, the natural next step is to evaluate its performance. But what does it mean for a model to perform well on subjective input?\n\nTo answer this question, we propose desiderata for a subjectivity-sensitive model. These desiderata are motivated by three overarching ideals rooted in our preceding discussion of how subjectivity is represented in NLP data and models: (1) representation of all, including minority voices, (2) based on the correct sources of subjectivity in the input, and (3) the representation of subjectivity (in data and models) generalizing to the real world.\n\nD1. Recognize when subjective modeling is necessary\n\nAs we highlight in Section 2.1 , certain inputs have multiple valid perspectives. For a model to make predictions that reflect this diversity, the first step is to recognize when an input needs to be treated subjectively versus objectively. Even when a task is generally considered to be subjective, this step is vital\u2014there will be cases where raters will have consensus, e.g., when dealing with a severe case of hate speech; predicting an aggregate estimate would be sufficient in that case.\n\nD2. Recognize which type of subjective modeling is needed\n\nAs we describe in Section 3 , model behavior depends on the type of subjective input. Thus, a model should recognize which type of subjectivity the input contains: ambiguity, polyphony, or both.\n\nD3. Recognize why there is subjectivity in the input\n\nBuilding on the desired model behavior we outline in Section 3 , a model should recognize why there is ambiguous or polyphonic subjectivity in the input. Using this information, the model can delineate the different disambiguations, clarifications, or perspectives to resolve. This facilitates better predictions and more reliable generalization to unseen scenarios.\n\nD4. Predict subjectivity accurately\n\nAfter recognizing the source of the subjectivity, a model should predict the subjectivity correctly.\nA model can predict subjectivity in different ways, as we discuss in Section 4.1 .\n\nD5. Calibrate the output with respect to the frequency of opinions\n\nAs we illustrate in Section 4.2 , certain models are trained to estimate the distribution of human judgment for an input. Depending on how subjectivity is expressed (distributional or overton), the predicted distribution should be calibrated to the actual human judgment distribution. This applies both when a probability distribution is obtained directly from the model and when an overton response is generated. For an overton response, the linguistic quantifiers should be well-calibrated. This also extends to when a model relies on uncertainty metrics to identify whether it has encountered a subjective input.\n\nD6. Represent all perspectives\n\nA subjectivity-sensitive model should account for the minority voices that are usually lost in aggregation. The model should represent a range of diverse viewpoints, minimizing bias toward dominant perspectives. Relevant perspectives should be decoupled from dominant perspectives. For example, it should not only echo a Western perspective but also other cultures when the input warrants it.\n\nD7. Express subjectivity without hampering user experience\n\nA subjectivity-sensitive model carries with it the responsibility of informing a user of different perspectives. This mirrors the responsibility of showing users explanations of decision-making in the field of explainable AI (XAI). What counts as a \u201cgood\u201d explanation depends on the user ( ehsan-2020-hcxai ) .\nIn a similar vein, we argue that subjectivity should be expressed in a way that does not hamper user experience. Consider a model giving a summary of all the different perspectives. It is of limited use when a response enumerates all potential perspectives, 2 2 2 Note that this excludes the setting where the output of the model is distributional . making it rather infeasible to grasp the overall view. Here, it should strike a balance between being concise and detailed according to user preference."
+    },
+    {
+      "heading": "6Subjectivity Evaluation Practices",
+      "text": "In Section 5 , we formulate the desiderata for a subjectivity-sensitive model in a top-down fashion. We now look bottom-up, exploring how these desiderata translate to concrete evaluation practices. We discuss existing metrics and analyze how current evaluation practices relate to our desiderata in both classification and free-text generation settings."
+    },
+    {
+      "heading": "6.1Existing Metrics",
+      "text": "We first discuss metrics used to measure aspects of how well a model captures subjectivity in its predictions. We review related literature and identify the main metrics and evaluation practices. 3 3 3 Our aim is not to provide an exhaustive list of existing metrics, but to provide a snapshot of important metrics and evaluation methods to identify gaps the field can focus on."
+    },
+    {
+      "heading": "6.2Metrics and Desiderata in Papers",
+      "text": "We analyze how the metrics are used in practice in relation to our desiderata. Based on the metrics we discussed, we distinguish the following categorization of metrics that are regularly used for evaluating aspects of subjectivity: Distance Metric , F 1 F_{1} , Accuracy , Reliability , and Other .\n\nWe searched for papers on subjectivity in NLP through snowballing from key papers and search terms such as \"subjectivity nlp/llms\", \"disagreement nlp/llms\", \"perspectivism nlp\", \"persona prompting\". We found 60 60 papers and annotated them, indicating the category of metrics used ( distance metric , F 1 F_{1} -variant, reliability metric, accuracy -variant, or other ), the evaluation objective (single annotator/individual, all annotators/population, specific group, subjective as a separate label, multi-label, or subjective or not) and the covered desiderata. 4 4 4 We will release the complete overview upon acceptance. Figure 3 shows our mapping. These visualizations are meant to give a general idea of evaluation practices; the distributions presented in the figures are based on an indicative (not exhaustive) literature search."
+    },
+    {
+      "heading": "7Opportunities and Challenges",
+      "text": "We discuss the gaps ( ) we identified that present opportunities ( ) for future work along with critical challenges that require a closer look.\n\nKeeping our desiderata in mind, we highlight some key aspects that have been (partially) unexplored."
+    },
+    {
+      "heading": "8Conclusion",
+      "text": "The impactful nature of NLP models in society demands that these models be sensitive to subjectivity, representing multiple perspectives in their output.\nWe analyze the current evaluation paradigms of subjectivity-sensitive models.\nWe begin by understanding subjectivity and how it is represented in NLP data and models, which leads us to define the desiderata for a subjectivity-sensitive model. We take a top-down approach to design seven desiderata, driven by our ideals for a model to (1) represent all, based on (2) the correct source of subjectivity to (3) generalize to the real world.\nWe then analyze 60 60 papers to map evaluation metrics to our desiderata. This mapping allows us to identify gaps, which can be fruitful directions for future work. Among these gaps, we primarily find that existing work has overlooked nuances in the types of subjectivity: polyphony versus ambiguity, and we argue that this distinction is crucial for effective evaluation. Additionally, current research efforts do not touch on our seventh desideratum: Express , nor the interplay between different desiderata. We finally highlight the importance of interdisciplinary collaboration to facilitate datasets and annotation strategies that can better capture subjectivity, and in turn, improve subjectivity-sensitive model development and evaluation."
+    },
+    {
+      "heading": "Acknowledgments",
+      "text": "This research was (partially) funded by the Hybrid Intelligence Center, a 10-year programme, and AlgoSoc, a collaborative 10-year research program on public values in the algorithmic society, both funded by the Dutch Ministry of Education, Culture and Science under the Gravitation programme (project numbers 024.005.017 and 024.004.022) through the Netherlands Organisation for Scientific Research. Any opinions, findings, and\nconclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the views of OCW or those of the AlgoSoc consortium as a whole. The figures and affiliation emojis have been designed using resources from flaticon.com; the chatbot for Express is by Flat Icons, lightbulb + hand by Dewi Sari, and the rest of the emojis\nby freepik."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1: The sequential nature of our proposed desiderata for evaluating a subjectivity-sensitive model.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28351/assets/x1.png"
+    },
+    {
+      "caption": "Figure 2: Dimensions of sources of subjectivity at a sample-level : ambiguity on the x-axis and polyphony on the y-axis. For each quadrant, we show the desired model output (as icons) with an example situated in hate speech detection.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28351/assets/x2.png"
+    },
+    {
+      "caption": "(a) The number of papers that cover each desiderata.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28351/assets/x3.png"
+    },
+    {
+      "caption": "(a) The number of papers that cover each desiderata.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28351/assets/x3.png"
+    },
+    {
+      "caption": "(b) The number of papers that cover each metric type.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28351/assets/x4.png"
+    },
+    {
+      "caption": "(c) The number of unique metric types used and desiderata investigated by the amount of papers.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28351/assets/x5.png"
+    },
+    {
+      "caption": "(d) Number of papers that address a specific evaluation objective.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28351/assets/x6.png"
+    }
+  ],
+  "ar5iv_success": true
+}

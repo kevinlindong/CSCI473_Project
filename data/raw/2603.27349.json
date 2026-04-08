@@ -1,0 +1,144 @@
+{
+  "paper_id": "2603.27349",
+  "title": "Inference-Time Structural Reasoning for Compositional Vision-Language Understanding",
+  "abstract": "Vision-language models (VLMs) excel at image-text retrieval yet persistently fail at compositional reasoning, distinguishing captions that share the same words but differ in relational structure. We present, a unified evaluation and augmentation framework benchmarking four architecturally diverse VLMs,CLIP, BLIP, LLaVA, and Qwen3-VL-8B-Thinking,on the Winoground benchmark under plain and scene-graph-augmented regimes. We introduce a dependency-based TextSceneGraphParser (spaCy) extracting subject-relation-object triples, and a Graph Asymmetry Scorer using optimal bipartite matching to inject structural relational priors. Caption ablation experiments (subject-object masking and swapping) reveal that Qwen3-VL-8B-Thinking achieves a group score of 62.75, far above all encoder-based models, while a proposed multi-turn SG filtering strategy further lifts it to 66.0, surpassing prior open-source state-of-the-art. We analyze the capability augmentation tradeoff and find that SG augmentation benefits already capable models while providing negligible or negative gains for weaker baselines. Code: https://github.com/amartyacodes/Inference-Time-Structural-Reasoning-for-Compositional-Vision-Language-Understanding",
+  "authors": [
+    "Amartya Bhattacharya"
+  ],
+  "date": "2026-03-28T17:41:35+00:00",
+  "url": "http://arxiv.org/abs/2603.27349v1",
+  "categories": [
+    "cs.CV",
+    "cs.CL"
+  ],
+  "primary_category": "cs.CV",
+  "sections": [
+    {
+      "heading": "1.\u2002Introduction",
+      "text": "Modern VLMs achieve remarkable performance on image captioning, visual question answering, and cross-modal retrieval. Yet a fundamental question persists: do these models truly understand the compositional structure of language grounded in visual scenes?\n\nConsider the minimal pair: \u201cThe dog is chasing the cat\u201d vs. \u201cThe cat is chasing the dog.\u201d Both share identical content words; they differ solely in the agent\u2013patient assignment. A model relying on bag-of-words statistics assigns nearly identical scores to both captions for any image, failing this basic compositional test.\n\nThe Winoground benchmark ( Thrush et\u00a0al. , 2022 ) operationalizes this challenge through 400 carefully curated minimally contrastive image\u2013caption pairs (Figure 1 ). Initial evaluations revealed CLIP performing only marginally above random chance, motivating the search for structural augmentation strategies.\n\nOur work is motivated by three observations. First, architectural diversity matters : dual-encoder, cross-attention, and generative VLMs process compositional information through different mechanisms. Second, explicit structure can help : scene graphs provide a structural representation absent from raw embeddings. Third, integration must be architecture-appropriate : an additive score prior suits embedding models; prompt injection suits generative models."
+    },
+    {
+      "heading": "1.1.\u2002Contributions.",
+      "text": "(1)\u00a0A unified evaluation framework for four VLMs on Winoground;\n(2)\u00a0a TextSceneGraphParser covering SVO, prepositional, copular, existential, and possessive constructions;\n(3)\u00a0a Graph Asymmetry Scorer via optimal bipartite matching targeting agent\u2013patient role reversal;\n(4)\u00a0systematic caption ablation experiments quantifying entity-identity vs. relational-syntax reliance;\n(5)\u00a0a multi-turn SG filtering strategy achieving group score 66.0, a new open-source state-of-the-art on Winoground."
+    },
+    {
+      "heading": "2.1.\u2002Compositional reasoning benchmarks.",
+      "text": "Thrush et\u00a0al. ( 2022 ) introduced Winoground, demonstrating that all VLMs tested performed near random chance on compositional image\u2013caption matching. Diwan et\u00a0al. ( 2022 ) analyzed failure modes, categorizing them as visual difficulty, linguistic ambiguity, and genuine compositional failure.\nConcurrently, Yuksekgonul et\u00a0al. ( 2023 ) introduced the ARO benchmark (Attribution, Relation, Order) with over 50,000 test cases from Visual Genome and COCO, demonstrating that contrastive VLMs systematically act as bag-of-words models , for example, BLIP assigns higher probability to \u201cthe grass is eating the horse\u201d over the correct caption with 81% confidence. Hsieh et\u00a0al. ( 2024 ) followed with SugarCrepe , identifying biases in ARO\u2019s hard negative construction and proposing LLM-generated fluent negatives across seven edit categories (replace/swap/add object, attribute, relation) that drive blind text models to chance accuracy."
+    },
+    {
+      "heading": "2.2.\u2002Inference-time compositional augmentation.",
+      "text": "A key family of methods improves compositional reasoning at inference time without retraining. Jiang et\u00a0al. ( 2024 ) proposed ComCLIP , a training-free approach that disentangles input images into subject, object, and action sub-images and performs evolving matching over compositional embeddings, mitigating spurious entity co-occurrence biases in CLIP, SLIP, and BLIP-2 across Winoground, VL-Checklist, SVO, and ComVG. Mitra et\u00a0al. ( 2024 ) introduced CCoT (Compositional Chain-of-Thought, CVPR 2024), a zero-shot prompting method that first instructs the model to generate a scene graph from the input image, then uses that graph as a structured intermediate reasoning step , improving compositional performance on Winoground, WHOOPS!, and general multimodal benchmarks without fine-tuning.\nOur multi-turn SG is closely related to both: like ComCLIP we operate at inference time, and like CCoT we leverage scene graph structure, but we use text scene graphs extracted from captions (requiring no visual SG generator) and inject them via a formally defined asymmetry scoring mechanism or multi-turn self-filtering."
+    },
+    {
+      "heading": "2.3.\u2002Training-time compositional fine-tuning.",
+      "text": "Yuksekgonul et\u00a0al. ( 2023 ) proposed NegCLIP , fine-tuning CLIP with POS-tag-based hard negative captions, achieving substantial ARO improvements with minimal downstream degradation. Mishra et\u00a0al. ( 2025 ) proposed SCRAMBLe (ICCV Workshops 2025), generating compositional hard negatives via chain-of-thought LLM prompting and adversarial filtering, then applying direct preference optimization to Molmo-7B , achieving 54.8% group score on Winoground, the prior open-source state-of-the-art. Herzig et\u00a0al. ( 2023 ) proposed SGVL , incorporating Visual Genome scene graph annotations into CLIP fine-tuning via learnable graph tokens that attend to patch embeddings, improving compositional performance across multiple benchmarks.\nOur method surpasses SCRAMBLe (66.0 vs. 54.8%) without any retraining, positioning inference-time structural reasoning in sufficiently capable base models as a compelling alternative to preference tuning."
+    },
+    {
+      "heading": "2.4.\u2002Large multimodal models.",
+      "text": "The shift to billion-parameter generative VLMs has produced striking Winoground gains. Liu et\u00a0al. ( 2023 ) showed LLaVA-1.5-13B achieves 36.5% group via yes/no scoring. Lin et\u00a0al. ( 2024 ) introduced VQAScore , using a VQA model to compute image\u2013text alignment as the probability of \u201cyes\u201d to \u201cDoes this image show {caption}?\u201d, providing richer compositional signal than cosine similarity.\nMost recently, Wu et\u00a0al. ( 2025 ) showed that reframing evaluation as a global matching problem (GroupMatch) and applying test-time self-training enables SigLIP-B16 to reach 67% group score and GPT-4.1 to surpass human performance (91.4%) , revealing that standard GroupScore metrics systematically underestimate hidden model capabilities."
+    },
+    {
+      "heading": "2.5.\u2002Scene graphs in VL understanding.",
+      "text": "Scene graphs , directed graphs encoding objects, attributes, and relations , have been used for image retrieval ( Johnson et\u00a0al. , 2015 ) , VQA ( Shi et\u00a0al. , 2019 ) , and image generation ( Johnson et\u00a0al. , 2018 ) . Text scene graphs parse captions into triple structures analogously. Our TextSceneGraphParser is most closely related to spaCy-based parsers used in SGVL ( Herzig et\u00a0al. , 2023 ) and CCoT ( Mitra et\u00a0al. , 2024 ) , but operates purely on caption text with explicit handling of five syntactic construction types."
+    },
+    {
+      "heading": "3.\u2002Winoground Benchmark",
+      "text": "Each example ( I 0 , I 1 , c 0 , c 1 , \u03c4 ) (I_{0},I_{1},c_{0},c_{1},\\tau) consists of two images, two captions sharing the same content words but differing in relational structure, and a linguistic-phenomenon tag.\nGiven scoring function s : \u2110 \u00d7 \ud835\udc9e \u2192 \u211d s:\\mathcal{I}\\times\\mathcal{C}\\to\\mathbb{R} , we compute four scores s 00 , s 10 , s 01 , s 11 s_{00},s_{10},s_{01},s_{11} and define: Text = \ud835\udfd9 \u200b [ s 00 > s 10 ] \u22c5 \ud835\udfd9 \u200b [ s 11 > s 01 ] \\displaystyle=\\mathbb{1}[s_{00}>s_{10}]\\cdot\\mathbb{1}[s_{11}>s_{01}] (1) Image = \ud835\udfd9 \u200b [ s 00 > s 01 ] \u22c5 \ud835\udfd9 \u200b [ s 11 > s 10 ] \\displaystyle=\\mathbb{1}[s_{00}>s_{01}]\\cdot\\mathbb{1}[s_{11}>s_{10}] (2) Group = Text \u22c5 Image \\displaystyle=\\text{Text}\\cdot\\text{Image} (3) Random-chance baselines: Text = Image = 0.25, Group \u2248 0.063 \\approx 0.063 ."
+    },
+    {
+      "heading": "4.\u2002Models and Scoring Functions",
+      "text": "We evaluate four VLMs spanning the major architectural paradigms (Table 1 ).\n\nCLIP ( Radford et\u00a0al. , 2021 ) uses cosine similarity between \u2113 2 \\ell_{2} -normalised CLS-token embeddings: s CLIP \u200b ( I , c ) = 1 2 \u200b ( 1 + cos \u200b - \u200b sim \u2061 ( f img \u200b ( I ) , f txt \u200b ( c ) ) ) s_{\\text{CLIP}}(I,c)=\\frac{1}{2}(1+\\operatorname{cos\\text{-}sim}(f_{\\text{img}}(I),f_{\\text{txt}}(c))) .\n\nBLIP ( Li et\u00a0al. , 2022 ) uses a cross-attention ITM head: s BLIP ( I , c ) = softmax ( [ v no , v yes ] ) 1 s_{\\text{BLIP}}(I,c)=\\operatorname{softmax}([v_{\\text{no}},v_{\\text{yes}}])_{1} .\n\nLLaVA ( Liu et\u00a0al. , 2023 ) scores via yes/no logits after an image-grounded prompt: s LLaVA \u200b ( I , c ) = exp \u2061 ( z yes ) / ( exp \u2061 ( z yes ) + exp \u2061 ( z no ) ) s_{\\text{LLaVA}}(I,c)=\\exp(z_{\\text{yes}})/(\\exp(z_{\\text{yes}})+\\exp(z_{\\text{no}})) .\n\nQwen3-VL-8B-Thinking ( Qwen Team , 2025 ) uses EOS-token pooling from a generative Mixture-of-Experts decoder, scored as CLIP but with richer contextual representations from grounding training."
+    },
+    {
+      "heading": "5.\u2002TextSceneGraphParser",
+      "text": "Figure 2 shows the parser pipeline. A text scene graph for caption c c is: \ud835\udca2 \u200b ( c ) = { \u27e8 s k , r k , o k \u27e9 } k = 1 K \\mathcal{G}(c)=\\{\\langle s_{k},\\;r_{k},\\;o_{k}\\rangle\\}_{k=1}^{K} where s k , o k s_{k},o_{k} are noun-phrase entities and r k r_{k} a relation (verb, preposition, or copula). Noun phrases are enriched with adjectival and compound modifiers.\n\nFive rules operate on spaCy\u2019s dependency tree ( Honnibal et\u00a0al. , 2020 ) : (R1)\u00a0SVO , transitive/intransitive verbs with relative/subordinate clause handling and negation; (R2)\u00a0Prepositional , spatial/temporal relations via prep / pobj arcs; (R3)\u00a0Existential , \u201cthere is/are\u201d constructions; (R4)\u00a0Copular , linking-verb sentences; (R5)\u00a0Possessive , \u201chas\u201d triples from poss arcs. Invalid triples are discarded and results cached for efficiency."
+    },
+    {
+      "heading": "6.\u2002Graph Asymmetry Scoring",
+      "text": "Given triples t a = \u27e8 s a , r a , o a \u27e9 t_{a}=\\langle s_{a},\\;r_{a},\\;o_{a}\\rangle and t b = \u27e8 s b , r b , o b \u27e9 t_{b}=\\langle s_{b},\\;r_{b},\\;o_{b}\\rangle with text embedding function \u03d5 \\phi , the pairwise asymmetry is: A \u200b ( t a , t b ) = \u03b1 \u200b ( \u03c3 \u200b ( s a , s b ) \u2212 \u03c3 \u200b ( s a , o b ) ) + \u03b3 \u200b ( \u03c3 \u200b ( o a , o b ) \u2212 \u03c3 \u200b ( o a , s b ) ) A(t_{a},t_{b})=\\alpha\\bigl(\\sigma(s_{a},s_{b})-\\sigma(s_{a},o_{b})\\bigr)+\\gamma\\bigl(\\sigma(o_{a},o_{b})-\\sigma(o_{a},s_{b})\\bigr) (4) where \u03c3 \u200b ( x , y ) = cos \u200b - \u200b sim \u2061 ( \u03d5 \u200b ( x ) , \u03d5 \u200b ( y ) ) \\sigma(x,y)=\\operatorname{cos\\text{-}sim}(\\phi(x),\\phi(y)) and \u03b1 = \u03b3 = 1.0 \\alpha=\\gamma=1.0 . The relation term cancels in the forward\u2013flipped difference, specifically targeting agent\u2013patient role reversal.\n\nFor graphs \ud835\udca2 a , \ud835\udca2 b \\mathcal{G}_{a},\\mathcal{G}_{b} , we build cost matrix C i \u200b j = A \u200b ( t a i , t b j ) C_{ij}=A(t_{a}^{i},t_{b}^{j}) and solve optimal bipartite matching via the Hungarian algorithm ( Kuhn , 1955 ) : \u0394 SG \u200b ( \ud835\udca2 a , \ud835\udca2 b ) = 1 | matched | \u200b \u2211 k C \u03c0 \u2217 \u200b ( k ) , \u03c3 \u2217 \u200b ( k ) \\Delta_{\\mathrm{SG}}(\\mathcal{G}_{a},\\mathcal{G}_{b})=\\frac{1}{|\\text{matched}|}\\sum_{k}C_{\\pi^{*}(k),\\sigma^{*}(k)} (5) When either graph is empty, \u0394 SG = 0 \\Delta_{\\mathrm{SG}}=0 , ensuring graceful degradation."
+    },
+    {
+      "heading": "6.1.\u2002Additive augmentation (CLIP, BLIP, Qwen3).",
+      "text": "s SG \u200b ( I , c ; \ud835\udca2 c , \ud835\udca2 c \u2032 ) = s base \u200b ( I , c ) + \u03bb \u22c5 \u0394 SG \u200b ( \ud835\udca2 c , \ud835\udca2 c \u2032 ) s_{\\text{SG}}(I,c;\\mathcal{G}_{c},\\mathcal{G}_{c^{\\prime}})=s_{\\text{base}}(I,c)+\\lambda\\cdot\\Delta_{\\mathrm{SG}}(\\mathcal{G}_{c},\\mathcal{G}_{c^{\\prime}}) , with \u03bb = 0.3 \\lambda=0.3 . Since the prior depends only on the caption pair, image scores are invariant ; only text and group scores can change."
+    },
+    {
+      "heading": "6.2.\u2002Prompt injection (LLaVA).",
+      "text": "Triples are injected into the natural-language prompt, instructing the model to attend to agent\u2013patient structure before the yes/no decision."
+    },
+    {
+      "heading": "7.\u2002Caption Ablation Study",
+      "text": "To mechanistically probe what information models rely on, we apply systematic caption transforms (Figure 3 ) and measure group-score drop \u0394 grp \\Delta_{\\text{grp}} (Table 2 ).\n\nThree key findings: (1)\u00a0Qwen3-VL shows the largest absolute drops across all conditions, confirming it relies most on entity identity and relational syntax. (2)\u00a0Masking objects consistently hurts more than masking subjects across all models. (3)\u00a0The swap condition ( \u0394 \u2248 \u2212 0.20 \\Delta\\approx-0.20 for Qwen3) confirms partial but imperfect compositional sensitivity , role reversal disrupts but does not destroy performance."
+    },
+    {
+      "heading": "8.\u2002Multi-Turn SG Filtering",
+      "text": "Figure 4 shows three strategies for Qwen3-VL-8B-Thinking. (S1) Plain : single-turn yes/no, no scene graph. (S2) Flat SG injection : all extracted triples in a single prompt. (S3) Multi-turn SG filtering (proposed): Turn\u00a01 generates the visually relevant subset of triples via greedy decoding; Turn\u00a02 uses only those filtered triples for the final match query (Figure 5 ). This visual grounding filter reduces noise from parser errors and irrelevant triples."
+    },
+    {
+      "heading": "9.1.\u2002Main Results",
+      "text": "Table 3 presents results for all strategies. Qwen3-VL-8B-Thinking plain (62.8% group) already substantially outperforms all encoder-based models. Multi-turn SG filtering further improves to 66.0%."
+    },
+    {
+      "heading": "9.2.\u2002Comparison with Prior Work",
+      "text": "Table 4 places results in context. Qwen3+SG (multi-turn) achieves 66.0% group, surpassing SCRAMBLe-Molmo-7B (54.8%) by 11.2 points and approaching human performance (85.5%), without any additional training."
+    },
+    {
+      "heading": "10.1.\u2002Capability\u2013augmentation tradeoff.",
+      "text": "For weaker encoder-based models (CLIP, BLIP), the additive SG prior produces negligible gains , the prior\u2019s signal is too weak to overcome insufficient base compositional sensitivity. For LLaVA, prompt injection hurts ( \u0394 grp = \u2212 0.073 \\Delta_{\\text{grp}}=-0.073 ): the model anchors on explicitly listed entities rather than integrating visual and structural evidence jointly. By contrast, Qwen3-VL benefits from SG filtering as a compositional regulariser , improving consistency of relational judgments. This pattern aligns with the view of Mitra et\u00a0al. ( 2024 ) that scene graph augmentation is most effective when the base model already possesses reasonable visual grounding capability."
+    },
+    {
+      "heading": "10.2.\u2002LLaVA and the over-specification failure mode.",
+      "text": "The performance drop under SG prompt injection for LLaVA ( \u0394 grp = \u2212 0.073 \\Delta_{\\text{grp}}=-0.073 ) instantiates a well-documented phenomenon in structured prompting: over-specification , wherein explicitly enumerating relational triples in the prompt causes the model to anchor on listed entities and suppress its own visual inference ( Mitra et\u00a0al. , 2024 ) .\nUnlike Qwen3-VL, which uses scene graph information as a filter over its existing visual representations, LLaVA treats injected triples as primary evidence, overriding the image signal.\nThis suggests that SG injection is only beneficial when the model has sufficient capacity to integrate structural priors with visual evidence rather than substitute one for the other , a distinction with practical implications for prompt design in generative VLMs."
+    },
+    {
+      "heading": "10.3.\u2002Why multi-turn outperforms flat injection.",
+      "text": "Flat SG injection yields a marginal gain (+1.4 group points). The multi-turn strategy adds +1.8 more by using the model\u2019s own visual grounding to filter irrelevant triples before the final decision, directly addressing the known limitation of CCoT-style methods that injecting inaccurate SGs can hurt performance ( Mitra et\u00a0al. , 2024 ) ."
+    },
+    {
+      "heading": "10.4.\u2002Multi-turn SG filtering as structured self-consistency.",
+      "text": "The multi-turn strategy can be understood as a form of structured self-consistency ( Wang et\u00a0al. , 2023 ) : Turn\u00a01 acts as a visually-grounded filter that samples the model\u2019s belief about which relational triples are perceptually relevant, and Turn\u00a02 conditions the final decision on this filtered intermediate.\nThis differs from standard self-consistency (majority voting over independent samples) in two ways: the intermediate is structured (a subset of parsed triples rather than a free-form chain-of-thought), and the two turns share a single context window, enabling the model to condition coherently.\nThe +1.8 group-point gain over flat injection thus reflects reduced noise from irrelevant triples rather than additional model computation per se, connecting our approach to the broader literature on inference-time compute allocation ( Wu et\u00a0al. , 2025 ) ."
+    },
+    {
+      "heading": "10.5.\u2002Per-tag decomposition of SG benefit.",
+      "text": "Aggregate group scores obscure a likely interaction between linguistic phenomenon tag and SG augmentation efficacy.\nScene graph augmentation is structurally targeted at agent\u2013patient role reversal, and should therefore benefit relational and action-based Winoground tags disproportionately, while providing little signal for non-visual tags (e.g., \u201csame/different\u201d constructions) or pragmatics tags where the relational structure is not the discriminating feature.\nA per-tag breakdown of \u0394 grp \\Delta_{\\text{grp}} under SG augmentation would sharpen the capability\u2013augmentation claim: rather than a model-level threshold, the effective condition may be tag-type \u00d7 \\times model capability , with SG helping capable models specifically on relational examples.\nWe leave this decomposition to future work but note it as an important diagnostic for any augmentation strategy on Winoground."
+    },
+    {
+      "heading": "10.6.\u2002Positioning relative to prior work.",
+      "text": "Relative to CCoT ( Mitra et\u00a0al. , 2024 ) we use text scene graphs (no visual SG generator required) with a formally defined asymmetry scorer, while CCoT generates visual SGs via LMM prompting. Relative to SCRAMBLe ( Mishra et\u00a0al. , 2025 ) we require no retraining and achieve +11.2 group points, suggesting inference-time structural reasoning in sufficiently capable models can outperform training-time preference tuning in smaller models. Our results also complement Wu et\u00a0al. ( 2025 ) , who show that evaluation metric reframing reveals hidden compositional capability in models like GPT-4.1, while we demonstrate that structured inference-time augmentation can unlock complementary compositional gains in open-weight models."
+    },
+    {
+      "heading": "10.7.\u2002Limitations and the ablation as a compositional diagnostic.",
+      "text": "The caption ablation experiments (Section 7 ) yield a structured performance fingerprint , group score under subject masking, object masking, joint masking, and subject\u2013object swap , that characterises each model\u2019s reliance on entity identity versus relational syntax independently of overall accuracy.\nWe propose this ablation diagnostic as a reusable evaluation protocol: applied to any new VLM on Winoground, it produces a four-dimensional profile that predicts whether SG augmentation is likely to help (high swap sensitivity, moderate mask sensitivity) or hurt (low overall sensitivity, suggesting bag-of-words processing).\nBeyond this, the TextSceneGraphParser relies on spaCy\u2019s statistical dependency parser, which can fail on complex Winoground sentences. Future work should explore: layer-wise probing to identify which transformer layers encode agent\u2013patient distinctions; learned graph matching replacing the Hungarian algorithm; extension to ARO ( Yuksekgonul et\u00a0al. , 2023 ) and SugarCrepe ( Hsieh et\u00a0al. , 2024 ) ; per-tag SG benefit decomposition; and integration of visual scene graphs for image-side structural priors."
+    },
+    {
+      "heading": "11.\u2002Conclusion",
+      "text": "We presented Multi-turn SG, a unified framework for evaluating and augmenting compositional reasoning in VLMs on Winoground. Our TextSceneGraphParser and Graph Asymmetry Scorer provide architecture-appropriate structural priors without retraining. Caption ablation experiments reveal that Qwen3-VL-8B-Thinking encodes substantial but imperfect compositional structure, and multi-turn SG filtering consistently improves over both flat injection and plain baselines. Our multi-turn strategy achieves 66.0% group score , a new open-source state-of-the-art , and our capability\u2013augmentation tradeoff analysis provides a principled framework for understanding when structural priors help. The ablation diagnostic introduced here offers a reusable protocol for predicting augmentation efficacy in future VLMs, and the structured self-consistency framing of multi-turn filtering opens a direction for principled inference-time compute allocation in compositional reasoning tasks."
+    },
+    {
+      "heading": "Acknowledgements",
+      "text": "This work was completed as a course project for COSC 189: Topics in Neurosymbolic AI at Dartmouth College. The author thanks Professor Soroush Vosoughi for guidance and feedback throughout the project. Figures were generated with the assistance of Google Gemini. Code development was supported in part by Claude (Anthropic)."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1 : Winoground examples. Captions share the same words arranged differently; images share the same visual elements interacting differently. Models must correctly pair each caption with its image.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27349/assets/example1.png"
+    },
+    {
+      "caption": "Figure 2 : TextSceneGraphParser architecture (spaCy rule-based). Five parallel extraction rules produce triples that are deduplicated and cached per caption string.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27349/assets/text_graph.png"
+    },
+    {
+      "caption": "Figure 3 : Caption ablation pipeline. spaCy identifies semantic spans offline; captions are transformed (mask/swap subject, object, or both) and evaluated without SG injection.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27349/assets/ablation.png"
+    },
+    {
+      "caption": "Figure 4 : Qwen3-VL-Thinking pipeline with multi-turn SG filtering. Turn\u00a01 identifies visually relevant SG relations; Turn\u00a02 uses those filtered triples for the final match decision.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27349/assets/multiturn.png"
+    },
+    {
+      "caption": "Figure 5 : Scoring mechanism: last-token logits for \u201cyes\u201d/\u201cno\u201d are softmax-normalized to yield P \u200b ( yes \u2223 I , c ) P(\\text{yes}\\mid I,c) .",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27349/assets/scoring_mechanism.png"
+    }
+  ],
+  "ar5iv_success": true
+}

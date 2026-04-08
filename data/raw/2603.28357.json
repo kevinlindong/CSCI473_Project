@@ -1,0 +1,124 @@
+{
+  "paper_id": "2603.28357",
+  "title": "Optimized Weighted Voting System for Brain Tumor Classification Using MRI Images",
+  "abstract": "The accurate classification of brain tumors from MRI scans is essential for effective diagnosis and treatment planning. This paper presents a weighted ensemble learning approach that combines deep learning and traditional machine learning models to improve classification performance. The proposed system integrates multiple classifiers, including ResNet101, DenseNet121, Xception, CNN-MRI, and ResNet50 with edge-enhanced images, SVM, and KNN with HOG features. A weighted voting mechanism assigns higher influence to models with better individual accuracy, ensuring robust decision-making. Image processing techniques such as Balance Contrast Enhancement, K-means clustering, and Canny edge detection are applied to enhance feature extraction. Experimental evaluations on the Figshare and Kaggle MRI datasets demonstrate that the proposed method achieves state-of-the-art accuracy, outperforming existing models. These findings highlight the potential of ensemble-based learning for improving brain tumor classification, offering a reliable and scalable framework for medical image analysis.",
+  "authors": [
+    "Ha Anh Vu"
+  ],
+  "date": "2026-03-30T12:24:54+00:00",
+  "url": "http://arxiv.org/abs/2603.28357v1",
+  "categories": [
+    "cs.CV",
+    "cs.LG"
+  ],
+  "primary_category": "cs.CV",
+  "sections": [
+    {
+      "heading": "IIntroduction",
+      "text": "Magnetic Resonance Imaging (MRI) is a critical tool for detecting and diagnosing brain tumors, where accurate classification is essential for guiding treatment decisions. Tumors such as glioma, meningioma, and pituitary tumors exhibit diverse morphological characteristics, including variations in shape, texture, and anatomical location. These differences and variations in MRI acquisition conditions pose challenges for precise classification. Traditional machine learning models like Support Vector Machines (SVM) and K-Nearest Neighbors (KNN) have shown effectiveness when leveraging handcrafted features such as Histogram of Oriented Gradients (HOG). Meanwhile, deep learning models, particularly Convolutional Neural Networks (CNNs) and ResNet architectures, have demonstrated promising results in medical imaging tasks. However, both approaches have limitations when applied independently, necessitating an integrated strategy to enhance classification performance.\n\nThis research proposes a weighted ensemble learning framework that combines multiple classifiers to improve brain tumor classification accuracy and robustness. The ensemble integrates traditional machine learning models with deep learning architectures, leveraging their complementary strengths. A weighted voting mechanism is employed to optimally combine predictions from different classifiers based on their individual performance. Image processing techniques such as Balance Contrast Enhancement (BCET), K-means clustering, and Canny edge detection are applied to enhance feature extraction, improving tumor boundary visibility and classification accuracy. Specifically, SVM and KNN are used for shape and texture analysis, while CNN-MRI, ResNet101, and DenseNet121 process grayscale MRI images to extract deep spatial representations. ResNet50 and Xception are also trained on edge-detected images to enhance the extraction of structural features.\n\nExperimental evaluations on the Figshare and Kaggle MRI datasets demonstrate that the proposed ensemble framework achieves classification accuracy exceeding 99%, surpassing existing methods and highlighting its potential for real-world medical applications. The remainder of this paper is structured as follows: Section II reviews related work on brain tumor classification using single and ensemble models. Section III details the methodology, including image processing, model selection, and the implementation of the weighted voting mechanism. Section IV presents the classification results and compares them with state-of-the-art approaches. Finally, Section V concludes the paper with key findings and directions for future research."
+    },
+    {
+      "heading": "IIRelated Work",
+      "text": "Advancements in brain tumor classification have been driven by both single-classifier models and ensemble-based approaches. While individual classifiers, such as deep learning-based Convolutional Neural Networks (CNNs) and traditional machine learning models like Support Vector Machines (SVM) and K-Nearest Neighbors (KNN), have demonstrated strong performance, each has its limitations in handling variations in tumor morphology. Ensemble learning addresses these challenges by integrating multiple models, leveraging their complementary strengths to improve classification accuracy and robustness. This section provides an overview of both single-model and ensemble-based approaches in brain tumor classification."
+    },
+    {
+      "heading": "II-ASingle Classifiers",
+      "text": "CNNs are widely used in medical imaging for their ability to extract hierarchical features from complex datasets. ResNet, VGGNet, and DenseNet have achieved state-of-the-art performance, particularly when fine-tuned with large-scale datasets like ImageNet [ 13 , 37 ] . Further improvements, such as hyperparameter tuning and architectural enhancements, have significantly boosted classification accuracy [ 23 , 32 , 31 , 20 ] . Recent advancements include sub-region tumor analysis [ 11 ] , EfficientNet optimization [ 21 ] , and the TDA framework for segmentation, classification, and severity prediction [ 15 ] .\n\nTraditional machine learning models remain relevant, especially in resource-limited settings. SVM [ 12 ] and KNN [ 26 ] , combined with feature extraction techniques like HOG and LBP [ 38 ] , continue to perform well. Multi-kernel SVM [ 14 , 34 ] and handcrafted features [ 1 , 18 ] have sometimes rivaled deep learning methods. Hybrid approaches, such as integrating Canny edge detection with CNNs [ 9 , 40 , 41 ] , further enhance classification accuracy by preserving spatial and textural information."
+    },
+    {
+      "heading": "II-BEnsemble Learning",
+      "text": "Ensemble learning enhances predictive accuracy by combining multiple classifiers, reducing variance, and improving generalization, making it highly effective in medical imaging. Techniques like bagging, boosting, and voting have been widely explored. In brain tumor classification, Bogacsovics et al. [ 8 ] used majority voting with CNNs like ResNet and MobileNet, while Siar et al. [ 35 ] applied weighted voting with VGG16 and ResNet50, improving performance. Sterniczuk et al. [ 36 ] further validated ensemble methods by integrating multiple deep learning models, leveraging diverse feature extraction techniques for higher accuracy.\n\nHybrid ensemble models have proven effective in improving accuracy. Munira et al. [ 27 ] combined CNNs with Random Forest using a voting mechanism, while Zhao et al. [ 44 ] integrated SVM ensembles with PCA for dimensionality reduction. These approaches demonstrate the benefits of combining classifiers for enhanced performance.\n\nRecent advancements in ensemble learning have incorporated attention mechanisms and advanced feature fusion techniques to refine classification accuracy. Abdulsalomov et al. [ 2 ] enhanced model reliability by integrating the Convolutional Block Attention Module (CBAM) and Bi-directional Feature Pyramid Networks (BiFPN) into an ensemble framework. Roy et al. [ 33 ] introduced a GAN-based augmentation technique within an explainable ensemble system, effectively addressing data imbalance issues and improving overall classification performance.\n\nBuilding on these prior works, this study proposes an enhanced ensemble learning framework that integrates deep and traditional machine learning models. A previous study by Vu et al. [ 39 ] explored an ensemble comprising KNN, SVM, CNN-MRI, and ResNet50, achieving a peak accuracy of 98.36%. In contrast, the proposed method expands upon this by incorporating additional deep learning models, Xception, ResNet101, and DenseNet121, further improving classification accuracy beyond 99%."
+    },
+    {
+      "heading": "IIIMETHODOLOGY",
+      "text": "This study explores the integration of multiple classifiers with diverse data representations. Each model, when trained on different input types, contributes unique classification perspectives for brain tumors. These variations complement one another within the ensemble system, ultimately improving accuracy. The choice of classifiers and input types is informed by preliminary experiments [ 40 , 39 ] and their proven effectiveness, as outlined in the section II ."
+    },
+    {
+      "heading": "III-AMRI data representations",
+      "text": "The experiments used various data representations, including original images, edge images, and features like HOG [ 38 ] , SIFT, ORB, EHD, PCA, color histograms, and LBP. Prior research found HOG, edge images, and original images most effective for MRI processing, leading to their selection for this study."
+    },
+    {
+      "heading": "III-CVoting system",
+      "text": "Figure 3 depicts the workflow of the voting system, where MRI images undergo preprocessing before classification. Depending on model requirements, images are used in their original form or transformed into alternative representations, such as HOG features or edge-detected images, to enhance feature extraction. Each classifier processes its respective input format and independently predicts the tumor class.\n\nA weighted voting mechanism determines the final classification by assigning greater influence to higher accuracy models, ensuring reliable predictions. This strategy balances classifier strengths while minimizing the impact of weaker models. A mathematical formulation optimally integrates these weighted votes, selecting the class with the highest score as the final prediction.\n\nThe voting system follows the mathematical formulation:\n\ny final = arg \u2061 max c \u2061 ( \u2211 i = 1 n w i \u22c5 p i , c ) y_{\\text{final}}=\\arg\\max_{c}\\left(\\sum_{i=1}^{n}w_{i}\\cdot p_{i,c}\\right) (1)\n\nWhere y final y_{\\text{final}} represents the predicted tumor class, w i w_{i} is the weight assigned to classifier i i , and p i , c p_{i,c} denotes the confidence score for class c c ."
+    },
+    {
+      "heading": "III-DOptimizations",
+      "text": "The optimization process refined key hyperparameters for brain tumor classification using AutoKeras [ 22 ] for CNN-MRI and Optuna [ 3 ] for other models. Standardized settings included a learning rate of 0.0001 for stability, batch size of 32 for efficiency, and dropout (0.3\u20130.5) with L2 weight decay to prevent overfitting. Activation functions varied ReLU for most Sand wish for Xception. Optimization strategies included SGD with Momentum for ResNet50, Adam for ResNet101 and DenseNet121, and RMSprop for Xception. Categorical Cross-Entropy was the primary loss function, with Focal Loss used for class imbalance in ResNet101.\n\nUniform data augmentation techniques: flipping, rotation, zooming, brightness adjustments, and noise injection were applied to enhance generalization. These optimizations strengthened MRI-based brain tumor classification, ensuring robust performance across architectures."
+    },
+    {
+      "heading": "IVResults",
+      "text": "This study utilizes two well-known MRI brain tumor datasets to improve classification accuracy and generalizability: the Kaggle Brain Tumor MRI dataset 1 1 1 https://www.kaggle.com/datasets/masoudnickparvar/brain-tumor-mri-dataset and the Figshare Brain Tumor dataset 2 2 2 https://figshare.com/articles/dataset/brain_tumor_dataset/1512427 (see Figure 4 ).\n\nThe Kaggle dataset [ 10 ] comprises 7,023 MRI images categorized into glioma, meningioma, pituitary tumors, and no tumor, with a predefined train-test split of 5,712 training and 1,311 testing images, ensuring balanced class distribution for consistent benchmarking. In contrast, the Figshare dataset contains 3,064 T1-weighted MRI images from 233 patients, divided into glioma, meningioma, and pituitary tumors with a 70%-30% train-test split. Unlike Kaggle, Figshare presents an imbalanced class distribution, introducing additional challenges for classification models."
+    },
+    {
+      "heading": "IV-AIndividual Results",
+      "text": "Table I shows that deep learning models consistently outperform traditional classifiers in accuracy and generalization. While KNN and SVM achieved competitive results, their performance depend on hyperparameters. KNN performed best with k = 3 k=3 using Euclidean distance, while SVM excelled with a linear kernel.\n\nAmong deep learning models, ResNet101 and DenseNet121 demonstrated the highest performance, achieving 98.37% and 98.15% on Figshare and 99.08% and 99.60% on Kaggle, respectively. The more profound architecture of ResNet101 enhanced hierarchical feature extraction, while DenseNet121 benefited from feature reuse and efficient gradient propagation. Xception, leveraging depthwise separable convolutions, achieved 97.93% on Figshare and 99.46% on Kaggle, excelling in spatial feature extraction. resnet50, trained on edge-enhanced images, performed well, particularly on Kaggle, highlighting the effectiveness of boundary-aware classification.\n\nOverall, models trained on the Kaggle dataset exhibited higher accuracy than those trained on Figshare, mainly due to Kaggle\u2019s larger dataset size and more balanced class distribution. In contrast, the imbalanced distribution in Figshare posed additional challenges, particularly affecting SVM and CNN-MRI models. CNN-MRI, while robust, showed slightly lower accuracy (95.65% on Figshare, 98.32% on Kaggle) than deeper architectures, reflecting its limited feature extraction capability."
+    },
+    {
+      "heading": "IV-BVoting System Results Before Optimization",
+      "text": "All classifiers contributed equally in the no-weight scenario (see Table II ), establishing a baseline to assess the ensemble system\u2019s performance. Despite no weighting, the system achieved 99.13% accuracy on Figshare and 99.54% on Kaggle. These results confirm that even a simple majority voting mechanism performs effectively, providing a strong benchmark before applying weight optimizations.\n\nIn the incremental-weight scenario (see Table III ), classifiers were assigned weights based on their performance, ensuring that higher-performing models had a greater influence on the ensemble\u2019s decisions. The weighting scheme ranged from w 1 = 7 w_{1}=7 , w 2 = 6 w_{2}=6 , \u2026, w 7 = 1 w_{7}=1 . On the Figshare dataset, this approach achieved an accuracy of 98.36%, slightly lower than the no-weight scenario, suggesting that equal contributions from all models may be more effective in this case. However, on the Kaggle dataset, the incremental-weighting strategy maintained a high accuracy of 99.54%, with perfect classification for the no tumor class.\n\nIn the highest-weight scenario (see Table IV ), the most accurate individual model was assigned a slightly higher weight while incorporating contributions from other classifiers. On the Figshare dataset, ResNet101 achieved the highest individual accuracy (see Table I ), so it was given a greater influence in the ensemble ( w 1 = 2 , w 2 = 1 , w 3 = 1 , \u2026 , w 7 = 1 w_{1}=2,w_{2}=1,w_{3}=1,\\dots,w_{7}=1 ), resulting in 99.13% accuracy, matching the performance of the no-weight scenario. Meanwhile, on the Kaggle dataset, DenseNet121 demonstrated the strongest individual performance, and emphasizing its contribution led to an optimized ensemble accuracy of 99.69%, with perfect classification across all tumor classes."
+    },
+    {
+      "heading": "IV-COptimized Voting System Results",
+      "text": "An automated approach optimized vote weights (0\u201310), excluding models with a weight of 0. The top three configurations achieved 99.46% accuracy on Figshare (Table V ) and 99.85% on Kaggle (Table VI ). While all reached the same accuracy, they revealed differences in misclassification distribution.\n\nOn Figshare, top configurations prioritized ResNet101, the most accurate model, with other classifiers supporting balanced classification. On Kaggle, DenseNet121 and Xception had greater influence, aligning with their superior accuracy. While overall accuracy remained identical, weight distributions affected class-specific performance, highlighting the trade-off between accuracy and classification stability."
+    },
+    {
+      "heading": "IV-DComparison",
+      "text": "The comparative analysis of the Figshare and Kaggle datasets highlights the accuracy gains achieved by our ensemble-based voting system. As shown in Table VII , prior single models like the 23-layer CNN 97.80% and ResNet50 (97.30%) lacked generalization, while ensemble systems (e.g., AlexNet, VGG-16, ResNet50) reached 97.55%. In contrast, our hybrid approach KNN, SVM, ResNet50, Xception, CNN-MRI, DenseNet121, ResNet101 achieved 99.46%, demonstrating the benefits of integrating deep learning and traditional methods.\n\nSimilarly, Table VIII confirms our method\u2019s superiority on the Kaggle dataset. While previous CNN and EfficientNet models peaked at 98.33% and ensemble systems (GoogleNet, ShuffleNet, SVM, KNN) at 98.40%, our optimized voting system achieved 99.85%, ensuring improved decision-making and robustness in medical diagnostics."
+    },
+    {
+      "heading": "VConclusion",
+      "text": "This paper proposes an ensemble-based classification system that employs a weighted voting mechanism to enhance the accuracy and reliability of MRI-based brain tumor diagnosis. By integrating traditional machine learning models (KNN, SVM) with deep learning architectures (CNN-MRI, ResNet50, Xception, DenseNet121, and ResNet101), the proposed approach effectively leverages diverse feature extraction/representation techniques and classifiers. Experimental evaluations on the Figshare and Kaggle datasets confirm that this ensemble framework outperforms individual classifiers, demonstrating the advantages of model diversity in medical image analysis. The results highlight that optimizing classifier contributions through a weighted voting strategy significantly improves classification accuracy and robustness.\n\nThe optimized ensemble achieved 99.46% accuracy on the Figshare dataset and 99.85% on the Kaggle dataset, surpassing both standalone models and prior ensemble-based methods. Analysis of the weighting distribution emphasizes the importance of assigning greater influence to high-performing classifiers, particularly models trained on edge-enhanced images (ResNet50, Xception) and grayscale MRI scans (DenseNet121, ResNet101). However, challenges remain, particularly in distinguishing between glioma and meningioma, indicating the need for further refinement in weighting adaptation and feature extraction. Future work should explore dynamic weighting strategies and advanced feature engineering techniques to enhance classification precision across all tumor categories."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "(a)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28357/assets/figures/Canny/step_1_Original_Image.jpg"
+    },
+    {
+      "caption": "(a)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28357/assets/figures/Canny/step_1_Original_Image.jpg"
+    },
+    {
+      "caption": "(b)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28357/assets/figures/Canny/step_2_Enhanced_Image_BCET.jpg"
+    },
+    {
+      "caption": "(c)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28357/assets/figures/Canny/step_3_Segmented_Image_K-means.jpg"
+    },
+    {
+      "caption": "(d)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28357/assets/figures/Canny/step_4_Edge_Detected_Image_Canny.jpg"
+    },
+    {
+      "caption": "Figure 2 : The CNN-MRI architecture used in the experiments.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28357/assets/x1.png"
+    },
+    {
+      "caption": "Figure 3 : The voting system overview.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28357/assets/figures/system.png"
+    },
+    {
+      "caption": "(a) Glioma",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28357/assets/figures/Dataset_Sample/glioma/1844.jpg"
+    },
+    {
+      "caption": "(a) Glioma",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28357/assets/figures/Dataset_Sample/glioma/1844.jpg"
+    },
+    {
+      "caption": "(b) Meningioma",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28357/assets/figures/Dataset_Sample/meningioma/199.jpg"
+    },
+    {
+      "caption": "(c) Pituitary",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28357/assets/figures/Dataset_Sample/pituitary/1049.jpg"
+    },
+    {
+      "caption": "(d) No Tumor",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28357/assets/figures/Dataset_Sample/notumor/Te-no_0012.jpg"
+    }
+  ],
+  "ar5iv_success": true
+}

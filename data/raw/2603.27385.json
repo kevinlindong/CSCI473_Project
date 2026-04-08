@@ -1,0 +1,100 @@
+{
+  "paper_id": "2603.27385",
+  "title": "Active In-Context Learning for Tabular Foundation Models",
+  "abstract": "Active learning (AL) reduces labeling cost by querying informative samples, but in tabular settings its cold-start gains are often limited because uncertainty estimates are unreliable when models are trained on very few labels. Tabular foundation models such as TabPFN provide calibrated probabilistic predictions via in-context learning (ICL), i.e., without task-specific weight updates, enabling an AL regime in which the labeled context - rather than parameters - is iteratively optimized. We formalize Tabular Active In-Context Learning (Tab-AICL) and instantiate it with four acquisition rules: uncertainty (TabPFN-Margin), diversity (TabPFN-Coreset), an uncertainty-diversity hybrid (TabPFN-Hybrid), and a scalable two-stage method (TabPFN-Proxy-Hybrid) that shortlists candidates using a lightweight linear proxy before TabPFN-based selection. Across 20 classification benchmarks, Tab-AICL improves cold-start sample efficiency over retrained gradient-boosting baselines (CatBoost-Margin and XGBoost-Margin), measured by normalized AULC up to 100 labeled samples.",
+  "authors": [
+    "Wilailuck Treerath",
+    "Fabrizio Pittorino"
+  ],
+  "date": "2026-03-28T19:37:13+00:00",
+  "url": "http://arxiv.org/abs/2603.27385v1",
+  "categories": [
+    "cs.LG"
+  ],
+  "primary_category": "cs.LG",
+  "sections": [
+    {
+      "heading": "IIntroduction",
+      "text": "Active learning (AL) aims to reduce annotation cost by selecting informative samples to label [ 13 , 11 ] .\nIn tabular classification, however, AL often provides limited benefit in the cold-start regime because acquisition functions depend on predictive uncertainty, which is unstable when models are fit on very small labeled sets.\n\nTabular foundation models such as TabPFN [ 7 , 8 ] provide strong probabilistic predictions via in-context learning (ICL), i.e., without task-specific gradient-based training.\nThis changes the AL perspective: instead of repeatedly re-training a model after each query, we can treat the labeled set as a context that is iteratively refined to improve predictions.\nYet, using ICL inside an AL loop raises two practical issues.\nFirst, TabPFN inference scales quadratically with context length, making pool-wide scoring expensive for large unlabeled sets.\nSecond, uncertainty-based querying can be brittle on noisy or imbalanced pools, where high uncertainty may correspond to outliers rather than informative boundary points.\n\nWe propose Tabular Active In-Context Learning (Tab-AICL) , a framework that instantiates common acquisition principles within TabPFN-based ICL.\nWe consider four acquisition rules: uncertainty sampling (TabPFN-Margin), diversity sampling (TabPFN-Coreset), an uncertainty\u2013diversity hybrid (TabPFN-Hybrid), and a scalable two-stage variant (TabPFN-Proxy-Hybrid) that shortlists candidates with a lightweight logistic-regression proxy before TabPFN-based selection.\n\nWe evaluate Tab-AICL on 20 tabular classification benchmarks with 10 random seeds, focusing on cold-start performance up to 100 labeled samples.\nAcross datasets, Tab-AICL improves normalized area under the learning curve (AULC) over strong retrained baselines with fixed hyperparameters (CatBoost-Margin and XGBoost-Margin) on a majority of tasks.\nConsistent with the diversity of tabular data regimes, no single acquisition rule dominates: margin sampling is strong on clean/structured datasets, hybrid selection often helps on clustered geometries, and proxy-hybrid is more robust when uncertainty sampling tends to fixate on outliers."
+    },
+    {
+      "heading": "IIITabular Active In-Context Learning",
+      "text": "Tab-AICL instantiates AL with an in-context tabular foundation model: the predictor is fixed, and learning proceeds by expanding the labeled context given at inference time.\nThe active loop selects which labeled examples to acquire and add to the context, rather than updating model parameters."
+    },
+    {
+      "heading": "III-AProblem Formulation",
+      "text": "Let \ud835\udcb0 = { x 1 , \u2026 , x M } \\mathcal{U}=\\{x_{1},\\dots,x_{M}\\} denote an unlabeled pool and \u2112 0 \\mathcal{L}_{0} a small labeled set.\nAt iteration t t , an acquisition rule selects a batch \ud835\udcac t \u2282 \ud835\udcb0 \\mathcal{Q}_{t}\\subset\\mathcal{U} of size B B to be labeled by an oracle.\nThe labeled context is updated as \u2112 t + 1 = \u2112 t \u222a { ( x , y ) : x \u2208 \ud835\udcac t } , \\mathcal{L}_{t+1}\\;=\\;\\mathcal{L}_{t}\\cup\\{(x,y)\\;:\\;x\\in\\mathcal{Q}_{t}\\}, and queried points are removed from the pool.\nGiven a fixed model \u2133 \\mathcal{M} capable of in-context learning (TabPFN), the objective is to maximize predictive performance on a held-out test set as a function of the labeling budget | \u2112 t | |\\mathcal{L}_{t}| ."
+    },
+    {
+      "heading": "III-BData Preprocessing",
+      "text": "We apply a single preprocessing pipeline \u03a6 \u200b ( \u22c5 ) \\Phi(\\cdot) to all methods.\nFeatures are treated as categorical or numerical using dataset metadata; if metadata are unavailable, integer-valued features with less than 20 unique values are treated as categorical.\nNumerical features are mean-imputed (computed on the training pool) and standardized with StandardScaler .\nCategorical features are mode-imputed and encoded with OrdinalEncoder .\nAll preprocessing parameters are fit on the training pool only (before querying) and then applied to both \ud835\udcb0 \\mathcal{U} and the test set to avoid leakage.\nThe feature counts in Table I refer to the dimensionality after preprocessing."
+    },
+    {
+      "heading": "III-CAcquisition Strategies",
+      "text": "We consider four acquisition rules that emphasize (i)\u00a0uncertainty, (ii)\u00a0diversity, or (iii)\u00a0their combination under computational constraints."
+    },
+    {
+      "heading": "IV-AActive Learning Protocol",
+      "text": "We simulate pool-based batch AL under a fixed labeling budget. For each dataset, we create a stratified 70/30 split into an unlabeled training pool \ud835\udcb0 \\mathcal{U} and a held-out test set, which is never used for acquisition or preprocessing decisions. The initial labeled context \u2112 0 \\mathcal{L}_{0} contains one randomly sampled instance per class. At each round, an acquisition rule selects a batch \ud835\udcac t \u2282 \ud835\udcb0 \\mathcal{Q}_{t}\\subset\\mathcal{U} of size B B without replacement, an oracle reveals the labels, and we update \u2112 t + 1 = \u2112 t \u222a { ( x , y ) : x \u2208 \ud835\udcac t } \\mathcal{L}_{t+1}=\\mathcal{L}_{t}\\cup\\{(x,y):x\\in\\mathcal{Q}_{t}\\} and \ud835\udcb0 \u2190 \ud835\udcb0 \u2216 \ud835\udcac t \\mathcal{U}\\leftarrow\\mathcal{U}\\setminus\\mathcal{Q}_{t} . The loop terminates when | \u2112 t | = N max = 100 |\\mathcal{L}_{t}|=N_{\\max}=100 .\nFor very small datasets, we additionally stop once 50% of the original unlabeled pool is queried."
+    },
+    {
+      "heading": "IV-BExperimental Design and Evaluation",
+      "text": "We repeat the full pipeline for 10 random seeds, resampling both the split and the initialization, and report mean \u00b1 \\pm std. We evaluate batch sizes B \u2208 { 5 , 10 , 15 , 20 } B\\in\\{5,10,15,20\\} to probe the trade-off between update frequency and within-batch diversity. To compare the cold-start efficiency of different methodologies, we report the normalized area under the learning curve (AULC) up to N max N_{\\max} as the primary metric. Let y t y_{t} denote the test-set Cohen \u03ba \\kappa after round t t , when | \u2112 t | = n t |\\mathcal{L}_{t}|=n_{t} . We compute AULC norm = 1 N max \u2212 n 0 \u200b \u2211 t = 1 T y t + y t \u2212 1 2 \u200b ( n t \u2212 n t \u2212 1 ) , \\mathrm{AULC}_{\\mathrm{norm}}=\\frac{1}{N_{\\max}-n_{0}}\\sum_{t=1}^{T}\\frac{y_{t}+y_{t-1}}{2}\\,(n_{t}-n_{t-1}), (2) which corresponds to the average \u03ba \\kappa over the cold-start acquisition trajectory. We also report final \u03ba \\kappa at N max N_{\\max} and ROC AUC; for multi-class problems, ROC AUC is computed one-vs-rest with macro-averaging.\nFor significance testing, we use paired Wilcoxon signed-rank tests on per-seed AULC norm \\mathrm{AULC}_{\\mathrm{norm}} scores. To control multiplicity across datasets, we apply Benjamini-Hochberg FDR correction and consider differences significant with the BH-adjusted p p -value p adj < 0.05 p_{\\mathrm{adj}}<0.05 ."
+    },
+    {
+      "heading": "IV-CBaselines and Reproducibility",
+      "text": "All methods are evaluated within the same AL protocol (identical splits, initialization \u2112 0 \\mathcal{L}_{0} , budget, and query-without-replacement). For TabPFN-based methods, we use TabPFN ( tabpfn Python package v6.2.0) with n estimators = 32 n_{\\mathrm{estimators}}=32 throughout. We report four Tab-AICL acquisition rules (TabPFN-Margin, TabPFN-Coreset, TabPFN-Hybrid, TabPFN-Proxy-Hybrid) and a passive TabPFN-Random baseline that uses the same TabPFN configuration but selects \ud835\udcac t \\mathcal{Q}_{t} uniformly at random. The oracle is simulated: ground-truth labels from the dataset are revealed upon query.\n\nAs retrained baselines, we include CatBoost and XGBoost with margin-based querying, where the model is refit from scratch at each round on the current labeled set \u2112 t \\mathcal{L}_{t} .\nTo avoid per-dataset tuning, which would be impractical under a realistic cold-start protocol, we fix hyperparameters for stability in low-data regimes. n estimators = 2000 n_{\\mathrm{estimators}}=2000 , learning \u200b _ \u200b rate = 0.05 \\mathrm{learning\\_rate}=0.05 , max \u200b _ \u200b depth = 6 \\mathrm{max\\_depth}=6 , and early \u200b _ \u200b stopping \u200b _ \u200b rounds = 50 \\mathrm{early\\_stopping\\_rounds}=50 .\nWe use scikit-learn for preprocessing and logistic regression, and the official catboost and xgboost packages.\nFinally, we include a semi-supervised Label Spreading baseline [ 17 ] with a kNN kernel ( k = 7 k=7 ) and clamping factor \u03b1 = 0.2 \\alpha=0.2 , paired with random acquisition to isolate the effect of the learner from the query rule."
+    },
+    {
+      "heading": "IV-DDatasets",
+      "text": "We benchmark 20 classification datasets from OpenML [ 15 ] and UCI [ 4 ] (Table I ), spanning heterogeneous domains and mixed feature types. To keep runtime comparable across benchmarks and reflect practical labeling budgets, datasets with more than 10,000 instances are uniformly subsampled to 10,000 prior to splitting. All datasets are processed with the standardized pipeline described in Section III , and the reported feature counts correspond to the post-preprocessing dimensionality."
+    },
+    {
+      "heading": "V-ACold-start efficiency vs. baselines",
+      "text": "Table II reports normalized AULC up to 100 labels. In this regime, TabPFN provides a strong cold-start baseline and, when combined with active acquisition, attains the best AULC on 15/20 datasets. Overall, TabPFN-based methods outperform the retrained GBDT baselines on 18/20 datasets, suggesting that ICL inference provides a favorable inductive bias in the low-label setting. Nevertheless, active querying is not uniformly beneficial: on Glass , Bank-Marketing , and Tic-Tac-Toe , TabPFN-Random matches or exceeds the active rules.\nConversely, CatBoost-Margin remains competitive on KC1 and Ilpd , indicating that tree-based biases can still be effective for some tabular datasets even under tight label budgets.\nFor completeness, we report the corresponding final-step performance at the 100-label budget (Cohen\u2019s \u03ba \\kappa and ROC AUC) in Appendix A .\n\nWe test whether TabPFN-Hybrid improves over the strongest retrained GBDT baseline (CatBoost-Margin) using a paired Wilcoxon signed-rank test across seeds ( N seeds = 10 N_{\\text{seeds}}=10 ) on normalized AULC scores. Table III reports per-dataset differences \u0394 \u200b AULC \\Delta\\text{AULC} and the corresponding p p -values after Benjamini\u2013Hochberg correction over the 20 datasets. After correction, TabPFN-Hybrid is significantly better on 8/20 datasets ( p adj < 0.05 p_{\\mathrm{adj}}<0.05 ). In the opposite direction, CatBoost-Margin does not achieve a statistically significant advantage over TabPFN-Hybrid on any dataset under the same protocol.\n\nAcross datasets, the benefit of active querying is not uniform and no single acquisition rule is consistently best. TabPFN-Margin is frequently competitive, while adding a diversity step (TabPFN-Hybrid) can improve performance on some benchmarks. TabPFN-Proxy-Hybrid is often among the more stable options, but it does not dominate. Finally, on several datasets TabPFN-Random matches or exceeds the active rules in the 0\u2013100 label regime, indicating that acquisition can be dataset-sensitive under this budget and protocol."
+    },
+    {
+      "heading": "V-BVisual analysis of learning trajectories",
+      "text": "Figures 1 \u2013 5 complement the table results by showing how methods behave across the acquisition horizon.\nFig. 1 summarizes the distribution of normalized AULC across the 20 datasets: hybrid rules tend to be more consistent across datasets, while pure uncertainty sampling can be more variable depending on the pool.\n\nInspection of representative learning curves highlights recurring patterns.\nOn structured datasets such as Ionosphere (Fig. 2 ), TabPFN-based methods typically reach high performance with fewer queried labels than retrained GBDT baselines in the N < 50 N<50 regime.\nOn noisier benchmarks such as Adult (Fig. 3 ), TabPFN-Proxy-Hybrid often exhibits tighter across-seed variability than uncertainty-only selection, consistent with the proxy stage reducing sensitivity to atypical points.\nOn datasets with clustered or geometric structure, TabPFN-Hybrid frequently maintains strong performance throughout the curve (e.g., Vehicle , Fig. 4 ), suggesting that combining an uncertainty filter with a simple diversity step can be beneficial.\nFinally, some acquisition rules show early differences that narrow as the labeled set grows, indicating that advantages are concentrated in the cold-start region rather than at the final budget.\nOverall, the figures suggest that differences between acquisition rules are driven not only by final performance but by how quickly and how stably they improve during the 0 \u2013 100 100 label regime."
+    },
+    {
+      "heading": "V-CComputational efficiency analysis",
+      "text": "TabPFN-based acquisition can be expensive because scoring candidates requires repeated in-context inference, whose attention cost grows quadratically with the context size. The proposed TabPFN-Proxy-Hybrid reduces the dominant cost by restricting TabPFN scoring to a proxy-defined shortlist. Concretely, a logistic-regression proxy computes uncertainty over the full pool and we retain only an \u03b1 = 0.05 \\alpha=0.05 fraction (clamped as described in Section 3 ); TabPFN then evaluates uncertainty and performs diversity selection only within this subset. Relative to scoring all of \ud835\udcb0 \\mathcal{U} with TabPFN, this reduces the number of TabPFN evaluations by approximately a factor 1 / \u03b1 1/\\alpha (about 20 \u00d7 20\\times when the clamp is inactive).\n\nBatch size influences runtime through two opposing effects: smaller batches increase the number of acquisition iterations, while larger batches increase the context size and the cost of each TabPFN call. In our implementation, intermediate values (e.g., B = 10 B=10 ) provide a practical compromise."
+    },
+    {
+      "heading": "V-DAblation study: batch size",
+      "text": "We study the effect of the query batch size B B on cold-start efficiency by running the same AL protocol with B \u2208 { 5 , 10 , 15 , 20 } B\\in\\{5,10,15,20\\} (Table IV ). As expected, smaller batches can improve normalized AULC because the context is updated more frequently, allowing the model to revise its predictions after fewer newly labeled points. At the same time, performance is reasonably stable across batch sizes on most datasets, with only modest degradation as B B increases. This suggests that Tab-AICL can be used with larger batches \u2013 often preferred in practice to amortize annotation overhead \u2013 without materially changing the main conclusions."
+    },
+    {
+      "heading": "VILimitations, trade-offs, and conclusion",
+      "text": "Tab-AICL reframes active learning for tabular foundation models as context optimization : at each step, we update the labeled context provided to TabPFN rather than retraining task-specific parameters. Across 20 classification benchmarks (10 seeds), TabPFN-based methods are strong cold-start predictors, and in many cases active acquisition improves normalized AULC up to 100 labels relative to both random querying and retrained gradient-boosting baselines under the same protocol. However, the results also show clear trade-offs and regime dependence."
+    },
+    {
+      "heading": "Acknowledgments",
+      "text": "This paper is supported by PNRR-PE-AI FAIR project funded by the NextGeneration EU program."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1: Comprehensive AULC Performance: Area Under Learning Curve scores across 20 datasets, grouped by acquisition strategy.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27385/assets/x1.png"
+    },
+    {
+      "caption": "Figure 2: Learning Curve for Ionosphere: Tab-AICL strategies achieve rapid convergence, with TabPFN-Proxy-Hybrid offering an effective balance of speed and stability.\nThe shaded regions represent 95% confidence intervals across 10 random seeds.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27385/assets/x2.png"
+    },
+    {
+      "caption": "Figure 3: Learning Curve for Adult: The TabPFN-Proxy-Hybrid strategy (pink) demonstrates stable performance and consistent gains.\nNote the narrower confidence intervals compared to other strategies.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27385/assets/x3.png"
+    },
+    {
+      "caption": "Figure 4: Learning Curve for Vehicle: The TabPFN-Hybrid strategy (purple) achieves higher performance than pure uncertainty sampling and baselines.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27385/assets/x4.png"
+    },
+    {
+      "caption": "Figure 5: Learning Curve for Page Blocks: The TabPFN-Margin strategy (blue) achieves rapid convergence, suggesting that for certain data manifolds, pure uncertainty sampling remains an effective approach.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27385/assets/x5.png"
+    }
+  ],
+  "ar5iv_success": true
+}

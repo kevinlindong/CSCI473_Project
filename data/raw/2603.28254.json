@@ -1,0 +1,247 @@
+{
+  "paper_id": "2603.28254",
+  "title": "MuonEq: Balancing Before Orthogonalization with Lightweight Equilibration",
+  "abstract": "Orthogonalized-update optimizers such as Muon improve training of matrix-valued parameters, but existing extensions mostly act either after orthogonalization by rescaling updates or before it with heavier whitening-based preconditioners. We introduce {\\method}, a lightweight family of pre-orthogonalization equilibration schemes for Muon in three forms: two-sided row/column normalization (RC), row normalization (R), and column normalization (C). These variants rebalance the momentum matrix before finite-step Newton--Schulz using row/column squared-norm statistics and only $\\mathcal{O}(m+n)$ auxiliary state. We show that finite-step orthogonalization is governed by input spectral properties, especially stable rank and condition number, and that row/column normalization is a zeroth-order whitening surrogate that removes marginal scale mismatch. For the hidden matrix weights targeted by {\\method}, the row-normalized variant R is the natural default and preserves the $\\widetilde{\\mathcal{O}}(T^{-1/4})$ stationarity guarantee of Muon-type methods. In LLaMA2 pretraining on C4, the default R variant consistently outperforms Muon on 130M and 350M models, yielding faster convergence and lower validation perplexity.",
+  "authors": [
+    "Da Chang",
+    "Qiankun Shi",
+    "Lvgang Zhang",
+    "Yu Li",
+    "Ruijie Zhang",
+    "Yao Lu",
+    "Yongxiang Liu",
+    "Ganzhao Yuan"
+  ],
+  "date": "2026-03-30T10:28:18+00:00",
+  "url": "http://arxiv.org/abs/2603.28254v1",
+  "categories": [
+    "cs.LG",
+    "stat.ML"
+  ],
+  "primary_category": "cs.LG",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "As the computational and data costs of large language model pretraining grow, optimization increasingly determines sample efficiency, throughput, and scalability. Beyond coordinate-wise adaptive methods such as AdamW (Loshchilov and Hutter, 2019 ) , Adan (Xie et al. , 2024 ) , and MARS (Liu et al. , 2025b ) , recent work has shifted toward a geometric view of matrix-valued updates. Muon ( Jordan et al. , ) , for instance, uses a Newton\u2013Schulz approximation to the polar factor of the momentum matrix to produce spectrally aligned updates (Bernstein and Newhouse, 2024 ; Chen et al. , 2025 ) . It has shown strong empirical scalability in LLM pretraining, often improving the trade-off among data efficiency, compute, and wall-clock time at fixed target loss (Liu et al. , 2025a ; Shah et al. , 2025 ) . Recent theory further characterizes Muon as spectral-norm steepest descent and establishes nonconvex convergence guarantees for both exact and approximate orthogonalization (Chang et al. , 2025 ; Sato et al. , 2025 ; Li and Hong, 2025 ; Shen et al. , 2025 ; Sfyraki and Wang, 2025 ; Gyu Yeol Kim, 2026 ; Shulgin et al. , 2025 ) .\n\nFollow-up work around Muon mainly proceeds along two directions. (i) Post-orthogonalization rescaling augments an already constructed orthogonal update with additional magnitude correction. Muon+ (Zhang et al. , 2026b ) , NorMuon (Li et al. , 2025 ) , and AdaMuon (Si et al. , 2025 ) respectively add row/column normalization, neuron-wise normalization, or element-wise variance adaptation after orthogonalization. These variants show that orthogonal updates remain compatible with later adaptive scaling, but they do not change the matrix that finite-step Newton\u2013Schulz actually sees. (ii) Pre-orthogonalization geometric correction instead modifies the coordinate system before spectral optimization. SOAP (Vyas et al. , 2024 ) connects Shampoo (Gupta et al. , 2018 ) with Adam/Adafactor (Shazeer and Stern, 2018 ; Kingma and Ba, 2015 ) through a preconditioned basis, while FISMO (Xu et al. , 2026a ) and Mousse (Zhang et al. , 2026c ) further perform spectral optimization in whitened coordinates. These methods suggest that improving geometry before orthogonalization is the more direct lever, but doing so usually requires maintaining left and right preconditioners together with extra matrix operations such as eigendecomposition, inverse power iteration, and whitening/dewhitening maps.\n\nThese works motivate a more precise question: Is there a lightweight design between post-orthogonalization rescaling and full whitening-based preconditioning that directly improves the input geometry for orthogonalization?\n\nOur starting point is that, in Muon, the relevant object is not only the exact polar factor but also the finite-step Newton\u2013Schulz approximation used in practice. Section 3.1 shows that both the convergence speed of Newton\u2013Schulz iterations and the gap between finite-step iterations and exact orthogonalization are governed by input spectral geometry, especially stable rank and condition number. This points to a simple design principle: improve the geometry before orthogonalization, but do so with the smallest possible intervention. A natural formalization is the optimal diagonal preconditioning problem: min \ud835\udc03 1 , \ud835\udc03 2 \u227b 0 \u2061 \u03ba \u200b ( \ud835\udc03 1 1 / 2 \u200b \ud835\udc00\ud835\udc03 2 \u2212 1 / 2 ) . \\displaystyle\\min_{\\mathbf{D}_{1},\\mathbf{D}_{2}\\succ 0}\\kappa\\bigl(\\mathbf{D}_{1}^{1/2}\\mathbf{A}\\mathbf{D}_{2}^{-1/2}\\bigr). Qu et al. (Qu et al. , 2025 ) derive an optimal diagonal preconditioner, but applying it online typically requires an auxiliary iterative solve. Classical row/column equilibration is less exact yet much lighter-weight (Ruiz, 2001 ) ; moreover, recent operator-geometry results identify row and column normalization as steepest-descent directions under the p \u2192 \u221e p\\to\\infty and 1 \u2192 q 1\\to q geometries, respectively (Xu et al. , 2026b ) . This makes diagonal equilibration a natural lightweight way to improve the matrix presented to Muon-style orthogonalization.\n\nBased on this observation, we propose MuonEq , a lightweight family of pre-orthogonalization equilibration schemes for Muon. MuonEq has three forms: two-sided row/column normalization (RC), row normalization (R), and column normalization (C). All three act directly on the momentum matrix before Newton\u2013Schulz using only row/column squared-norm statistics and \ud835\udcaa \u200b ( m + n ) \\mathcal{O}(m+n) auxiliary state. Detailed justification is deferred to Section 3 : Theorem 3.1 quantifies the spectral sensitivity of finite-step orthogonalization, Proposition 3.2 shows that row/column normalization is a zeroth-order surrogate for whitening, and Proposition 3.4 together with Theorem 3.5 clarify the trade-off between stronger two-sided equilibration and cleaner one-sided geometry. For the hidden Transformer weight matrices targeted by MuonEq , recent architecture-aware analyses by (Xu et al. , 2026b ) identify row-sided geometry as the natural one-sided choice, whereas column-sided geometry is more closely associated with embedding matrices; accordingly, we adopt R as the default and treat RC and C as companion forms for analysis and ablation. Compared with Muon+ (Zhang et al. , 2026b ) , which rescales the update after orthogonalization, MuonEq modifies the matrix fed into orthogonalization. Unlike whitening-based methods such as FISMO and Mousse (Xu et al. , 2026a ; Zhang et al. , 2026c ) , it avoids Kronecker factors, matrix-valued second-order statistics, eigendecomposition, and momentum transport, and requires only \ud835\udcaa \u200b ( m + n ) \\mathcal{O}(m+n) auxiliary state.\n\nOur contributions are threefold. 1. First, we propose MuonEq , a lightweight family of pre-orthogonalization equilibration schemes for Muon with three forms: RC, R, and C; these variants rebalance the matrix before Newton\u2013Schulz using only row/column squared-norm statistics, with R as the default for hidden matrix weights. 2. Second, we show that finite-step Newton\u2013Schulz is governed by the input spectrum, especially stable rank and condition number; that row/column normalization acts as a zeroth-order surrogate for whitening; and that RC and R admit a clear trade-off between stronger spectral correction and cleaner one-sided convergence structure, with the default R variant satisfying a \ud835\udcaa ~ \u200b ( T \u2212 1 / 4 ) \\widetilde{\\mathcal{O}}(T^{-1/4}) nonconvex guarantee under standard assumptions. 3. Third, empirically, the default R variant consistently outperforms Muon across model sizes and token budgets, while ablations over RC, R, and C show that R is the strongest default form for the hidden-weight setting targeted by MuonEq ."
+    },
+    {
+      "heading": "2Method",
+      "text": "Notation and setup. Scalars are denoted by non-bold letters, vectors by bold lowercase letters, and matrices by bold uppercase letters. On \u211d d \\mathbb{R}^{d} , we use the Euclidean inner product \u27e8 \ud835\udc31 , \ud835\udc32 \u27e9 2 := \ud835\udc31 \u22a4 \u200b \ud835\udc32 \\langle\\mathbf{x},\\mathbf{y}\\rangle_{2}:=\\mathbf{x}^{\\top}\\mathbf{y} and norm \u2016 \ud835\udc31 \u2016 2 \\|\\mathbf{x}\\|_{2} . For matrices, \u27e8 \ud835\udc00 , \ud835\udc01 \u27e9 F := tr \u2061 ( \ud835\udc00 \u22a4 \u200b \ud835\udc01 ) \\langle\\mathbf{A},\\mathbf{B}\\rangle_{F}:=\\operatorname{tr}(\\mathbf{A}^{\\top}\\mathbf{B}) and \u2016 \ud835\udc00 \u2016 F \\|\\mathbf{A}\\|_{F} denote the Frobenius inner product and norm, and \u2016 \ud835\udc00 \u2016 \u2217 \\|\\mathbf{A}\\|_{*} denotes the nuclear norm. We write [ m ] := { 1 , 2 , \u2026 , m } [m]:=\\{1,2,\\ldots,m\\} and let \u2115 \\mathbb{N} be the set of non-negative integers. The model parameter is a matrix \ud835\udc17 \u2208 \u211d m \u00d7 n \\mathbf{X}\\in\\mathbb{R}^{m\\times n} , and, unless otherwise stated, we assume m \u2265 n m\\geq n . For any matrix \ud835\udc00 \u2208 \u211d m \u00d7 n \\mathbf{A}\\in\\mathbb{R}^{m\\times n} with rank r \u2264 n r\\leq n , we write its compact singular value decomposition as \ud835\udc00 = \ud835\udc14 \u200b \u03a3 \u200b \ud835\udc15 \u22a4 \\mathbf{A}=\\mathbf{U}\\Sigma\\mathbf{V}^{\\top} , where \u03a3 = diag \u2061 ( \u03c3 1 , \u2026 , \u03c3 r ) \\Sigma=\\operatorname{diag}(\\sigma_{1},\\dots,\\sigma_{r}) and \u03c3 1 \u2265 \u22ef \u2265 \u03c3 r > 0 \\sigma_{1}\\geq\\cdots\\geq\\sigma_{r}>0 , and define Orth \u2061 ( \ud835\udc00 ) := \ud835\udc14\ud835\udc15 \u22a4 \\operatorname{Orth}(\\mathbf{A}):=\\mathbf{U}\\mathbf{V}^{\\top} . In finite-data form, the training objective can be written as f \u200b ( \ud835\udc17 ) := 1 N \u200b \u2211 i \u2208 [ N ] f i \u200b ( \ud835\udc17 ) f(\\mathbf{X}):=\\frac{1}{N}\\sum_{i\\in[N]}f_{i}(\\mathbf{X}) , where f i \u200b ( \ud835\udc17 ) f_{i}(\\mathbf{X}) is the loss associated with the i i -th sample \ud835\udc33 i \\mathbf{z}_{i} . Equivalently, we use the stochastic formulation min \ud835\udc17 \u2208 \u211d m \u00d7 n \u2061 f \u200b ( \ud835\udc17 ) , f \u200b ( \ud835\udc17 ) = \ud835\udd3c \u03be \u223c \ud835\udc9f \u200b [ f \u200b ( \ud835\udc17 ; \u03be ) ] , \\min_{\\mathbf{X}\\in\\mathbb{R}^{m\\times n}}f(\\mathbf{X}),\\qquad f(\\mathbf{X})=\\mathbb{E}_{\\xi\\sim\\mathcal{D}}[f(\\mathbf{X};\\xi)], (1) where f f may be nonconvex, \u03be \\xi is independent of \ud835\udc17 \\mathbf{X} , and \ud835\udd3c \u03be \u200b [ \u22c5 ] \\mathbb{E}_{\\xi}[\\cdot] denotes expectation with respect to \u03be \\xi . For any matrix \ud835\udc00 \\mathbf{A} with singular values { \u03c3 i \u200b ( \ud835\udc00 ) } i = 1 r \\{\\sigma_{i}(\\mathbf{A})\\}_{i=1}^{r} , we further use sr \u2061 ( \ud835\udc00 ) := \u2016 \ud835\udc00 \u2016 F 2 \u2016 \ud835\udc00 \u2016 2 2 , \u03ba 2 \u200b ( \ud835\udc00 ) := \u03c3 1 \u200b ( \ud835\udc00 ) \u03c3 r \u200b ( \ud835\udc00 ) , p i := \u03c3 i \u200b ( \ud835\udc00 ) 2 \u2016 \ud835\udc00 \u2016 F 2 , H \u200b ( p ) := \u2212 \u2211 i = 1 r p i \u200b log \u2061 p i . \\operatorname{sr}(\\mathbf{A}):=\\frac{\\|\\mathbf{A}\\|_{F}^{2}}{\\|\\mathbf{A}\\|_{2}^{2}},\\kappa_{2}(\\mathbf{A}):=\\frac{\\sigma_{1}(\\mathbf{A})}{\\sigma_{r}(\\mathbf{A})},p_{i}:=\\frac{\\sigma_{i}(\\mathbf{A})^{2}}{\\|\\mathbf{A}\\|_{F}^{2}},H(p):=-\\sum_{i=1}^{r}p_{i}\\log p_{i}.\n\nMuon as finite-step orthogonalized momentum. For matrix parameters, Muon constructs the update by orthogonalizing the momentum matrix. Let \ud835\udc0c t \\mathbf{M}_{t} denote the momentum at iteration t t . The abstract Muon update is \ud835\udc14 t = Orth \u2061 ( \ud835\udc0c ~ t ) , \ud835\udc17 t + 1 = \ud835\udc17 t \u2212 \u03b7 t \u200b \ud835\udc14 t , \\mathbf{U}_{t}=\\operatorname{Orth}(\\tilde{\\mathbf{M}}_{t}),\\qquad\\mathbf{X}_{t+1}=\\mathbf{X}_{t}-\\eta_{t}\\mathbf{U}_{t}, (2) where \ud835\udc0c ~ t \\tilde{\\mathbf{M}}_{t} is either the standard momentum or its Nesterov variant ( Jordan et al. , ; Liu et al. , 2025a ; Chang et al. , 2025 ) . In practice, Orth \u2061 ( \ud835\udc0c ~ t ) \\operatorname{Orth}(\\tilde{\\mathbf{M}}_{t}) is implemented by a small fixed number of Newton\u2013Schulz iterations rather than exact polar decomposition ( Jordan et al. , ) . The design question is therefore not only what direction is desirable in the exact limit, but also what matrix should be fed into finite-step Newton\u2013Schulz.\n\nPre-orthogonalization equilibration family. MuonEq inserts diagonal preconditioning before orthogonalization: \ud835\udc0c ^ t = DiagPre \u200b ( \ud835\udc0c ~ t ; s ) , \ud835\udc14 t = Orth \u2061 ( \ud835\udc0c ^ t ) , \ud835\udc17 t + 1 = \ud835\udc17 t \u2212 \u03b7 t \u200b \ud835\udc14 t , \\hat{\\mathbf{M}}_{t}=\\textbf{DiagPre}(\\tilde{\\mathbf{M}}_{t};s),\\qquad\\mathbf{U}_{t}=\\operatorname{Orth}(\\hat{\\mathbf{M}}_{t}),\\qquad\\mathbf{X}_{t+1}=\\mathbf{X}_{t}-\\eta_{t}\\mathbf{U}_{t}, (3) where the mode s \u2208 { RC , R , C } s\\in\\{\\mathrm{RC},\\mathrm{R},\\mathrm{C}\\} selects one of three equilibration forms.\nLet \ud835\udc03 r , t = diag \u2061 ( rowsum \u2061 ( \ud835\udc0c ~ t \u2299 \ud835\udc0c ~ t ) + \u03b5 ) , \ud835\udc03 c , t = diag \u2061 ( colsum \u2061 ( \ud835\udc0c ~ t \u2299 \ud835\udc0c ~ t ) + \u03b5 ) . \\mathbf{D}_{r,t}=\\operatorname{diag}\\bigl(\\operatorname{rowsum}(\\tilde{\\mathbf{M}}_{t}\\odot\\tilde{\\mathbf{M}}_{t})+\\varepsilon\\bigr),\\qquad\\mathbf{D}_{c,t}=\\operatorname{diag}\\bigl(\\operatorname{colsum}(\\tilde{\\mathbf{M}}_{t}\\odot\\tilde{\\mathbf{M}}_{t})+\\varepsilon\\bigr). We consider the following three maps: DiagPre \u200b ( \ud835\udc0c ~ t ; s ) = { \ud835\udc03 r , t \u2212 1 / 2 \u200b \ud835\udc0c ~ t \u200b \ud835\udc03 c , t \u2212 1 / 2 , s = RC , \ud835\udc03 r , t \u2212 1 / 2 \u200b \ud835\udc0c ~ t , s = R , \ud835\udc0c ~ t \u200b \ud835\udc03 c , t \u2212 1 / 2 , s = C . \\textbf{DiagPre}(\\tilde{\\mathbf{M}}_{t};s)=\\begin{cases}\\mathbf{D}_{r,t}^{-1/2}\\tilde{\\mathbf{M}}_{t}\\mathbf{D}_{c,t}^{-1/2},&s=\\mathrm{RC},\\\\\n\\mathbf{D}_{r,t}^{-1/2}\\tilde{\\mathbf{M}}_{t},&s=\\mathrm{R},\\\\\n\\tilde{\\mathbf{M}}_{t}\\mathbf{D}_{c,t}^{-1/2},&s=\\mathrm{C}.\\end{cases} (4) Since these maps use only row and column squared norms, the extra state is \ud835\udcaa \u200b ( m + n ) \\mathcal{O}(m+n) , in the factorized spirit of Adafactor (Shazeer and Stern, 2018 ) . Unlike methods that rely on matrix-valued or adaptive preconditioners (Gupta et al. , 2018 ; Shazeer and Stern, 2018 ; Kingma and Ba, 2015 ; Xu et al. , 2026a ) , MuonEq changes only the matrix fed to Newton\u2013Schulz. Relative to Muon ( Jordan et al. , ) , the orthogonalization routine itself is unchanged; relative to Muon+, NorMuon, and AdaMuon (Zhang et al. , 2026b ; Li et al. , 2025 ; Si et al. , 2025 ) , MuonEq rebalances the input rather than rescales the output.\n\nWhy the default variant is R. This choice is block-dependent rather than a universal preference for row normalization. The trade-off is guided by \u2016 NS K \u200b ( S \u200b ( \ud835\udc0c ) ) \u2212 Orth \u200b ( \ud835\udc0c ) \u2016 F \u2264 \\displaystyle\\left\\|\\mathrm{NS}_{K}(S(\\mathbf{M}))-\\mathrm{Orth}(\\mathbf{M})\\right\\|_{F}\\leq \u2016 NS K \u200b ( S \u200b ( \ud835\udc0c ) ) \u2212 Orth \u200b ( S \u200b ( \ud835\udc0c ) ) \u2016 F \u23df finite-step approximation error \\displaystyle\\underbrace{\\left\\|\\mathrm{NS}_{K}(S(\\mathbf{M}))-\\mathrm{Orth}(S(\\mathbf{M}))\\right\\|_{F}}_{\\text{finite-step approximation error}} (5) + \u2016 Orth \u200b ( S \u200b ( \ud835\udc0c ) ) \u2212 Orth \u200b ( \ud835\udc0c ) \u2016 F \u23df preconditioning bias , \\displaystyle+\\underbrace{\\left\\|\\mathrm{Orth}(S(\\mathbf{M}))-\\mathrm{Orth}(\\mathbf{M})\\right\\|_{F}}_{\\text{preconditioning bias}}, where S S is one of RC, R, or C. The first term is the finite-step Newton\u2013Schulz error and depends on the spectrum of S \u200b ( \ud835\udc0c ) S(\\mathbf{M}) ; Theorem 3.1 therefore explains why the more aggressive two-sided RC map often gives the largest spectral correction. The second term is the bias induced by preprocessing. Proposition 3.2 shows that row/column normalization is a zeroth-order surrogate for whitening, removing marginal scale mismatch before orthogonalization. Among the one-sided variants, recent operator-geometry analyses identify row-sided geometry as the natural choice for the hidden Transformer weight matrices targeted by MuonEq , whereas column-sided geometry is more closely associated with embedding matrices (Xu et al. , 2026b ) . This makes R the most appropriate default in our setting. Consistent with this picture, Proposition 3.4 characterizes the pure RC regime as a stronger two-sided spectral corrector, whereas Theorem 3.5 gives the cleanest nonconvex guarantee for the row-normalized variant."
+    },
+    {
+      "heading": "3Analysis",
+      "text": "The analysis follows the logic of MuonEq : Section 3.1 establishes the spectrum sensitivity of finite-step Newton\u2013Schulz; Section 3.2 interprets row/column normalization as a zeroth-order surrogate for whitening; and Section 3.3 motivates the R rather than RC, with row normalization admitting a clean stochastic nonconvex guarantee. Together, Theorem 3.1 , Proposition 3.2 , Proposition 3.4 , and Theorem 3.5 justify the MuonEq family and the default choice of R."
+    },
+    {
+      "heading": "3.1Why spectral geometry matters for finite-step Newton\u2013Schulz orthogonalization",
+      "text": "For clarity, the theorem below is stated for the wide case p \u2264 q p\\leq q ; the tall case follows by transposition.\n\nTheorem 3.1 shows that broad spectra slow finite-step orthogonalization by delaying contraction along small singular directions. To isolate this effect, Figure 1 uses random Gaussian matrices with controlled shapes and spectral spreads. The top row shows the finite-step error in Theorem 3.1 , and the bottom row shows the corresponding condition numbers before and after normalization.\n\nTo verify the same mechanism on real training trajectories, Figure 2 uses pre-NS momentum matrices from a 2.6B-token Muon run on LLaMA2-130M Touvron et al. ( 2023 ) trained on C4 (Raffel et al. , 2020 ) . The top row shows the module-wise median of the error in Theorem 3.1 , and the bottom row shows the corresponding mean."
+    },
+    {
+      "heading": "3.2Row/column normalization as a zeroth-order surrogate for whitening",
+      "text": "The next result shows that normalization is not merely heuristic rescaling. It is the leading-order term of exact whitening/orthogonalization when the normalized Gram matrix is close to identity. Consequently, normalization removes marginal scale mismatch first and leaves only the correlation correction to the polar step.\n\nTogether, Proposition 3.2 , Corollary 3.3 , and Remark 3.2 explain the division of labor in MuonEq : normalization removes marginal-scale mismatch at zeroth order, and the subsequent Newton\u2013Schulz orthogonalization handles the remaining correlation structure. This is exactly why DiagPre Eq. ( 4 ) is a meaningful lightweight surrogate for a much more expensive whitening step."
+    },
+    {
+      "heading": "3.3Convergence analysis of the RC and R variants",
+      "text": "To analyze the MuonEq family, we focus on the two variants that are most informative theoretically: the two-sided RC map and the default row-normalized R map. RC is the strongest spectral corrector among the three forms but induces a more involved alignment term, whereas R yields the cleanest one-sided geometry and convergence argument. Accordingly, Proposition 3.4 studies the pure RC variant, and Theorem 3.5 provides the main guarantee for the default R variant. The column-normalized C map is retained as the embedding-aligned companion in the method family and empirical ablations.\n\nThese assumptions are standard in analyses of adaptive and Muon-type methods (Xie et al. , 2024 ; Chen et al. , 2025 ; Li et al. , 2023 ; Wang et al. , 2023 ; Chang and Yuan, 2025 ; Huang et al. , 2025 ) ."
+    },
+    {
+      "heading": "4.1Main Result",
+      "text": "In this section, we evaluate the performance of the proposed MuonEq optimizers on LLM pretraining. All experiments are conducted using 64 Ascend 910C (64GB) NPUs. Detailed experimental settings are provided in Appendix J .\n\n\u25b6 \\blacktriangleright LLaMA2 on C4 Dataset. We compare MuonEq with AdamW, MARS-AdamW, Muon, and Muon-Nes on LLaMA2-130M and LLaMA2-350M trained on C4 Raffel et al. ( 2020 ) . For the main comparison, LLaMA2-130M and LLaMA2-350M are trained for 10.5B and 21.0B tokens, respectively. We tune the learning rate using shorter pilot runs of 2.6B tokens for 130M and 7.5B tokens for 350M, with search grids { 5 \u200b e \u2212 4 , 1 \u200b e \u2212 3 , 2 \u200b e \u2212 3 , 3 \u200b e \u2212 3 , 5 \u200b e \u2212 3 , 8 \u200b e \u2212 3 , 1 \u200b e \u2212 2 } \\{5\\mathrm{e}{-4},1\\mathrm{e}{-3},2\\mathrm{e}{-3},3\\mathrm{e}{-3},5\\mathrm{e}{-3},8\\mathrm{e}{-3},1\\mathrm{e}{-2}\\} and { 5 \u200b e \u2212 4 , 1 \u200b e \u2212 3 , 1.5 \u200b e \u2212 3 , 2 \u200b e \u2212 3 , 3 \u200b e \u2212 3 , 5 \u200b e \u2212 3 } \\{5\\mathrm{e}{-4},1\\mathrm{e}{-3},1.5\\mathrm{e}{-3},2\\mathrm{e}{-3},3\\mathrm{e}{-3},5\\mathrm{e}{-3}\\} , respectively; Appendix J gives the remaining hyperparameters. For MARS-AdamW, we use the best searched value \u03b3 = 0.025 \\gamma=0.025 reported in Liu et al. ( 2025b ) .\n\nFigure 3 reports training loss versus tokens, validation loss versus tokens, and validation loss versus wall-clock time for LLaMA2-130M trained to 10.5B tokens. Figure 4 reports the corresponding validation-loss comparison for LLaMA2-350M trained to 21.0B tokens. Table 1 reports the best validation perplexity, peak memory (GB) usage, and training wall-clock time (Second/Step) for these main comparison runs. Across Figure 3 , Figure 4 , and Table 1 , MuonEq consistently improves over Muon."
+    },
+    {
+      "heading": "4.2Ablation Study",
+      "text": "We ablate the three MuonEq variants RC, R, and C to isolate pre-orthogonalization geometry. All variants use the same optimizer states, scalar hyperparameters, and Newton\u2013Schulz budget; only the pre-orthogonalization diagonal map changes. We take R as the default variant. All ablations run on 4 RTX Pro6000 (96GB) GPUs; details are deferred to Appendix J.2 .\n\nThe results consistently favor R. Among the three static variants, R performs best on both CIFAR-10/ResNet-18 and FineWeb/GPT2-small, reaching 94.53% test accuracy on CIFAR-10 and 24.94 validation perplexity on FineWeb/GPT2-small. RC is competitive but falls short of R, while C is weaker in this hidden-weight setting. Full static-variant comparisons appear in Tables 3 and 3 .\n\nThis pattern matches the trade-off in Eq.\u00a0( 5 ) and the analysis in Section 3 . RC provides stronger two-sided spectral correction and can reduce the finite-step Newton\u2013Schulz term more aggressively, but also introduces larger preconditioning bias. For the hidden matrix weights targeted by MuonEq , the more relevant one-sided geometry is row-sided, so R offers the best trade-off between spectral correction and geometric alignment. This interpretation is consistent with (Xu et al. , 2026b ) . Comparisons with (Pethick et al. , 2025 ) and (Glentis et al. , 2025 ) require care because their row/column terminology depends on parameter layout and task setting; we discuss this point in the appendix J.3 ."
+    },
+    {
+      "heading": "5Related Work",
+      "text": "MuonEq is viewed as a lightweight pre-balanced Muon family rather than as a fully whitened optimizer. It inserts diagonal equilibration before Newton\u2013Schulz orthogonalization and includes three forms: two-sided row/column normalization (RC), row normalization (R), and column normalization (C), with R as the default choice for the hidden matrix weights considered in this paper. All three use only row/column squared-norm statistics and preserve the \ud835\udcaa \u200b ( m + n ) \\mathcal{O}(m+n) state profile.\n\nMuon and orthogonalized-update optimizers. Muon Jordan et al. introduced the core design of orthogonalizing matrix-valued momentum with a small fixed number of Newton\u2013Schulz iterations. Subsequent work has expanded this idea into a broader family of orthogonalized-update optimizers, including post-orthogonalization normalization and rescaling methods such as Muon+, NorMuon, and AdaMuon Zhang et al. ( 2026b ); Li et al. ( 2025 ); Si et al. ( 2025 ) ; adaptive stepsize variants such as AdaGO and NAMO Zhang et al. ( 2025 , 2026a ) ; distributed and communication-aware extensions such as Dion and MuLoCo Ahn et al. ( 2025 ); Th\u00e9rien et al. ( 2025 ) ; reduced-state implementations Gupta et al. ( 2025 ) ; and fine-tuning-oriented variants Page et al. ( 2025 ) . These methods mainly alter the orthogonalized update itself or the surrounding optimization machinery. By contrast, MuonEq modifies the matrix fed into orthogonalization through lightweight pre-orthogonalization equilibration.\n\nTheory of Muon-style methods. Recent theory interprets Muon as steepest descent under spectral-norm or nuclear-norm geometry Bernstein and Newhouse ( 2024 ); Chen et al. ( 2025 ) , establishes stochastic and nonconvex convergence guarantees Shen et al. ( 2025 ); Chang et al. ( 2025 ); Nagashima and Iiduka ( 2026 ); Zhang and Lin ( 2026 ) , and analyzes practical ingredients such as weight decay, critical batch size, and inexact orthogonalization Sato et al. ( 2025 ); Gyu Yeol Kim ( 2026 ); Shulgin et al. ( 2025 ) . This literature is directly relevant to MuonEq because we retain the same finite-step orthogonalization primitive as Muon and change only the geometry of its input. Our analysis further highlights the role of input spectrum in finite-step Newton\u2013Schulz and clarifies how diagonal equilibration trades stronger spectral correction against preprocessing bias.\n\nStructured preconditioning, factorized statistics, and whitening-inspired methods. A separate line of work studies matrix-aware preconditioning, including Shampoo Gupta et al. ( 2018 ) , K-FAC Martens and Grosse ( 2015 ); Eschenhagen et al. ( 2023 ) , SOAP Vyas et al. ( 2024 ) , Sketchy Feinberg et al. ( 2023 ) , and ASGO An et al. ( 2025 ) . Adafactor Shazeer and Stern ( 2018 ) is especially relevant from a systems perspective because it shows how row- and column-factorized second-moment statistics reduce optimizer state to \ud835\udcaa \u200b ( m + n ) \\mathcal{O}(m+n) for matrix-valued parameters. Recent Muon-adjacent whitening or preconditioned-polar methods, including FISMO and Mousse Xu et al. ( 2026a ); Zhang et al. ( 2026c ) , pursue a similar high-level goal: improve the geometry before imposing spectral constraints. The key difference is that these methods rely on richer matrix- or Kronecker-structured preconditioners, whereas MuonEq restricts the intervention to diagonal row/column equilibration. In this sense, MuonEq is closer to low-cost equilibration than to full whitening.\n\nOrthogonalization algorithms. There is also a complementary numerical literature on faster and more accurate polar/orthogonalization routines, including improved Newton\u2013Schulz variants and matrix-sign methods such as CANS and Polar Express Grishina et al. ( 2025 ); Amsel et al. ( 2025 ) . This literature matters because Muon-style optimizers operate in the regime of approximate orthogonalization, where only a small number of iterations is affordable; MuonEq is designed explicitly for this setting."
+    },
+    {
+      "heading": "6Conclusion",
+      "text": "We study how to improve the matrix geometry seen by finite-step orthogonalization in Muon-style optimization without the cost of full whitening. MuonEq does so with a lightweight family of pre-orthogonalization equilibration schemes: two-sided row/column normalization (RC), row normalization (R), and column normalization (C). These variants modify the input to Newton\u2013Schulz orthogonalization while preserving the \ud835\udcaa \u200b ( m + n ) \\mathcal{O}(m+n) memory profile of factorized methods. For the hidden matrix weights studied here, we use R as the default variant.\n\nThe analysis shows that finite-step orthogonalization is highly sensitive to the input spectrum and that row/column normalization acts as a zeroth-order whitening surrogate by removing marginal scale mismatch. It also clarifies the trade-off within the MuonEq family: RC gives stronger two-sided spectral correction, whereas R yields cleaner one-sided geometry and the main \ud835\udcaa ~ \u200b ( T \u2212 1 / 4 ) \\widetilde{\\mathcal{O}}(T^{-1/4}) nonconvex guarantee. Empirically, the default R variant consistently outperforms Muon in LLaMA2 pretraining on C4 across evaluated model sizes and token budgets. Ablations over RC, R, and C further support R as the strongest default for the hidden-weight setting considered here."
+    },
+    {
+      "heading": "G.2LemmaG.2",
+      "text": "Consider the practical row-normalized R variant ( 4 ), with\nNesterov disabled and \u03bb = 0 , \u03b5 = 0 \\lambda=0,\\varepsilon=0 . Then the update is \ud835\udc03 r , t := diag \u2061 ( rowsum \u2061 ( \ud835\udc0c t \u2299 \ud835\udc0c t ) ) , \ud835\udc0c ^ t := ( \ud835\udc03 r , t 1 / 2 ) \u2020 \u200b \ud835\udc0c t , \ud835\udc0e t := NS5 \u200b ( \ud835\udc0c ^ t ) , \ud835\udc17 t + 1 = \ud835\udc17 t \u2212 a \u200b \u03b7 t \u200b \ud835\udc0e t , \\mathbf{D}_{r,t}:=\\operatorname{diag}\\bigl(\\operatorname{rowsum}(\\mathbf{M}_{t}\\odot\\mathbf{M}_{t})\\bigr),\\hat{\\mathbf{M}}_{t}:=(\\mathbf{D}_{r,t}^{1/2})^{\\dagger}\\mathbf{M}_{t},\\mathbf{O}_{t}:=\\mathrm{NS5}(\\hat{\\mathbf{M}}_{t}),\\mathbf{X}_{t+1}=\\mathbf{X}_{t}-a\\eta_{t}\\mathbf{O}_{t}, where a := 0.2 \u200b max \u2061 { m , n } a:=0.2\\sqrt{\\max\\{m,n\\}} .\nHere \u2020 denotes the Moore\u2013Penrose pseudoinverse, so a zero row remains zero after row\nnormalization, and we adopt the convention Orth \u2061 ( \ud835\udfce ) = \ud835\udfce \\operatorname{Orth}(\\mathbf{0})=\\mathbf{0} ."
+    },
+    {
+      "heading": "J.1Pretraining on C4",
+      "text": "\u25b6 \\blacktriangleright Experimental setup. We use 64 Ascend 910C (64GB) NPUs for all experiments. We compare AdamW, MARS-AdamW, Muon, Muon-Nes, and MuonEq on LLaMA2-130M and LLaMA2-350M trained on C4 [ 34 ] . We keep the model architecture, dataset, and training recipe fixed across optimizers. The global batch size is 128 for LLaMA2-130M and 256 for LLaMA2-350M, and the maximum sequence length is 4096 for both models. Hyperparameters are selected according to validation performance.\n\n\u25b6 \\blacktriangleright Hyperparameter search. The selected hyperparameters are summarized in Tables 4 and 5 . For the main comparison, LLaMA2-130M and LLaMA2-350M are trained for 10.5B and 21.0B tokens, respectively. Learning-rate sweeps are performed on shorter pilot runs of 2.6B tokens for LLaMA2-130M and 7.5B tokens for LLaMA2-350M. AdamW and MARS-AdamW use ( \u03b2 1 , \u03b2 2 ) = ( 0.9 , 0.95 ) (\\beta_{1},\\beta_{2})=(0.9,0.95) , \u03f5 = 10 \u2212 8 \\epsilon=10^{-8} , and weight decay 0.1. Muon, Muon-Nes, and MuonEq use Muon momentum 0.95 and weight decay 0.1. We set \u03b3 = 0.025 \\gamma=0.025 for MARS-AdamW and \u03b3 = 0.05 \\gamma=0.05 for Muon-Nes and MuonEq . For Muon, Muon-Nes, and MuonEq , we use the Muon implementation from Moonlight 1 1 1 https://github.com/MoonshotAI/Moonlight ; all 2D weight matrices except embeddings are optimized with the corresponding Muon-type optimizer, while 1D parameters and embeddings are optimized with AdamW."
+    },
+    {
+      "heading": "J.2Ablation Study Details",
+      "text": "\u25b6 \\blacktriangleright Experimental setup. All ablation experiments are conducted on 4 RTX Pro6000 (96GB) GPUs. We use two workloads: CIFAR-10 with ResNet-18 and FineWeb pretraining of GPT2-small up to 10.5B tokens. Unless otherwise stated, the architecture, data pipeline, training budget, learning-rate schedule, warmup length, weight decay, momentum, Newton\u2013Schulz iteration budget, and parameter grouping are kept identical to the corresponding reference recipe; only the diagonal map before orthogonalization is changed. The selected hyperparameters are summarized in Tables 6 and 7 . For learning-rate tuning, we use discrete search grids that depend on the workload and optimizer family. On CIFAR-10 with ResNet-18, the SGD baseline is tuned over { 1 \u200b e \u2212 1 , 5 \u200b e \u2212 2 , 1 \u200b e \u2212 2 , 5 \u200b e \u2212 3 } \\{1\\mathrm{e}{-1},5\\mathrm{e}{-2},1\\mathrm{e}{-2},5\\mathrm{e}{-3}\\} , AdamW over { 5 \u200b e \u2212 3 , 1 \u200b e \u2212 3 , 5 \u200b e \u2212 4 , 1 \u200b e \u2212 4 } \\{5\\mathrm{e}{-3},1\\mathrm{e}{-3},5\\mathrm{e}{-4},1\\mathrm{e}{-4}\\} , and Muon-type optimizers over { 1 \u200b e \u2212 1 , 5 \u200b e \u2212 2 , 1 \u200b e \u2212 2 , 5 \u200b e \u2212 3 , 1 \u200b e \u2212 3 } \\{1\\mathrm{e}{-1},5\\mathrm{e}{-2},1\\mathrm{e}{-2},5\\mathrm{e}{-3},1\\mathrm{e}{-3}\\} . We use the Muon implementation from Moonlight 2 2 2 https://github.com/KellerJordan/cifar10-airbench . On FineWeb pretraining of GPT2-small, all methods are tuned over the same learning-rate grid { 5 \u200b e \u2212 4 , 1 \u200b e \u2212 3 , 2 \u200b e \u2212 3 , 5 \u200b e \u2212 3 } \\{5\\mathrm{e}{-4},1\\mathrm{e}{-3},2\\mathrm{e}{-3},5\\mathrm{e}{-3}\\} . We use the Muon implementation from Moonlight 3 3 3 https://github.com/MoonshotAI/Moonlight\n\nWe compare the three MuonEq variants RC, R, and C. RC applies two-sided row/column normalization throughout training, R applies row normalization throughout training, and C applies column normalization throughout training. We take R as the default variant. In all cases, the orthogonalization routine, optimizer states, and scalar hyperparameters are unchanged.\n\nThe purpose of this ablation is to isolate the effect of pre-orthogonalization geometry rather than to redesign the optimizer for each variant. We therefore use the same training budget and evaluation protocol across all runs. On CIFAR-10 we report final test accuracy. On FineWeb/GPT2-small we report validation perplexity at the end of the 10.5B-token budget.\n\nThis ablation is directly connected to Eq.\u00a0( 5 ). RC provides the strongest two-sided spectral correction and mainly targets the finite-step Newton\u2013Schulz term. R and C test the two one-sided geometries under the same optimizer configuration. Since MuonEq targets hidden matrix weights, R is the more relevant default in our setting, while C is included as the column-sided companion form."
+    },
+    {
+      "heading": "J.3A Note on Row/Column Terminology in Prior Work",
+      "text": "A careful comparison to prior row/column normalization papers requires fixing the matrix convention. [ 13 ] write linear weights as \u03b8 \u2208 \u211d d in \u00d7 d out \\theta\\in\\mathbb{R}^{d_{\\mathrm{in}}\\times d_{\\mathrm{out}}} and define column-wise normalization along the output dimension. Under the standard deep-learning storage layout \ud835\udc16 = \u03b8 \u22a4 \u2208 \u211d d out \u00d7 d in \\mathbf{W}=\\theta^{\\top}\\in\\mathbb{R}^{d_{\\mathrm{out}}\\times d_{\\mathrm{in}}} , this corresponds to row normalization of the stored hidden-weight matrix. Their empirical observation that row-wise normalization can be unstable is also traced largely to the LM-head, where row-wise normalization produces extreme gradient values. This is not the same setting as MuonEq , which is aimed at hidden matrix weights.\n\nBy contrast, [ 31 ] use the standard convention \ud835\udc16 \u2208 \u211d d out \u00d7 d in \\mathbf{W}\\in\\mathbb{R}^{d_{\\mathrm{out}}\\times d_{\\mathrm{in}}} , so their ColNorm is genuinely column-wise in the same orientation as ours. Their main recommendation for language models is first-layer ColNorm, hidden-layer Spectral, and last-layer Sign. We therefore interpret our row-sided default choice as directly aligned with [ 49 ] , compatible with [ 13 ] after accounting for layout conventions, and not in tension with [ 31 ] once first-layer/input geometry is separated from hidden-layer geometry."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "(a) 1024 \u00d7 \\times 1024",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x1.png"
+    },
+    {
+      "caption": "(a) 1024 \u00d7 \\times 1024",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x1.png"
+    },
+    {
+      "caption": "(b) 1024 \u00d7 \\times 4096",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x2.png"
+    },
+    {
+      "caption": "(c) 4096 \u00d7 \\times 1024",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x3.png"
+    },
+    {
+      "caption": "(d) 4096 \u00d7 \\times 4096",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x4.png"
+    },
+    {
+      "caption": "(e) 1024 \u00d7 \\times 1024",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x5.png"
+    },
+    {
+      "caption": "(f) 1024 \u00d7 \\times 4096",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x6.png"
+    },
+    {
+      "caption": "(g) 4096 \u00d7 \\times 1024",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x7.png"
+    },
+    {
+      "caption": "(h) 4096 \u00d7 \\times 4096",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x8.png"
+    },
+    {
+      "caption": "(a) Step 1%",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x9.png"
+    },
+    {
+      "caption": "(a) Step 1%",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x9.png"
+    },
+    {
+      "caption": "(b) Step 10%",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x10.png"
+    },
+    {
+      "caption": "(c) Step 50%",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x11.png"
+    },
+    {
+      "caption": "(d) Step 100%",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x12.png"
+    },
+    {
+      "caption": "(e) Step 1%",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x13.png"
+    },
+    {
+      "caption": "(f) Step 10%",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x14.png"
+    },
+    {
+      "caption": "(g) Step 50%",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x15.png"
+    },
+    {
+      "caption": "(h) Step 100%",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x16.png"
+    },
+    {
+      "caption": "(a) Training Loss",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x17.png"
+    },
+    {
+      "caption": "(a) Training Loss",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x17.png"
+    },
+    {
+      "caption": "(b) Validation Loss",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x18.png"
+    },
+    {
+      "caption": "(c) Wall-clock time",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x19.png"
+    },
+    {
+      "caption": "(a) Training Loss",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x20.png"
+    },
+    {
+      "caption": "(a) Training Loss",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x20.png"
+    },
+    {
+      "caption": "(b) Validation Loss",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x21.png"
+    },
+    {
+      "caption": "(c) Wall-clock time",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x22.png"
+    },
+    {
+      "caption": "Table 2: Ablation on CIFAR-10 with ResNet-18.",
+      "image_path": ""
+    },
+    {
+      "caption": "Table 3: Ablation on Fineweb-10.5B tokens with GPT2-small.",
+      "image_path": ""
+    },
+    {
+      "caption": "(a) 130M",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x23.png"
+    },
+    {
+      "caption": "(a) 130M",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x23.png"
+    },
+    {
+      "caption": "(b) 350M",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x24.png"
+    },
+    {
+      "caption": "(a) Step 1%",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x25.png"
+    },
+    {
+      "caption": "(a) Step 1%",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x25.png"
+    },
+    {
+      "caption": "(b) Step 10%",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x26.png"
+    },
+    {
+      "caption": "(c) Step 50%",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x27.png"
+    },
+    {
+      "caption": "(d) Step 100%",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x28.png"
+    },
+    {
+      "caption": "(a) Step 1%",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x29.png"
+    },
+    {
+      "caption": "(a) Step 1%",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x29.png"
+    },
+    {
+      "caption": "(b) Step 10%",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x30.png"
+    },
+    {
+      "caption": "(c) Step 50%",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x31.png"
+    },
+    {
+      "caption": "(d) Step 100%",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28254/assets/x32.png"
+    }
+  ],
+  "ar5iv_success": true
+}

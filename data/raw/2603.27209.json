@@ -1,0 +1,163 @@
+{
+  "paper_id": "2603.27209",
+  "title": "LightMover: Generative Light Movement with Color and Intensity Controls",
+  "abstract": "We present LightMover, a framework for controllable light manipulation in single images that leverages video diffusion priors to produce physically plausible illumination changes without re-rendering the scene. We formulate light editing as a sequence-to-sequence prediction problem in visual token space: given an image and light-control tokens, the model adjusts light position, color, and intensity together with resulting reflections, shadows, and falloff from a single view. This unified treatment of spatial (movement) and appearance (color, intensity) controls improves both manipulation and illumination understanding. We further introduce an adaptive token-pruning mechanism that preserves spatially informative tokens while compactly encoding non-spatial attributes, reducing control sequence length by 41% while maintaining editing fidelity. To train our framework, we construct a scalable rendering pipeline that generates large numbers of image pairs across varied light positions, colors, and intensities while keeping the scene content consistent with the original image. LightMover enables precise, independent control over light position, color, and intensity, and achieves high PSNR and strong semantic consistency (DINO, CLIP) across different tasks.",
+  "authors": [
+    "Gengze Zhou",
+    "Tianyu Wang",
+    "Soo Ye Kim",
+    "Zhixin Shu",
+    "Xin Yu",
+    "Yannick Hold-Geoffroy",
+    "Sumit Chaturvedi",
+    "Qi Wu",
+    "Zhe Lin",
+    "Scott Cohen"
+  ],
+  "date": "2026-03-28T09:51:59+00:00",
+  "url": "http://arxiv.org/abs/2603.27209v1",
+  "categories": [
+    "cs.CV",
+    "cs.CL",
+    "cs.GR",
+    "cs.LG"
+  ],
+  "primary_category": "cs.CV",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "Imagine shopping online for a new floor lamp. Product photos reveal its appearance, but not what truly matters: how the lamp would change the mood and illumination of your own living room. With only a single image of a living room, a user naturally wants to insert a lamp, drag it across the room, warm its color, dim its brightness, and observe how these adjustments reshape shadows, reflections, and ambience. Achieving such light-centric editing in a single real image is extremely challenging as illumination interacts globally with geometry, materials, and occlusion, while the user expects precise, causal control.\n\nExisting methods fall into two categories. Inverse-rendering approaches [ 23 , 48 , 24 , 56 , 60 ] reconstruct dense geometry, materials, and lighting before re-rendering the scene. While physically grounded, these pipelines are highly ill-posed from a single image, computationally expensive, and do not offer intuitive controls, such as moving or recoloring individual lights interactively. Diffusion-based editors (e.g., LightLab [ 30 ] ) can manipulate tone and ambient illumination but do not model spatial light movement, while object-centric diffusion models (e.g., ObjectMover [ 65 ] ) rely on video priors to move objects but treat illumination only implicitly, and thus fail to propagate the correct shadows, colors, and falloff when moving a light source.\nMore recently, general generative image editing models (SDEdit [ 32 ] , DiffEdit [ 11 ] , InstructPix2Pix [ 6 ] , Nano-Banana [ 16 ] , Qwen-Image(-Edit) [ 59 , 43 ] ) support powerful text- or mask-driven semantic edits; however, they lack an explicit light-centric parameterization and thus struggle to provide precise, physically plausible control over individual lights.\n\nIn this paper, we introduce LightMover, a video-diffusion framework for explicit, parametric illumination control from a single image. Our key idea is to extend the ObjectMover [ 65 ] token formulation with illumination-specific control tokens for color and intensity, embedded using a multi-signal positional encoding (spatial, temporal, condition-type, and role). This design yields a unified model that supports both object edits (movement, insertion, removal) and illumination edits within the same backbone, avoiding task-specific adapters. A naive extension of this formulation is to encode color and intensity as extra \u201cframes\u201d, but this dramatically increases the token count and thereby limits the model\u2019s efficiency and resolution. To avoid control tokens inflating the sequence length, we introduce an adaptive token-pruning strategy: spatial controls (e.g., movement maps) retain fine-grained tokens in small, localized regions and are downsampled elsewhere, while non-spatial controls (color, intensity) are represented with learnable compression ratios. This reduces the length of the control token by 41 % 41\\% while maintaining accurate spatial and illumination control.\n\nTo support training, we build a scalable physically-based rendering pipeline that generates matched image pairs varying in light location, spectrum, and intensity. These pairs enable the model to learn the causal effects of illumination: how shadows shift, how reflections brighten, and how indirect lighting propagates, to unlock capabilities that video priors alone cannot provide.\nMoreover, we find that training these illumination controls jointly in a multi-task manner produces strong mutual reinforcement: positional, color, and intensity signals regularize one another, improving accuracy and stability across all light-related tasks.\n\nIn summary, our contributions are threefold: \u2022 We introduce a unified diffusion-based framework that formulates light control as a sequence-to-sequence task, enabling fine-grained manipulation of illumination. \u2022 We propose an adaptive token-pruning mechanism that improves efficiency by compactly encoding non-spatial attributes while preserving spatial precision. \u2022 We develop a scalable data generation pipeline with physically accurate rendering and a multi-task training strategy for light insertion, removal, and movement, resulting in state-of-the-art photorealistic and controllable lighting manipulation."
+    },
+    {
+      "heading": "2Related Works",
+      "text": "Object Movement. Diffusion-based inpainting methods [ 3 , 53 , 29 , 32 , 47 ] represent the mainstream approach for generative removal, while insertion frameworks [ 28 , 67 , 9 , 63 , 50 , 51 ] extend them to conditionally synthesize new objects under identity constraints. However, inpainting inherently limits the handling of global illumination cues, as expanding masks often destroy scene consistency and fail to reconstruct shadows or reflections. Shadow-specific methods [ 17 , 57 ] partially alleviate this but rely on precise masks and cannot generalize to broader lighting effects. Mask-free approaches such as ObjectDrop [ 58 ] decouple removal and insertion into two steps, often leading to misaligned perspective or inconsistent lighting, while scene-level insertion [ 54 ] allows broader context editing but lacks true movement capability.\nRecent progress in generative movement seeks to reposition objects directly through single-pass diffusion. Control paradigms include drag-based manipulation [ 34 , 49 , 4 , 35 ] , motion-field guidance [ 15 ] , 3D-aware conditioning [ 33 , 39 , 64 , 5 ] , and video diffusion-based sequence modeling [ 65 ] .\n\nRelighting and Light Control. Image-based light editing has been widely explored in flash photography, addressing white balancing [ 18 ] , bounce-flash capture [ 36 ] , and post-capture flash control [ 31 ] . Murmann et al. [ 37 ] collected a multi-illumination dataset using a motorized flash rig and trained a U-Net [ 46 ] to predict directional lighting. Hui et al. [ 19 ] used flash/no-flash pairs to disentangle illuminants based on spectral cues, enabling control over individual light sources. Aksoy et al. [ 1 ] curated a large flash/no-flash dataset and trained a Pix2Pix model [ 20 ] to separate ambient and flash components.\nInverse-rendering pipelines [ 12 , 22 ] reconstruct geometry and materials for explicit lighting control, but are computationally expensive and ill-posed from a single image; recent work [ 7 , 66 , 25 , 62 , 68 ] incorporates learned priors to improve scalability while still relying on intrinsic decomposition or dense video supervision.\nWe follow a similar data-driven paradigm but in a more general setting where only a single RGB image is available. Unlike prior flash-specific approaches, we draw inspiration from LightLab [ 30 ] , which leverages diffusion models for explicit light-source control and turn-on/off illumination synthesis. Note that LightLab does not support light source movement.\n\nGeneral Image Editing. Beyond task-specific pipelines, diffusion-based editors provide broad semantic and structural manipulation capabilities. Classical methods such as SDEdit [ 32 ] and DiffEdit [ 11 ] enable mask-driven or noise-based refinements, while instruction-tuned models like InstructPix2Pix [ 6 ] support natural-language edits. Recent LLM-powered systems, including Nano-Banana [ 45 ] and Qwen-Image(-Edit) [ 59 , 43 ] , further enhance multimodal reasoning and editing robustness. However, these general-purpose editors lack an explicit light-centric formulation and therefore struggle to enforce physically plausible illumination, realistic shadow propagation, and precise spatial control needed for light movement and fine-grained relighting."
+    },
+    {
+      "heading": "3.2Data Generation Pipeline",
+      "text": "To train a model capable of accurate and physically consistent light manipulation, we combine real captured data with a large-scale synthetic corpus . Real-world photographs provide natural appearance and material diversity, while synthetic data enable systematic variation of lighting parameters and scalable supervision across light movement, color, and intensity. Together, these two sources form a comprehensive dataset that supports learning both visual realism and physical consistency."
+    },
+    {
+      "heading": "4Experiments",
+      "text": "We train LightMover on a 5B-parameter video diffusion transformer. Training samples are drawn at mixed resolutions of 512\u00d7512 and 1024\u00d71024 with a 1:1 ratio. The dataset combines synthetic and real data at a 10:1 ratio. Synthetic tasks are distributed across seven categories: (1) light movement, (2) object movement, (3) light color change, (4) light intensity change, (5) joint movement and color/intensity change, (6) light removal, and (7) light insertion, following a ratio of 6:3:3:3:1:1, respectively. We additionally apply light-illumination augmentation using the Physically Disentangled Rendering procedure described in Section 3.2 , which dynamically varies ambient and direct light components during training. More implementation details and training hyperparameters will be provided in the supplementary file.\n\nEvaluation. We evaluate LightMover quantitatively and qualitatively across two complementary benchmarks designed to assess controllable illumination editing: LightMove-A for real captured data and LightMove-B for synthetic scenes with ground-truth illumination variations.\n\nLightMove-A (Real). LightMove-A comprises 200 real-world image triplets captured by experienced photographers. Each set includes (1) a scene with the light source, (2) the same scene with the light moved. The dataset enables the evaluation of realistic light movement.\n\nLightMove-B (Synthetic). LightMove-B is a synthetic benchmark to evaluate illumination control with known ground-truth light variations.\nThese pairs are curated as described in Section 3.2 and contain 2 held-out scenes with unseen light sources, objects, and materials.\n\nMetrics. For quantitative analysis, we use perceptual similarity metrics including DINO-Score [ 8 ] and CLIP-Score [ 44 ] , computed over the local regions affected by illumination changes. We additionally report PSNR on the full image to assess overall photometric consistency.\n\nAdditional Evaluations. For qualitative evaluation, where explicit ground truth is not required, we use a collection of 50 diverse real images from Pexels [ 42 ] . We manually annotate light-source regions and corresponding masks, and use these as references for visual comparison."
+    },
+    {
+      "heading": "4.1Comparison to SoTA Models",
+      "text": "In this section, we extensively evaluate the light movement performance of LightMover on various settings, as well as its general object movement ability.\n\nLight Movement. We evaluate the light movement performance of LightMover on the LightMove-A dataset for quantitative analysis and the Pexels dataset for qualitative comparison. Quantitative results are reported in Table 1 , and visual examples are shown in Figure 4 . We compare against two representative baseline streams:\n(1) LLM-powered text-to-image (T2I) models , including Gemini-2.5-Flash-Image [ 16 ] and Qwen-Image [ 59 ] , which interpret text instructions through large language model integration. To ensure fair comparison, we evaluate these models under two settings: (a) a one-step editing setup, where both the source object and target location are marked with bounding boxes and specified in the text prompt, and (b) a two-step pipeline, where the model first removes the light source and then inserts it at the target position indicated by the bounding box. Details including the prompt templates are provided in the Supplementary Material.\n(2) ObjectMover [ 65 ] ,\nan object movement model,\nserving as a structural baseline.\n\nAs shown in Table 1 , LightMover significantly outperforms both LLM-powered editors and ObjectMover. Compared to text instruction-based models, LightMover provides markedly higher precision in localizing and adjusting light positions, avoiding the ambiguous or global scene modifications typical of text-conditioned diffusion models. Compared to ObjectMover, our model exhibits superior global illumination reasoning . It can accurately capture reflection, shadow, and multi-light interactions to produce consistent and physically plausible light movement results.\n\nBesides, we also present qualitative results on light insertion and removal in Figure 5 . LightMover better preserves the background scene and demonstrates a more coherent understanding of illumination composition, effectively removing all illumination-related effects.\n\nLight Movement with Illumination Control. Beyond spatial movement, we further evaluate LightMover\u2019s ability to jointly control movement and illumination attributes using the synthetic LightMove-B benchmark. The evaluation is divided into three folds:\n(1) Color change only , where the light source is shifted among ten distinct target colors;\n(2) Intensity change only , with ten target illumination levels; and\n(3) Joint movement with illumination change , which combines spatial relocation with either color or intensity modulation.\nEach single-attribute split contains 100 paired examples, while the compositional split includes 150 pairs.\n\nAs shown in Table 2 , LightMover consistently outperforms LLM-based baselines across all settings, demonstrating strong generalization to both individual and multiple light controls. Notably, our adaptive token pruning achieves comparable or superior accuracy in single-attribute tasks and yields substantial efficiency gains for multi-attribute sequences by reducing redundant tokens while preserving controllability.\n\nGeneral Object Movement.\n\nBeyond light source manipulation, we evaluate the generalization ability of LightMover on the ObjMove-A benchmark [ 65 ] , following the evaluation protocol introduced in ObjectMover. This benchmark assesses general object movement , removal , and insertion .\n\nWe compare LightMover on the core task of object movement against representative baselines, including MagicFixup [ 2 ] , 3DiT [ 33 ] , Drag-Anything [ 61 ] , AnyDoor [ 9 ] , and Paint-by-Example [ 63 ] . For a fair comparison, insertion-based methods such as AnyDoor and Paint-by-Example are combined with an inpainting step to first remove the source object, while Drag-Anything generates the final frame of a short trajectory between source and target positions. Further implementation details are provided in the Supplementary.\n\nAs shown in Table 3 , LightMover maintains strong performance on general object movement, consistently outperforming all baselines. This demonstrates that our unified formulation and joint training effectively generalizes beyond light-specific manipulation to broader spatial editing tasks."
+    },
+    {
+      "heading": "4.2Ablation Studies",
+      "text": "Effect of Training Data.\n\nWe first study the impact of different training data configurations. We ablate variants trained with and without Light Aug. , light color change , and light intensity change tasks. Light Aug. denotes online illumination augmentation using physically disentangled rendering, where image pairs are dynamically rendered with varied light colors and intensities. As shown in Table 4 , these auxiliary tasks are highly correlated and jointly enhance the model\u2019s capability for precise light movement. Co-training with all tasks yields the best performance, as color and intensity variation help the model better disentangle the target light source\u2019s contribution and learn the global light composition.\n\nEffect of Token Pruning Strategy. In this experiment, we investigate how different token pruning strategies affect performance when handling long control sequences. We evaluate three variants:\n(i) w/o frame-as-condition : the light control attributes are not represented as image frames. Instead, two learned embeddings are introduced to encode color and intensity changes, which are concatenated to the token sequence.\n(ii) w/o object frame : the object frame is removed from the control input to shorten the sequence length; and\n(iii) w/o adaptive downsampling : all condition frames are uniformly downsampled to a fixed 8 \u00d7 8 8{\\times}8 resolution, removing the spatial adaptivity of our pruning scheme. As shown in Table 5 , removing frame-based conditioning or spatially adaptive downsampling leads to a notable drop in controllability and visual fidelity. Our full model, equipped with the adaptive pruning strategy, achieves the best balance between efficiency and precision, demonstrating its importance for modeling complex multi-attribute illumination control."
+    },
+    {
+      "heading": "5Conclusion",
+      "text": "This work demonstrates that physically consistent light manipulation can be achieved through a data-centric and learning-based approach. By constructing an automatic rendering pipeline for large-scale paired illumination data and leveraging a \u201c2.5D\u201d formulation that use video diffusion models for single-image light reasoning, LightMover bridges the gap between fully 2D generative models and costly 3D physical rendering. We show that a learned model can approximate complex global light transport with far greater efficiency while maintaining photorealistic fidelity. We believe this paradigm opens new directions for scalable, physically aware image editing and for integrating learned illumination control into general 2D and 3D generative frameworks."
+    },
+    {
+      "heading": "B.1Comparison with Ground Truth",
+      "text": "To validate the physical plausibility of LightMover, we directly compare our predictions against real ground-truth photographs from the LightMove-A benchmark, where each ground truth is captured by the same camera under identical ambient conditions with the light source physically relocated. As shown in Figure 6 , LightMover achieves precise positional control for local lighting changes, accurately reproducing shadows, highlights, and surface shading patterns that closely match the ground-truth images. Notably, these examples are selected without cherry-picking from challenging in-the-wild scenes, demonstrating that our model generalizes robustly to diverse real-world environments without introducing visual hallucinations or physically inconsistent artifacts."
+    },
+    {
+      "heading": "B.2Visual Ablation of Training Data Composition",
+      "text": "Figure 7 provides qualitative ablation results corresponding to the quantitative analysis in Table\u00a04 of the main paper. These visual comparisons illustrate the effectiveness of the proposed data augmentation strategy and the synergistic effects of training data composition. Specifically, training with the physically disentangled rendering augmentation ( Light Aug. ) enables the model to generalize to complex shadow interactions, such as intricate leaf shading patterns, that are absent in the unaugmented data. Furthermore, incorporating light color and intensity variation tasks during training improves the model\u2019s understanding of how individual light sources contribute to the overall scene illumination. The full model, trained with all proposed data components, produces the most physically coherent results by effectively disentangling and recombining illumination effects."
+    },
+    {
+      "heading": "B.3Comparison with the Learnable Embedding Variant",
+      "text": "We compare our frame-based conditioning design against a variant that uses separate learnable embeddings for different control signals (Table\u00a05, line\u00a03 in the main paper). As shown in Figure 8 , we evaluate the joint move-with-color-change task, where the colored dot in the top-left corner of each result indicates the target light color. The variant with condition-specific learnable embeddings fails to correctly recognize color conditions when movement and color changes are applied simultaneously. This is because learnable embeddings are less flexible and do not generalize well to multiple simultaneous controls: they tend to conflate or ignore individual signals when multiple conditions are introduced jointly. In contrast, our frame-based conditioning naturally integrates with the video diffusion backbone and supports joint control over movement, color, and intensity by encoding each condition as an explicit image frame, enabling the model to maintain distinct and accurate representations for each control signal."
+    },
+    {
+      "heading": "C.1One-Step Editing",
+      "text": "In the one-step setup, both the original light-source location and the target location are marked in the input image using a red bounding box and a blue bounding box, respectively.\nThe model receives a single prompt instructing it to relocate the light source from the red region to the blue region and produce the corresponding physically consistent relighting.\nWe include three variants: concise , basic , and precise in our preliminary experiments. Detail prompts are shown below:\n\nWe show the generated results in Figure 12 ."
+    },
+    {
+      "heading": "C.2Two-Step Editing",
+      "text": "For the two-step setup described in the main paper, we decompose the task into:\n(1) light removal , followed by\n(2) light insertion at the target location .\n\nWe first segment the light-source object using SAM and crop it into a standalone patch. The model is then prompted twice: once to remove the light source from the scene, and once to reinsert it at the blue target region with physically consistent relighting. We show the prompt for removal and insertion below.\n\nWe show the removal result and final editing results in Figure 13 ."
+    },
+    {
+      "heading": "D.1Surface Interaction",
+      "text": "When a light source moves, surfaces must respond with updated shading patterns that reflect both geometry and material properties.\n\nDiffuse Shading on Surfaces. The overall shading gradients on diffuse surfaces shift according to light direction, requiring coherent large-scale brightness redistribution.\n\nSpecular Highlights. Highlights must relocate precisely across curved or planar glossy surfaces, with intensity modulated by surface normals and microfacet properties.\n\nMaterial-Aware Response. Different materials like metal, plastic, paper, and fabric exhibit distinct BRDF behaviors. LightMover preserves these distinctions, producing sharp specular lobes on metallic surfaces and softer responses on matte objects.\n\nThe results in Figure 16 demonstrate that LightMover accurately captures these interactions across diverse real-world scenes."
+    },
+    {
+      "heading": "D.2Cast Shadows",
+      "text": "Shadows encode critical geometric information and are highly sensitive to light movement. This makes them one of the most challenging aspects of the task.\n\nShadow Direction & Length. As the light source moves, cast shadows must rotate and stretch according to object\u2013surface geometry. A physically inconsistent direction immediately breaks realism.\n\nShadow Softness (Penumbra / Umbra). The softness of a shadow depends on the light source size and distance. Our model adapts shadow edges to match these conditions, producing realistic penumbra transitions.\n\nOcclusion Reasoning. Correct shadow placement requires inferring hidden or partially visible geometry. Our method captures this structure, preserving accurate attachment points and occlusion boundaries.\n\nAs shown in Figure 17 , the generated shadows are coherent, geometry-aware, and physically plausible."
+    },
+    {
+      "heading": "D.3Reflections",
+      "text": "Reflections provide one of the strongest tests of illumination consistency since they depend jointly on light position, surface orientation, and scene geometry.\n\nReflection Direction Consistency. Reflective surfaces: wet roads, metal, polished materials must display highlights and reflected objects at positions consistent with the moved light source.\n\nReflection Intensity and Falloff. The brightness and attenuation of reflected highlights must adjust with the illumination energy and direction.\n\nEnvironment & Object Coupling. Reflections must remain coherent with both the environment and the emitting light source, especially in urban scenes with multiple reflective cues.\n\nFigure 18 shows that LightMover maintains this global consistency, accurately updating reflective behavior under light movement."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1 : Results of light source movement. LightMover demonstrates robust control over light movement, color, and intensity in diverse illumination scenarios. It maintains global radiometric balance, reconstructs occluded illumination, and infers plausible light\u2013object interactions under varying geometry and materials. Beyond single-attribute control, LightMover supports compositional manipulation that simultaneously adjusts light position, color, and intensity. These results highlight the potential of our 2.5D learning paradigm to achieve physically coherent lighting reasoning within a purely 2D generative framework.",
+      "image_path": ""
+    },
+    {
+      "caption": "Figure 2 : Overview of LightMover. Left: our sequence-to-sequence formulation encodes a reference image, object crop, movement map, and optional color/intensity controls as input frames. Right: additional supported tasks, including light removal and insertion.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27209/assets/x2.png"
+    },
+    {
+      "caption": "Figure 3 : Illustration of training samples. Top: our synthetic data varies from scenes, objects, and lighting conditions; Bottom: the image relighting post-processing during training.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27209/assets/x3.png"
+    },
+    {
+      "caption": "Figure 4 : Comparison of light movement results. The blue bounding box in the input indicates the target light location. For Gemini-2.5-Flash-Image , the first column shows the two-step modular editing setup, and the second column shows the one-step editing result. Compared with ObjectMover , LightMover accurately handles light propagation and its interaction with the environment. Compared with Gemini-2.5-Flash-Image , LightMover provides more precise control and produces more coherent and photometrically consistent relighting.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27209/assets/x4.png"
+    },
+    {
+      "caption": "Figure 5 : Light insertion/removal results. Compared to Nano-Banana [ 45 ] , LightMover produces more physically consistent edits, preserving background while correctly adding or removing illumination effects associated with the target light source.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27209/assets/x5.png"
+    },
+    {
+      "caption": "Figure 6 : Comparison with ground-truth images. We show side-by-side comparisons between LightMover predictions and ground-truth photographs captured by the same camera under the same ambient conditions but with the light source physically relocated.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27209/assets/x6.png"
+    },
+    {
+      "caption": "Figure 7 : Qualitative results for Table\u00a04 (training data ablation). With the proposed synthetic rendering data pipeline (Light Aug.), the model generalizes to complex shadow handling (e.g., leaf shading). Incorporating color and intensity variations further improves the modeling of light contributions and their combinations.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27209/assets/x7.png"
+    },
+    {
+      "caption": "Figure 8 : Comparison with the learnable embedding variant. We evaluate the move-with-color-change task, where the colored dot in the top-left indicates the target color. The LightLab variant with learnable embeddings fails to correctly encode color conditions when movement and color changes are applied together.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27209/assets/x8.png"
+    },
+    {
+      "caption": "Figure 9 : Concise prompt for the one-step editing.",
+      "image_path": ""
+    },
+    {
+      "caption": "Figure 10 : Basic prompt variant for the one-step editing. This prompt emphasizes physical correctness and globally consistent relighting.",
+      "image_path": ""
+    },
+    {
+      "caption": "Figure 11 : \u201cPrecise\u201d step-by-step prompt variant for the one-step editing. This version enforces explicit reasoning over shadow geometry, reflectance behavior, and scene consistency.",
+      "image_path": ""
+    },
+    {
+      "caption": "Figure 12 : Light movement results for Nano-Banana [ 45 ] one-step editing. We show the input reference image and the results of using different prompts.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27209/assets/x9.png"
+    },
+    {
+      "caption": "Figure 13 : Light movement results for Nano-Banana [ 45 ] two-step editing. We show the input reference image for removal and insertion tasks, and the results.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27209/assets/x10.png"
+    },
+    {
+      "caption": "Figure 14 : Removal prompt for the two-step Nano-Banana editing.",
+      "image_path": ""
+    },
+    {
+      "caption": "Figure 15 : Insertion prompt for the two-step Nano-Banana editing.",
+      "image_path": ""
+    },
+    {
+      "caption": "Figure 16 : Surface interaction results. Examples of diffuse shading, specular highlights, and material-dependent responses under light movement.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27209/assets/x11.png"
+    },
+    {
+      "caption": "Figure 17 : Cast shadow results. Examples demonstrating changes in shadow direction, softness, and occlusion structure.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27209/assets/x12.png"
+    },
+    {
+      "caption": "Figure 18 : Reflection results. Examples of updated highlight positions and reflective consistency after repositioning the light source.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27209/assets/x13.png"
+    }
+  ],
+  "ar5iv_success": true
+}

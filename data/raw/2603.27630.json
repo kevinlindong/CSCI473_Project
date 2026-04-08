@@ -1,0 +1,88 @@
+{
+  "paper_id": "2603.27630",
+  "title": "RTLSeek: Boosting the LLM-Based RTL Generation with Multi-Stage Diversity-Oriented Reinforcement Learning",
+  "abstract": "Register Transfer Level (RTL) design translates high-level specifications into hardware using HDLs such as Verilog. Although LLM-based RTL generation is promising, the scarcity of functionally verifiable high-quality data limits both accuracy and diversity. Existing post-training typically produces a single HDL implementation per specification, lacking awareness of RTL variations needed for different design goals. We propose RTLSeek, a post-training paradigm that applies rule-based Diversity-Oriented Reinforcement Learning to improve RTL correctness and diversity. Our Diversity-Centric Multi-Objective Reward Scheduling integrates expert knowledge with EDA feedback, and a three-stage framework maximizes the utility of limited data. Experiments on the RTLLM benchmark show that RTLSeek surpasses prior methods, with ablation results confirming that encouraging broader design-space exploration improves RTL quality and achieves the principle of \"the more generated, the better results.\" Implementation framework, including the dataset, source code, and model weights, is shown at https://anonymous.4open.science/r/DAC2026ID71-ACB4/.",
+  "authors": [
+    "Xinyu Zhang",
+    "Zhiteng Chao",
+    "Yonghao Wang",
+    "Bin Sun",
+    "Tianyun Ma",
+    "Tianmeng Yang",
+    "Jianan Mu",
+    "Jing Justin Ye",
+    "Huawei Li"
+  ],
+  "date": "2026-03-29T11:01:02+00:00",
+  "url": "http://arxiv.org/abs/2603.27630v1",
+  "categories": [
+    "cs.AR",
+    "cs.LG"
+  ],
+  "primary_category": "cs.AR",
+  "sections": [
+    {
+      "heading": "1.Introduction",
+      "text": "Register Transfer Level (RTL) design translates high-level functional descriptions into circuit block architectures and remains the most complex stage of digital hardware customization. Unlike downstream logic and physical design, RTL coding is still poorly automated and heavily dependent on engineer expertise.\nRecent advances in Large Language Models (LLMs) ( brown2020language ; ouyangTrainingLanguageModels ; openaiGPT4TechnicalReport2024 ) have enabled automatic code generation across many programming languages, motivating research on LLM-driven RTL generation. Early work shows that Supervised Fine-Tuning (SFT) can align human language with RTL design languages and functional specifications ( changDataAllYou2024a ; chenDawnAINativeEDA2024 ; liuChipNeMoDomainAdaptedLLMs2024 ; thakurBenchmarkingLargeLanguage2023 ; liuVerilogEvalEvaluatingLarge2023 ; luRTLLMOpenSourceBenchmark2023 ) .\nHowever, progress remains limited: even on simple benchmarks, RTL generation accuracy stays below 60% ( liuDEEPRTLBRIDGINGVERILOG2025 ) . A primary bottleneck is the scarcity of high-quality training data\u2014only about one thousand examples include testbenches, which are essential for verifying correctness. From an academic standpoint, a substantial expansion of open-source, functionally verifiable chip design data appears unlikely in the near term.\nThis raises a fundamental question for the community: How can we leverage circuit design expertise to improve LLM training without relying on more testbench-equipped datasets?\n\nHuman learners often approach RTL design through \u201clearning by seeking\u201d : exploring multiple solutions for a single problem, validating them, and extracting deeper insights from limited examples. In contrast, as illustrated in Figure 2 , the widely used one-to-one post-training paradigm (e.g., SFT) encourages rote memorization rather than genuine reasoning about RTL design principles.\n\nInspired by human learning, we propose encouraging LLMs to actively explore diverse RTL implementations\u2014generating multiple structural variants for the same description and evaluating them\u2014thereby maximizing the utility of scarce testbench-equipped data. Achieving this requires overcoming two challenges:\n\u2460 Training efficiency: enabling diverse exploration with a limited dataset;\n\u2461 Diversity\u2013correctness balance: ensuring rigorous functional correctness while broadening design space exploration.\nRecent progress, such as DeepSeek R1 ( deepseek-aiDeepSeekR1IncentivizingReasoning2025 ) , demonstrates that Group Relative Policy Optimization (GRPO)-based Reinforcement Learning (RL) can unlock emergent reasoning abilities in LLMs, reshaping post-training methodologies.\n\nMotivated by human learning and these methodological advances, we introduce RTLSeek , a diversity-oriented RL framework for LLM-based RTL code generation. To maximize scarce training data, RTLSeek integrates SFT with a two-stage GRPO process. We design a specialized reward mechanism\u2014automatically generated via circuit analysis tools\u2014to balance correctness learning and diversity exploration. To further promote structurally diverse design attempts, we compute diversity rewards through Abstract Syntax Tree (AST)\u2013based structural equivalence analysis.\n\nOur contributions are summarized as follows:\n\n\u2022 We present RTLSeek, a diversity-oriented reinforcement learning framework for LLM-based RTL generation. By integrating GRPO into training, RTLSeek systematically explores structural diversity and substantially improves RTL code generation quality. \u2022 To balance diversity and correctness, RTLSeek employs a Multi-Objective Reward Scheduling strategy that combines expert IC design constraints, EDA tool feedback, and dynamic assessments of intermediate-generation quality. \u2022 To address the scarcity of verifiable datasets, RTLSeek introduces a three-stage training pipeline : (1) SFT warm-up, (2) diversity-oriented exploration, and (3) multi-objective exploration, achieving an effective trade-off between exploration depth and functional correctness. \u2022 Experimental results show that our post-training paradigm improves Qwen 2.5\u2019s RTL generation performance by over 40%, surpassing other methods. Ablation studies confirm that removing diversity rewards or any training stage degrades performance, highlighting the effectiveness of our diversity-oriented RL approach in data-scarce RTL tasks."
+    },
+    {
+      "heading": "2.Observation",
+      "text": "Test Time Scale (TTS) technology is usually used to enhance generation ability of LLMs through the strategic design of user prompts as shown in Figure 2 . For more challenging generation tasks, by adjusting input prompts during the test phase, the same LLM is able to generate multiple structurally diverse RTL code snippets, among which a functionally correct module is more likely to emerge. If the LLM is only asked to produce a single output, it becomes much harder to generate the correct result in one attempt.\n\nThis observation also highlights a key distinction: unlike software code, RTL exhibits inherent concurrency, where even minor structural changes can significantly impact functional correctness. This raises the question of whether enhancing the model\u2019s reasoning and RTL understanding during training\u2014so as to generate structurally diverse RTL modules\u2014could improve the success rate of LLMs in RTL generation tasks, ultimately advancing toward the goal of \u201cthe more generated, the better the results.\u201d"
+    },
+    {
+      "heading": "3.Design of RTLSeek",
+      "text": "In this section, we present the design of RTLSeek as shown in Figure 3 .\nFirst, we formalize the problem formulation for LLM-based RTL generation and outline the overall design of RTLSeek.\nNext, we detail our hybrid training paradigm that integrates SFT with GRPO-based reinforcement learning, followed by the multi-objective reward mechanism that dynamically balances correctness and diversity. Finally, we present our AST-based structural analysis approach for diversity quantification."
+    },
+    {
+      "heading": "3.1.Problem Definition",
+      "text": "Our problem can be defined as follows.\nGiven a natural language specification S S describing desired hardware behavior (see user prompt in Figure 4 ), the RTL generation task aims to produce a set of design implementations { D 1 , D 2 , \u2026 , D n } \\{D_{1},D_{2},...,D_{n}\\} satisfying:\n\n(1) Functional Equivalence : \u2200 D i , D j \u2208 { D } : D i \u2261 D j \\forall D_{i},D_{j}\\in\\{D\\}:D_{i}\\equiv D_{j} where \u2261 \\equiv denotes behavioral equivalence verified through testbench. (2) Structural Diversity : Struct \u2061 ( D i ) \u2260 Struct \u2061 ( D j ) \\operatorname{Struct}(D_{i})\\neq\\operatorname{Struct}(D_{j}) for i \u2260 j i\\neq j , where Struct \u2061 ( \u22c5 ) \\operatorname{Struct}(\\cdot) represents the Abstract Syntax Tree (AST) representation. (3) Non-trivial Variation : Diversity \u2061 ( Struct \u2061 ( D i ) , Struct \u2061 ( D j ) ) \\operatorname{Diversity}(\\operatorname{Struct}(D_{i}),\\operatorname{Struct}(D_{j})) > \u03b4 >\\delta , where \u03b4 \\delta is the minimum variation threshold excluding superficial changes (e.g., variable renaming)."
+    },
+    {
+      "heading": "3.2.Overall Design",
+      "text": "This paper addresses a critical problem in RTL generation using LLMs: how to effectively leverage existing circuit design expertise to enhance model training, given the severe scarcity of high-quality, verifiable training data.\nThe current landscape presents a fundamental limitation that only several thousand samples with accompanying testbenches (essential for validating model-generated RTL code) are publicly available.\nThis data scarcity creates a pressing need for alternative training paradigms that can compensate for the lack of large-scale, high-quality datasets.\n\nExisting solutions fall short in two key aspects. First, verification-based RTL generation methods ( sami2024aivril ; huang2024towards ) achieve only superficial diversity improvements (e.g., simple variable renaming) at high computational cost.\nSecond, while SFT ensures basic correctness, it fails to produce sufficiently diverse designs; conversely, pure diversity-driven approaches often generate non-functional code.\nThis reveals a fundamental tension in RTL generation: how to simultaneously ensure functional correctness while exploring meaningful design variations under tight data constraints.\n\nTo address these challenges, we propose RTLSeek, a GPRO-based training paradigm that combines three key innovations: \u2022 A hybrid training paradigm integrating SFT with two-stage GRPO optimization (as shown in Figure 3 ); \u2022 An automated reward system using circuit analysis tools to balance correctness and diversity (as shown in Figure 4 ); \u2022 AST-based structural equivalence analysis to quantify and encourage design diversity (as shown in Figure 5 ).\n\nUnlike previous methods that treat correctness and diversity as competing objectives, RTLSeek\u2019s integrated approach enables efficient exploration of the design space while maintaining functional validity, even with limited training data."
+    },
+    {
+      "heading": "3.3.The Hybrid Training Paradigm",
+      "text": "In this section, we introduce the hybrid training paradigm integrating the SFT and the two-stage GRPO-based RL.\nWe first present the preliminary of the GRPO-based RL.\nThen we give the details of the training paradigm."
+    },
+    {
+      "heading": "3.4.Multi-Objective Reward Scheduling",
+      "text": "The key challenge in improving the exploration quality of LLMs in RL lies in designing an appropriate reward mechanism that both refines decisions and provides systematic guidance throughout the learning process.\n\nTraditional post-training paradigms based on SFT typically utilize syntax and functional correctness feedback from EDA tools ( changDataAllYou2024a ) to refine reference responses. However, these approaches often underutilize scarce training datasets and currently lack effective verification methods to ensure functional correctness for most testbench-free datasets.\n\nAs illustrated in Fig 4 , we propose Multi-Objective Reward Scheduling. This approach not only incorporates syntax and functional correctness feedback but also integrates a diversity reward obtained through Abstract Syntax Tree (AST) analysis to guide LLMs in generating structurally diverse RTLs. Additionally, we introduce a context reward to regulate reasoning quality, thereby achieving an effective exploration-exploitation balance.\n\nThe whole reward function R t \u200b o \u200b t \u200b a \u200b l R_{total} is as follows:\n\n(2) R t \u200b o \u200b t \u200b a \u200b l = R s \u200b y \u200b n + R f \u200b u \u200b n \u200b c + R d \u200b i \u200b v + R c \u200b o \u200b n \u200b t , R_{total}=R_{syn}+R_{func}+R_{div}+R_{cont},\n\nHere, R R epresents the reward functions we have designed separately. By decomposing and combining different rewards for various RL training stages, we are able to maximize the exploration capabilities of the LLM within the constraints of limited training data.\nThese components are explained in detail below."
+    },
+    {
+      "heading": "3.5.AST-Based Diversity Analysis",
+      "text": "To determine whether Verilog code segments differ substantively or merely in superficial aspects like variable naming or statement reordering, we implement equivalence verification based on AST, hierarchical representations that capture the syntactic structure of code while abstracting away lexical details such as whitespace and comments. For Verilog hardware description language, these tree structures effectively preserve module definitions, port declarations, signal assignments, and control structures in a form conducive to programmatic analysis ( takamaeda2015pyverilog ) .\n\nWe parse source code into ASTs using pyverilog, then apply a recursive comparison algorithm that performs a depth-first traversal of both trees as shown in Figure 5 .\nThis algorithm methodically compares node types, attributes, and structural relationships to determine complete equivalence. By operating at the structural level rather than the textual level, our approach overcomes limitations of text-based comparison by accurately identifying structural equivalence despite surface differences.\n\nWhen code segments differ only in variable names (e.g., \u201dp\u201d versus \u201dq\u201d), our system recognizes their equivalence, while correctly distinguishing functionally different implementations even when they share certain syntactic patterns. This recursive verification system supports diversity exploration in RTL code generation for RTL-Seek by filtering out superficially different but structurally identical variants."
+    },
+    {
+      "heading": "5.Conclusion",
+      "text": "This paper presents RTLSeek, a novel post-training paradigm using Diversity-Oriented Reinforcement Learning to improve the accuracy and diversity of LLM-generated RTL. With a Diversity-Centric Multi-Objective Reward and a three-stage training framework, RTLSeek effectively addresses data scarcity. Experiments show it outperforms GPT-4 and DeepSeek R1 on RTLLM benchmark, with ablation studies confirming its effectiveness."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1 . Motivation of RTLSeek: diversity-oriented post-training alleviates data scarcity limitations in current SFT-based RTL generation.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27630/assets/x1.png"
+    },
+    {
+      "caption": "Figure 2 . Observation from GPT-4\u2019s RTL design: achieving Test Time Scale (TTS) ( zhang2025and ) by designing a multi-sample user prompt enhances the correctness of generated RTL syntax and functionality.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27630/assets/x2.png"
+    },
+    {
+      "caption": "Figure 3 . The three-stage hybrid training paradigm in RTLSeek.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27630/assets/x3.png"
+    },
+    {
+      "caption": "Figure 4 . Diversity-Centric Multi-Objective Reward reinforcement learning in RTLSeek.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27630/assets/x4.png"
+    },
+    {
+      "caption": "Figure 5 . Verilog structural equivalence testing algorithm based on abstract syntax tree.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27630/assets/x5.png"
+    },
+    {
+      "caption": "Figure 6 . The trend graph of the total reward obtained by every training step.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27630/assets/fig/training_progress_15.png"
+    }
+  ],
+  "ar5iv_success": true
+}

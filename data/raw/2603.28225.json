@@ -1,0 +1,141 @@
+{
+  "paper_id": "2603.28225",
+  "title": "Detecting the Unexpected: AI-Driven Anomaly Detection in Smart Bridge Monitoring",
+  "abstract": "Bridges are critical components of national infrastructure and smart cities. Therefore, smart bridge monitoring is essential for ensuring public safety and preventing catastrophic failures or accidents. Traditional bridge monitoring methods rely heavily on human visual inspections, which are time-consuming and prone to subjectivity and error. This paper proposes an artificial intelligence (AI)-driven anomaly detection approach for smart bridge monitoring. Specifically, a simple machine learning (ML) model is developed using real-time sensor data collected by the iBridge sensor devices installed on a bridge in Norway. The proposed model is evaluated against different ML models. Experimental results demonstrate that the density-based spatial clustering of applications with noise (DBSCAN)-based model outperforms in accurately detecting the anomalous events (bridge accident). These findings indicate that the proposed model is well-suited for smart bridge monitoring and can enhance public safety by enabling the timely detection of unforeseen incidents.",
+  "authors": [
+    "Rahul Jaiswal",
+    "Joakim Hellum",
+    "Halvor Heiberg"
+  ],
+  "date": "2026-03-30T09:47:36+00:00",
+  "url": "http://arxiv.org/abs/2603.28225v1",
+  "categories": [
+    "cs.LG"
+  ],
+  "primary_category": "cs.LG",
+  "sections": [
+    {
+      "heading": "IIntroduction",
+      "text": "Bridges are the critical component of smart cities, forming the backbone of modern transportation systems. With hundreds of thousands of bridges deployed worldwide, for instance, over 18,000 in Norway [ 16 ] , ensuring their safety and reliability is of paramount importance. Traditionally, the assessment of bridge conditions has relied heavily on human visual inspections. However, such inspections are often time-consuming and prone to error, as accurately evaluating the extent of structural deterioration, particularly in concrete/wooden bridges, is challenging due to the limitations of human visual observations. To overcome these challenges, intelligent sensor-based, data-driven machine-learning bridge monitoring techniques have emerged. It enables timely assessment of structural integrity, enhancing pedestrian and public safety, and mitigating the risk of catastrophic failures or accidents. Effective bridge monitoring requires designing a smart model that can capture variations between normal and anomalous sensor data.\n\nAnomaly detection is an important application of data mining [ 9 ] and is commonly referred to as outlier detection. In the context of bridge sensor data, anomalies or outliers correspond to the measurements that deviate from the normal signal or data patterns. These deviations may arise from structural damage, abnormal loading conditions, environmental effects, or sensor malfunctions. The objective of anomaly detection is therefore to identify such inconsistent or irregular sensor observations that differ significantly from typical bridge behaviour. A toy example illustrating anomaly detection in sensor data is presented in Fig. 1 . As shown, the anomalous data point exhibits a significantly higher peak compared to the normal sensor measurements.\n\nSeveral approaches have been proposed in the literature for detecting anomalies in sensor data. Statistical-based methods [ 15 ] , such as multivariate models [ 5 ] and mean-variance-based techniques [ 7 ] , typically learn discriminative features from historical monitoring data representing normal structural behaviour. A data point is then classified as anomalous when it deviates significantly from these learned features. However, the effectiveness of statistical methods relies on the prior empirical knowledge, including assumptions about data distributions and model parameters used for anomaly identification. In practice, the true distribution of real-world sensor data is often unknown, which can limit the accuracy of anomaly detection using statistical methods.\n\nRecently, artificial intelligence (AI)-driven, particularly machine learning (ML)-based, approaches have gained significant attention for anomaly detection [ 14 ] , as they automatically extract discriminative features from raw bridge sensor data to train models. Neural network-based methods are also effective due to their strong representation and universal approximation capabilities [ 12 , 13 ] . For instance, a K-nearest neighbour-based anomaly detection framework is proposed in [ 8 ] using raw vibration measurements collected from a bridge. A convolutional neural network (CNN) is used in [ 1 ] to detect structural damages in bridge systems. An autoencoder is employed in [ 17 ] for anomaly detection in bridge structural health monitoring.\n\nThe review of existing literature highlights that anomaly detection in bridge systems is critical for maintaining the structural performance of the bridge, ensuring pedestrian and public safety, and mitigating the risk of catastrophic failures or accidents. Motivated by these findings, this work focuses on machine learning-based anomaly detection for smart bridge monitoring. Specifically, we develop an efficient ML-based anomaly detection framework to identify a bridge accident captured by iBridge sensor devices (see Section IV-A ) installed on a bridge in Norway. The proposed model can enable bridge monitoring authorities to promptly detect anomalous events and take timely corrective actions, thereby reducing potential risks and preventing further adverse consequences.\n\nThe remainder of this paper is organized as follows. Section II describes the machine learning methods employed for anomaly detection. Section III introduces the proposed anomaly detection model. Section IV describes the experimental dataset. Section V discusses the results, and Section VI concludes the paper and outlines directions for future work."
+    },
+    {
+      "heading": "IIBackground",
+      "text": "This section describes various machine learning techniques used in our experimental study for detecting anomalies in the bridge monitoring system."
+    },
+    {
+      "heading": "II-AIsolation Forest",
+      "text": "The Isolation Forest (IF) algorithm detects anomalies using an ensemble of binary trees [ 3 ] . In bridge monitoring applications, sensor data are isolated by randomly selecting a feature and an associated split value at each node. The algorithm constructs a forest, referred to as an iForest, comprising multiple isolation trees (iTrees) [ 19 ] . During training, the sensor data are recursively partitioned until the iTrees effectively separate normal data points from anomalous data points. Typically, anomalous data points are isolated near the root nodes of the iTrees, whereas normal operating conditions (points) require deeper traversals and are located farther from the root nodes. A simplified structure of an iTree [ 14 ] is illustrated in Fig. 2 . Here, external nodes have no children, whereas internal nodes contain two child nodes. In this representation, anomalies are typically associated with external nodes."
+    },
+    {
+      "heading": "II-BAutoencoder",
+      "text": "An autoencoder (AE) [ 2 ] is a neural network designed to learn a compact (latent) representation of input data while minimizing the error in reconstructing the original signal. In bridge monitoring applications, autoencoders are typically trained using sensor measurement data that capture normal signal behaviour. Consequently, when anomalous sensor measurements, such as those caused by structural damage, a vehicular accident, an unusual load on the bridge, or sensor malfunctions, are encountered, the reconstruction error increases significantly. This reconstruction error can therefore be used as an effective indicator for anomaly detection.\n\nAn autoencoder consists of an encoder and a decoder. The encoder compresses input data into a low-dimensional latent representation (also called a bottleneck), and the decoder reconstructs the original input from that latent representation, as shown in Fig. 3 . The autoencoder model is trained by minimizing the reconstruction error between the input and its reconstruction. Next, we briefly present the mathematical formulation of an autoencoder.\n\nLet a sensor device with d d channels generate measurements over time. At time t t , the sensor measurements are given as: \ud835\udc31 t = x t ( 1 ) , x t ( 2 ) , \u2026 , x t ( d ) \\mathbf{x}_{t}=x_{t}^{(1)},x_{t}^{(2)},\\dots,x_{t}^{(d)} (1) where, x t ( i ) x_{t}^{(i)} denotes the measurements of the i-th sensor device.\n\nThe encoder compresses the input into a low-dimensional latent representation as: \ud835\udc33 = f \u03b8 \u200b ( \ud835\udc31 ) = \u03c3 \u200b ( \ud835\udc16 e \u200b \ud835\udc31 + \ud835\udc1b e ) \\mathbf{z}=f_{\\theta}(\\mathbf{x})=\\sigma\\left(\\mathbf{W}_{e}\\mathbf{x}+\\mathbf{b}_{e}\\right) (2)\n\nwhere, \ud835\udc16 e \u2208 \u211d k \u00d7 D \\mathbf{W}_{e}\\in\\mathbb{R}^{k\\times D} is encoder weight matrix, \ud835\udc1b e \u2208 \u211d k \\quad\\mathbf{b}_{e}\\in\\mathbb{R}^{k} is the encoder bias vector, k < D \\quad k<D is the dimension of the latent space which controls the compression strength, D D is the dimension of the input vector, \ud835\udc33 \u2208 \u211d k \\mathbf{z}\\in\\mathbb{R}^{k} is the latent vector, and \u03c3 \u200b ( \u22c5 ) \\sigma(\\cdot) is a nonlinear activation function (e.g., ReLU, tanh). Note that \u211d \\mathbb{R} denotes the set of real numbers.\n\nThe decoder reconstructs the original input from the latent representation as: \ud835\udc31 ^ = g \u03d5 \u200b ( \ud835\udc33 ) = \u03c3 \u200b ( \ud835\udc16 d \u200b \ud835\udc33 + \ud835\udc1b d ) \\hat{\\mathbf{x}}=g_{\\phi}(\\mathbf{z})=\\sigma\\left(\\mathbf{W}_{d}\\mathbf{z}+\\mathbf{b}_{d}\\right) (3)\n\nwhere, \ud835\udc16 d \u2208 \u211d D \u00d7 k \\mathbf{W}_{d}\\in\\mathbb{R}^{D\\times k} and \ud835\udc1b d \u2208 \u211d D \\quad\\mathbf{b}_{d}\\in\\mathbb{R}^{D} .\n\nNext, the reconstruction error measures how well the model reproduces sensor signal patterns, and it is given by the mean squared error (MSE) [ 18 ] as: \u2112 \u200b ( \ud835\udc31 , \ud835\udc31 ^ ) = 1 D \u200b \u2211 i = 1 D ( x i \u2212 x ^ i ) 2 \\mathcal{L}(\\mathbf{x},\\hat{\\mathbf{x}})=\\frac{1}{D}\\sum_{i=1}^{D}\\left(x_{i}-\\hat{x}_{i}\\right)^{2} (4)\n\nTo determine whether a given sample is normal or anomalous, an anomaly score based on reconstruction error (MSE) is computed and compared against a predefined threshold. If the anomaly score is below the threshold, the sample is classified as normal; otherwise, it is classified as anomalous. Note that normal samples exhibit low reconstruction error, whereas anomalous samples result in high reconstruction error."
+    },
+    {
+      "heading": "II-CDensity-based Spatial Clustering of Application with Noise",
+      "text": "The Density-based Spatial Clustering of Applications with Noise (DBSCAN) [ 4 ] is a density-based clustering technique that identifies data patterns by analyzing the local concentration of samples. In bridge monitoring applications, DBSCAN assumes that sensor measurements corresponding to normal data points form dense regions in the feature space, whereas abnormal events such as accidents or unusual loads appear as isolated points with low local density.\n\nThe method relies on two key parameters. The neighbourhood radius eps , which defines the maximum distance between two sensor measurements for them to be considered neighbours and form a cluster. The minimum number of points minpts , which specifies the minimum number of neighbouring measurements required within the eps radius for a data point to be considered as part of the cluster [ 4 ] .\n\nDuring training, DBSCAN categorizes samples into three groups. The samples having a sufficient number of neighbours within the eps distance are treated as dense-region points and represent normal operating conditions of the bridge. The samples that lie close to these dense regions but do not independently satisfy the density requirement are considered boundary points. All remaining samples that do not belong to any dense region are treated as outliers or anomalies.\n\nA simplified illustration of the DBSCAN method [ 14 ] is presented in Fig. 4 . As shown, six distinct groups are formed based on the clustering process, where the neighbourhood radius eps defines the cluster boundaries. A group is identified as a valid cluster only if it contains at least minpts data points. For instance, when minpts is set to 3, Groups 1, 2, 4, and 6 satisfy the clustering criteria and are classified as clusters, while Groups 3 and 5 are treated as outliers. In contrast, increasing minpts to 5 results in Groups 3, 5, and 6 being labelled as outliers."
+    },
+    {
+      "heading": "IIIProposed Anomaly Detection Model",
+      "text": "The primary goal of the proposed anomaly detection model is to accurately identify abnormal events for effective bridge monitoring. To achieve this goal, the proposed system architecture integrates multiple cooperating components, as illustrated in Fig. 5 . The architecture consists of three main stages. First, sensor data collected from the iBridge sensor device (see Section IV-A ) are preprocessed and prepared as input to the anomaly detection model. Second, the AI-based anomaly detection model is trained using the processed data, during which it learns salient feature patterns. Finally, the trained model detects anomalous events and outputs anomaly predictions, which can be used to identify potential failures or accident-related incidents in the bridge monitoring system."
+    },
+    {
+      "heading": "IVExperimental Dataset",
+      "text": "This section describes the sensor device used for data acquisition and the real-time bridge monitoring dataset."
+    },
+    {
+      "heading": "IV-ASensor Data Acquisition Device: iBridge",
+      "text": "The bridge monitoring data are collected using a sensor-based device, iBridge, as illustrated in Fig. 6 . The iBridge [ 10 ] is a compact and smart device equipped with a multifunctional sensor-based system that transmits sensor data to a cloud platform via 4G communication. It supports battery operation and can be interfaced with a wide range of sensors and transmitters. The iBridge is specifically designed for use with strain gauges and can measure various structural responses, such as acceleration, tensile and compressive stresses, cracking, displacement of mass and collapse, strain on the metal beams, weight, pressure, vibration, angular variation, torque, temperature, liquid level, and moisture.\n\nThe iBridge device incorporates an integrated accelerometer and temperature sensor, functioning as a multifunctional data logger. It is easy to install on various materials and surfaces, can be relocated and reused, and supports adaptable battery configurations based on deployment needs. The direct sensor connectivity enables cable-free installation and no power connection. The device is connected to an intelligent cloud-based platform for configuration and data storage, providing continuous 24/7 access to monitoring data or seamless integration with the enterprise resource planning (ERP) system.\n\nThe iBridge device is suitable for a wide range of monitoring applications. For example, in the building and construction sector, it can be used to monitor cracks, settlement-related damages, vibrations, and moisture. In transportation infrastructure, including roads, ports, bridges, and railways, it can enable the assessment of changes in load-bearing capacity, overload conditions, structural forces, and unforeseen incidents."
+    },
+    {
+      "heading": "IV-BBridge Monitoring Dataset",
+      "text": "The bridge monitoring data in this study are collected from a bridge located in Inland, Norway. Two iBridge sensor devices (iBridge\u00a0A and iBridge\u00a0B) are installed beneath the bridge, approximately 70 meters apart, as shown in Fig. 7 . For accident detection, real-time sensor data from both devices is considered over eleven days, from August 15 to August 25, 2025. The sensor data includes measurements of acceleration (in mG) in X, Y and Z directions, respectively, and strain on the metal beams (in mV). It contains a total of 3,775,112 samples. These measurements consist of numerical values. The data is sampled at a frequency of 5 Hz, corresponding to one measurement every 0.2 seconds."
+    },
+    {
+      "heading": "IV-CData Preprocessing",
+      "text": "The collected raw sensor data contain inconsistencies and missing values, which can adversely affect accuracy and model performance. Therefore, the dataset is preprocessed to enhance data quality, reliability, and suitability for ML models analysis. The preprocessing stage involves data cleaning and handling missing entries. As the number of missing values is limited, these samples are discarded from the dataset. Alternatively, transfer learning [ 11 ] techniques can be employed to address missing data or data scarcity challenges. The processed dataset is then used to train ML models for anomaly detection.\n\nNext, we denote the notations for the features corresponding to iBridge A and iBridge B. For iBridge A, the accelerations in X, Y, Z directions, and strain\non the metal beams are denoted as acx_A , acy_A , acz_A , and adc2_A , respectively. Similarly, for iBridge B, the corresponding features are denoted as acx_B , acy_B , acz_B , and adc2_B , respectively. Since five samples are recorded per second, the data are resampled at a one-minute interval to enhance data pattern clarity, highlight anomaly peaks, improve temporal uniformity, and stabilize model learning, thereby enabling more reliable ML models. For visualization, the final resulting dataset is shown in Fig. 8 .\n\nSince the data ranges of acx_A and acx_B are significantly larger than those of the other features, they are illustrated separately in Fig. 9 . The remaining features, excluding acx_A and acx_B , are shown in Fig. 10 ."
+    },
+    {
+      "heading": "VResults and Discussions",
+      "text": "This section presents the experimental environment and a comprehensive analysis of the results."
+    },
+    {
+      "heading": "V-AExperimental Environment",
+      "text": "All algorithms are implemented in Python\u00a03.13.6 using the Keras framework built on TensorFlow\u00a02.2.0 and executed on a MacBook with an Apple M4 chip and 16\u00a0GB of RAM."
+    },
+    {
+      "heading": "V-BGround Truth",
+      "text": "The exact timing of the accident is subjectively determined through a detailed manual analysis of the sensor data, which serves as the ground truth in this study, as shown in Fig. 11 . The accident timing is identified as August\u00a024, 2025, at 01:15\u00a0AM. Although this manual inspection enables accurate identification of the accident event, it requires expert knowledge and substantial human effort, making it impractical for continuous and real-time bridge monitoring. To address this limitation, we subsequently present ML-based anomaly detection models designed to automatically identify such events in a smart bridge monitoring system."
+    },
+    {
+      "heading": "V-CProposed Model Analysis",
+      "text": "The bridge monitoring dataset described in Section IV-B is employed to train three different ML models (see Section II ) for detecting the precise timing of the accident as an anomaly in the smart bridge monitoring system. The dataset is first scaled to a common range to ensure fair feature contribution and reduce false alarms. A grid search [ 6 ] is then employed to obtain the optimal parameters for each model, which are presented in Table I ."
+    },
+    {
+      "heading": "VIConclusions and Future Work",
+      "text": "This paper investigates the anomaly detection problem in bridge monitoring systems using real-world sensor data collected by the iBridge sensor devices. The dataset is first analyzed and preprocessed to ensure data quality and reliability. Motivated by recent advances in artificial intelligence, we propose a simple machine learning model that learns discriminative features directly from sensor data and employs a decision module to detect anomalies, with a particular focus on identifying a bridge accident in Norway. Experimental results show that the proposed approach based on DBSCAN accurately detects anomalous events (bridge accident) and outperforms other evaluated ML models. Our proposed model has the potential to significantly enhance anomaly detection capabilities in bridge monitoring systems, thereby reducing the risk of catastrophic failures or accidents and improving public safety. Future work will explore the integration of more complex feature representations and the development of an early warning system for proactive smart bridge monitoring."
+    },
+    {
+      "heading": "Acknowledgement",
+      "text": "This work was supported by Smart Sensor Systems AS through data provision and conference dissemination support."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1: A toy example of anomaly detection in sensor data.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28225/assets/x1.png"
+    },
+    {
+      "caption": "Figure 2: A simple illustration of an iTree structure.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28225/assets/x2.png"
+    },
+    {
+      "caption": "Figure 3: A simple illustration of an autoencoder.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28225/assets/x3.png"
+    },
+    {
+      "caption": "Figure 4: A simple illustration of the DBSCAN method.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28225/assets/x4.png"
+    },
+    {
+      "caption": "Figure 5: The proposed anomaly detection model.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28225/assets/x5.png"
+    },
+    {
+      "caption": "Figure 6: A simple illustration of the iBridge sensor device.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28225/assets/figures/ibridge.png"
+    },
+    {
+      "caption": "Figure 7: Illustration of installed iBridge devices on the bridge.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28225/assets/figures/ibridge_installed.png"
+    },
+    {
+      "caption": "Figure 8: All features in the bridge monitoring dataset.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28225/assets/x6.png"
+    },
+    {
+      "caption": "Figure 9: acx_A and acx_B of the bridge monitoring dataset.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28225/assets/x7.png"
+    },
+    {
+      "caption": "Figure 10: All features except acx_A and acx_B of the dataset.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28225/assets/x8.png"
+    },
+    {
+      "caption": "Figure 11: Actual (ground-truth) accident timestamp.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28225/assets/x9.png"
+    },
+    {
+      "caption": "Figure 12: Detected anomalies using the Isolation Forest model.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28225/assets/x10.png"
+    },
+    {
+      "caption": "Figure 13: Detected anomalies using the autoencoder model.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28225/assets/x11.png"
+    },
+    {
+      "caption": "Figure 14: Detected anomalies using the DBSCAN model.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28225/assets/x12.png"
+    }
+  ],
+  "ar5iv_success": true
+}

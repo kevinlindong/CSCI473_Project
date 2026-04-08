@@ -1,0 +1,155 @@
+{
+  "paper_id": "2603.28173",
+  "title": "Skillful Kilometer-Scale Regional Weather Forecasting via Global and Regional Coupling",
+  "abstract": "Data-driven weather models have advanced global medium-range forecasting, yet high-resolution regional prediction remains challenging due to unresolved multiscale interactions between large-scale dynamics and small-scale processes such as terrain-induced circulations and coastal effects. This paper presents a global-regional coupling framework for kilometer-scale regional weather forecasting that synergistically couples a pretrained Transformer-based global model with a high-resolution regional network via a novel bidirectional coupling module, ScaleMixer. ScaleMixer dynamically identifies meteorologically critical regions through adaptive key-position sampling and enables cross-scale feature interaction through dedicated attention mechanisms. The framework produces forecasts at $0.05^\\circ$ ($\\sim 5 \\mathrm{km}$ ) and 1-hour resolution over China, significantly outperforming operational NWP and AI baselines on both gridded reanalysis data and real-time weather station observations. It exhibits exceptional skill in capturing fine-grained phenomena such as orographic wind patterns and Foehn warming, demonstrating effective global-scale coherence with high-resolution fidelity. The code is available at https://anonymous.4open.science/r/ScaleMixer-6B66.",
+  "authors": [
+    "Weiqi Chen",
+    "Wenwei Wang",
+    "Qilong Yuan",
+    "Lefei Shen",
+    "Bingqing Peng",
+    "Jiawei Chen",
+    "Bo Wu",
+    "Liang Sun"
+  ],
+  "date": "2026-03-30T08:40:36+00:00",
+  "url": "http://arxiv.org/abs/2603.28173v1",
+  "categories": [
+    "cs.LG",
+    "cs.AI"
+  ],
+  "primary_category": "cs.LG",
+  "sections": [
+    {
+      "heading": "1.Introduction",
+      "text": "Accurate weather forecasting is essential for disaster mitigation, agriculture, transportation, and energy management (Coiffier, 2011 ) .\nTraditional numerical weather prediction (NWP) systems solve the governing equations of atmospheric dynamics involving mass continuity, momentum conservation, and thermodynamics, and parameterize subgrid-scale processes such as turbulence and cloud microphysics (Hurrell et al. , 2013 ; Bouall\u00e8gue et al. , 2024 ) .\nAlthough NWP models provide physically consistent forecasts and remain operational standards, their computational demands and sensitivity to parameterization schemes limit the skill in resolving kilometer-scale weather phenomena governed by multiscale interactions.\n\nRecent data-driven AI models, particularly Transformer-based architectures trained on global reanalysis data such as ERA5, have achieved remarkable success in medium-range forecasting at synoptic scales at resolution of 0.25 \u2218 0.25^{\\circ} and coarser. However, high-resolution operational regional forecasting (e.g., 0.05 \u2218 0.05^{\\circ} , or \u223c 5 \u200b km \\sim 5\\,\\mathrm{km} ) remains a significant challenge. Kilometer-scale weather is governed by complex multiscale interactions: large-scale circulations modulate local processes such as topographic flows, coastal breezes, and convective systems, while fine-scale features also feedback to broader dynamics. A prime example is the Hengduan Mountains, where large-scale dynamics including the Indian Monsoon, East Asian Monsoon, and Tibetan Plateau climate, interact with extreme terrain gradients. These terrain gradients, which exceed 3 , 000 \u200b m 3,000\\,\\mathrm{m} within 100 \u200b km 100\\,\\mathrm{km} , drive localized wind accelerations, sharp temperature contrasts, and convective processes that are poorly captured by coarse global models or isolated regional models (Xiang et al. , 2024 ) .\nSuch intricate multiscale interactions challenge conventional models, necessitating forecasting models that reconcile global-scale coherence with high-resolution fidelity.\n\nRecent studies have begun to explore data-driven regional weather forecasting and downscaling, typically treating global forecasts as static inputs (Nipen et al. , 2024 ; Oskarsson et al. , 2023 ; Xu et al. , ; Qin et al. , 2024 ; Mardani et al. , 2025 ) . However, these decoupled methods neglect dynamic cross-scale interactions and suffer from temporal misalignment between low-frequency global forecasts (e.g., 6-hourly) and high-resolution regional observations (e.g., hourly).\nIn summary, to make accurate high-resolution regional weather forecasting requires addressing two key challenges: (1) a mechanism to dynamically identify regions where cross-scale interactions are active , and (2) a bidirectional coupling framework that ensures spatial-temporal consistency across scales .\n\nTo address the aforementioned challenges, we propose a novel global\u2013regional coupling framework for high-resolution regional weather prediction. Our approach seamlessly integrates a pretrained global Transformer model, which provides synoptic-scale (large scale) context, with a regional refinement model operating at 0.05 \u2218 0.05^{\\circ} resolution. Central to this architecture is ScaleMixer , a module that adaptively identifies key spatial regions exhibiting strong multiscale interactions and enable bidirectional feature encoding between global and regional tokens.\nThis allows the model to prioritize meteorologically critical areas such as typhoon boundaries and mountain ridges, and maintain global coherence while resolving fine-grained regional dynamics.\nThe main contributions of this work are summarized as follows: \u2022 A global\u2013regional coupling framework for 0.05 \u2218 0.05^{\\circ} and 1 1 -hour forecasting by integrating a pretrained global model for synoptic-scale context with a high-resolution regional model \u2022 The ScaleMixer module for dynamic identification of cross-scale interaction regions and bidirectional feature fusion. \u2022 Experiments on both hindcast and operational settings show our model\u2019s superiority against operational NWP and leading AI baselines. Case studies over complex terrain in China further demonstrates the model\u2019s notable skill in capturing orographic wind effects and Foehn warming. \u2022 Similar to other AI-based models, the model is highly efficient during inference. It takes less than 3 minutes for 48-hour forecasting on a single GPU, while numerical models like IFS-HRES typically requires about 1 hour on massive CPU clusters for a similar forecasting window."
+    },
+    {
+      "heading": "3.Methodology",
+      "text": "Accurate regional weather forecasting requires seamless integration of large-scale atmospheric dynamics with localized, high-resolution features.\nAs nearly all AI-based global models are trained on the EAR5 dataset, we assume a pretrained Vision Transformer (ViT)-based global weather forecasting model, denoted \u2133 global \\mathcal{M}_{\\mathrm{global}} , which operates on low-resolution ( 0.25 \u2218 0.25^{\\circ} ) global reanalysis data \ud835\udc14 t 0 \u2208 \u211d H \u00d7 W \u00d7 C \\mathbf{U}^{t_{0}}\\in\\mathbb{R}^{H\\times W\\times C} . At time t 0 t_{0} , the model generates 6-hour-ahead global predictions capturing synoptic-scale dynamics: (1) \ud835\udc14 ^ t 0 + 6 \u200b H = \u2133 global \u200b ( \ud835\udc14 t 0 ) , \\hat{\\mathbf{U}}^{t_{0}+6\\mathrm{H}}=\\mathcal{M}_{\\mathrm{global}}(\\mathbf{U}^{t_{0}}), where H \u00d7 W \u00d7 C H\\times W\\times C represents the stacked weather state with multiple levels of upper air and surface variables, in which latitude and longitude are divided into H H and W W grids for each variable. Concurrently, high-resolution regional analysis data \ud835\udc96 t 0 \u2208 \u211d h \u00d7 w \u00d7 V reg \\boldsymbol{u}^{t_{0}}\\in\\mathbb{R}^{h\\times w\\times V_{\\mathrm{reg}}} provides critical surface variables (wind components U , V U,V , temperature T T , specific humidity Q Q , pressure P P , radiation fluxes S \u200b S \u200b R \u200b D SSRD , and total cloud cover T \u200b C \u200b C TCC ) within a region of interest at 1 \u200b hour 1\\,\\mathrm{hour} temporal resolution and 0.05 \u2218 0.05^{\\circ} spatial resolution."
+    },
+    {
+      "heading": "3.1.Pretrained Global Weather Model",
+      "text": "Our global model \u2133 global \\mathcal{M}_{\\mathrm{global}} prioritizes architectural simplicity, flexibility, and scalability, and implements a vision Transformer (ViT) architecture (Dosovitskiy et al. , 2020 ) . Without loss of generality, our framework can work with any ViT-based global weather forecasting model. In the following discussion, we will limit the discussion on our in-house developed ViT-based global model, comprising three core components:\n\nPatch Embedding and Tokenization: A 2-D convolutional layer partitions the multivariate input atmospheric state \ud835\udc14 t 0 \u2208 \u211d H \u00d7 W \u00d7 C \\mathbf{U}^{t_{0}}\\in\\mathbb{R}^{H\\times W\\times C} into non-overlapping spatial patches of size P \u00d7 P P\\times P . This generates token representations \ud835\udc12 \u2208 \u211d N \u00d7 d \\mathbf{S}\\in\\mathbb{R}^{N\\times d} , where N = ( H / P ) \u00d7 ( W / P ) N=(H/P)\\times(W/P) and d d is the embedding dimension.\n\nTransformer Encoder: A stack of M M Transformer encoder layers processes the sequence \ud835\udc12 \\mathbf{S} through multi-head self-attention and feed-forward networks (Vaswani et al. , 2017 ; Dosovitskiy et al. , 2020 ) , enabling global information interaction across spatial scales.\n\nPrediction Head: A deconvolution block upscales the processed sequence back to the original spatial resolution H \u00d7 W H\\times W , producing a 6-hour ahead deterministic global forecast \ud835\udc14 t 0 + 6 \u200b H \\mathbf{U}^{t_{0}+6\\mathrm{H}} of the full atmospheric state.\n\nThe global model \u2133 global \\mathcal{M}_{\\mathrm{global}} is pretrained on ERA5 reanalysis (Hersbach et al. , 2020 ) using weighed mean absolute error (MAE) as the loss function (detailed in Section \u02dc 3.4 ). The dataset includes five pressure level variables (13 vertical levels each): geopotential ( z z ), specific humidity ( q q ), wind components ( u , v u,v ), and temperature (t), and multiple surface variables, e.g., 2-meter temperature (t2m), 10-meter wind (u10, v10), and mean sea level pressure (msl), surface pressure (sp), etc. (detailed in Appendix \u02dc B )."
+    },
+    {
+      "heading": "3.2.Modifications in Regional Weather Model",
+      "text": "The regional model \u2133 regional \\mathcal{M}_{\\mathrm{regional}} inherits the Transformer architecture from the global model but introduces necessary modifications: (1) modified patch embedding layer to incorporate fine-grained topography and temporal encodings, (2) enhanced prediction head with adaptive layer normalization (AdaLN) (Peebles and Xie, 2023 ) to amplify the high-frequency signal for hourly temporal alignment, and (3) fewer Transformer encoder layers ( k \u226a M k\\ll M ) to reduce computational overhead while preserving regional meteorological fidelity.\n\nPatch Embedding: In addition to the input { \ud835\udc96 t 0 + i \u200b H } i = \u2212 5 0 \u2208 \u211d h \u00d7 w \u00d7 V reg \u00d7 6 \\left\\{{\\boldsymbol{u}}^{t_{0}+i\\mathrm{H}}\\right\\}_{i=-5}^{0}\\in\\mathbb{R}^{h\\times w\\times V_{\\mathrm{reg}}\\times 6} , the block also needs to process the static topography, land-sea mask, and dynamic hourly temporal information. Regional analyses are tokenized across 6 time steps using a shared patch embedding layer, with topography, land-sea masks, and temporal embeddings (hour-of-day, day-of-year) added via MLP. To ensure geographic consistency with global patches, we set patch size p = 5 \u00d7 P p=5\\times P , generating regional tokens \ud835\udc2c \u2208 \u211d n \u00d7 d \\mathbf{s}\\in\\mathbb{R}^{n\\times d} , where n = ( h / p ) \u00d7 ( w / p ) n=(h/p)\\times(w/p) .\n\nTransformer Encoders: The regional model employs k k encoder layers ( k \u226a M k\\ll M , where M = k \u00d7 L M=k\\times L ) to achieve computational efficiency in regional optimization. Each cross-scale coupling block comprises L L global encoder layers, 1 regional encoder layer, and 1 ScaleMixer module.\n\nPrediction Head: To generate 6-hour forecasts at hourly intervals, 6 dedicated prediction heads produce lead time-specific outputs ( \u0394 \u200b t = 1 \u200b H \u200b to \u200b 6 \u200b H \\Delta t=1\\mathrm{H}\\;\\text{to}\\;6\\mathrm{H} ). Temporal alignment is enforced via AdaLN (Peebles and Xie, 2023 ) , where scale and shift parameters \u03b3 , \u03b2 \\gamma,\\beta are derived from Fourier embeddings of \u0394 \u200b t \\Delta t : (3) FourierEmbed \u2061 ( \u0394 \u200b t ) = [ cos \u2061 ( 2 \u200b \u03c0 \u200b a i \u200b \u0394 \u200b t + b i ) , sin \u2061 ( 2 \u200b \u03c0 \u200b a i \u200b \u0394 \u200b t + b i ) ] \\displaystyle\\operatorname{FourierEmbed}(\\Delta t)=\\left[\\cos({2\\pi a_{i}\\Delta t+b_{i}}),\\sin({2\\pi a_{i}\\Delta t+b_{i}})\\right] for \u200b 0 \u2264 i < d / 2 , \\displaystyle\\qquad\\text{ for }0\\leq i<d/2, (4) \u03b3 , \u03b2 = MLP \u2061 ( FourierEmbed \u2061 ( \u0394 \u200b t ) ) , \\displaystyle\\gamma,\\beta=\\operatorname{MLP}\\left(\\operatorname{FourierEmbed}(\\Delta t)\\right), where a i a_{i} and b i b_{i} are learnable Fourier embedding parameters. This formulation ensures high-frequency signal amplification for regional forecasting. Moreover, regional prediction heads take the concatenation of regional tokens and spatially-aligned global tokens as input to make full use of multi-scale information."
+    },
+    {
+      "heading": "3.3.ScaleMixer: Bidirectional Global and Regional Scale Coupling",
+      "text": "Accurate high-resolution regional prediction requires resolving multiscale atmospheric processes\u2013from synoptic-scale forcings to mesoscale circulations\u2013while maintaining global dynamical consistency. To this end, we introduce ScaleMixer , a differentiable coupling mechanism that explicitly models interactions between the global foundation model and the regional refinement model. As illustrated in Figure 1 (right), ScaleMixer enables bidirectional feature fusion by adaptively identifying meteorologically critical regions and performing token-level encoding, effectively prioritizing areas with strong cross-scale interactions."
+    },
+    {
+      "heading": "3.4.Model Optimization",
+      "text": "The optimization schedule follows a three-stage training protocol: (1) global model pretraining, (2) regional model one-step training ( 6 6 -hours ahead), and (3) regional model autoregressive roll-out fine-tuning ( 12 \u223c 48 12\\sim 48 -hours ahead)."
+    },
+    {
+      "heading": "4.Experiments",
+      "text": "To resolve high-impact meteorological phenomena such as convective storms and boundary layer dynamics, weather prediction systems require high-resolution spatial-temporal modeling capabilities. We evaluate ScaleMixer through two complementary experimental paradigms: (1) hindcast for verification using reanalysis data, and (2) operational forecast to assess predictive skill under dynamically evolving initial conditions consistent with production environment management system."
+    },
+    {
+      "heading": "4.3.Skillful Regional Weather Forecasting at 0.05\u2218Resolution",
+      "text": "We focus on short-term forecasting for next 48 hours, primarily because such outlooks have a more immediate impact on societal functions and daily routines. Furthermore, this is the period that NWP models have optimal performances.\nThe deterministic forecasting results of ScaleMixer and baselines are summarized in Table 1 , and Figure 2 , evaluating forecast skill across \u0394 \u200b t = 1 \u223c 48 \\Delta t=1\\sim 48 hours lead time."
+    },
+    {
+      "heading": "4.5.Ablation Studies",
+      "text": "To rigorously validate the architectural design of ScaleMixer, we conducted fine-grained ablation studies focusing on two core dimensions: the sampling strategy for key position identification and the directionality of cross-scale coupling. Furthermore, we analyzed the sensitivity of the model to critical hyperparameters. All ablation experiments were conducted on the validation set with a forecast lead time of \u0394 \u200b t = 24 \\Delta t=24 hours.\n\nEffectiveness of ScaleMixer Components. We compared our proposed framework against four variants: (A) Random Sampling , replacing adaptive identification with random selection; (B) Fixed Uniform Grid , utilizing a static grid for interaction; (C) Unidirectional Coupling , allowing only global-to-regional information flow; and (D) No Interaction , equivalent to the standalone regional model. The results are summarized in Table 3 .\n\nThe results demonstrate: (1) Effectiveness of Adaptive Sampling: The proposed adaptive key position identification significantly outperforms the Fixed Uniform Grid (Variant B), reducing T2M RMSE by 9.4%. This demonstrates that dynamically focusing computation on meteorologically active regions (e.g., high-gradient boundaries) is far more efficient than uniform processing, which may waste capacity on static areas; and (2) Effectiveness of Bidirectional Coupling: Compared to unidirectional coupling (Variant C), our bidirectional mechanism achieves a 6.2% improvement in T2M RMSE. This confirms that allowing high-resolution regional features to explicitly refine global tokens creates a necessary closed-loop feedback, enhancing the consistency of the synoptic-scale context.\n\nHyperparameter Sensitivity. We further investigated the sensitivity of the regional encoder depth ( k k ). As shown in Table 5 , increasing the number of layers from k = 2 k=2 to k = 4 k=4 yields significant gains, while k = 8 k=8 offers diminishing returns with doubled computational cost. Based on these results, we adopted k = 4 k=4 as the default configuration to balance forecasting accuracy and inference efficiency."
+    },
+    {
+      "heading": "5.Conclusion",
+      "text": "In this paper, we present a multiscale deep learning framework for high-resolution regional weather forecasting that bridges synoptic-scale dynamics with localized mesoscale processes. By integrating a pretrained global foundation model and a novel bidirectional global-regional coupling module, ScaleMixer achieves state-of-the-art performance in resolving complex weather phenomena at 0.05 \u2218 0.05^{\\circ} ( \u223c 5 \u200b km \\sim 5\\,\\mathrm{km} ) resolution.\nExperimental results establish ScaleMixer as a robust data-driven approach for regional weather forecasting. In the future, we will extend the framework to probabilistic forecasting and assimilate multi-modal observations (e.g., radar, satellite) for real-time forecasting."
+    },
+    {
+      "heading": "Limitations and Ethical Considerations",
+      "text": "Limitations. While ScaleMixer demonstrates significant advancements in regional weather forecasting, it is a purely data-driven model and lacks explicit equation-based constraints (e.g., Navier\u2013Stokes or hydrostatic balance), which can cause unphysical artifacts in long roll-outs, especially in extreme regimes. Future work will add physics-informed regularization to better enforce conservation laws.\n\nEthical Considerations Both global reanalysis and global operational analysis data are publicly available. The CLDAS dataset and weather station observations were obtained from the China Meteorological Administration, and we have been granted permission to use them for academic research, which poses no potential ethical risks."
+    },
+    {
+      "heading": "B.1.ERA5 and operational anlysis with0.250.25\u00b0 resolution",
+      "text": "we selected 6 atmospheric variables at all 13 pressure levels , 3 surface variables, and 3 static variables for the ERA5 dataset with 0.25 0.25 \u00b0 resolution, as detailed in Table \u02dc 6 . In our model training, we choose all variables as input variables, and all variables except three static variables as output variables that are used for loss calculation to pretrain global model \u2133 global \\mathcal{M}_{\\mathrm{global}} ."
+    },
+    {
+      "heading": "B.2.CLDAS with0.050.05\u00b0 resolution",
+      "text": "We selected 7 surface variables for the CLDAS dataset with 0.25 0.25 \u00b0 resolution, as detailed in Table \u02dc 7 . In our model training, we choose all variables as input variables, and all variables as output variables that are used for loss calculation to train global-regional model \u2133 global \u2212 regional \\mathcal{M}_{\\mathrm{global-regional}} ."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1 . Left: The Architecture of Global-Regional Weather Forecasting Model: Synoptic-scale context ( \u2133 global \\mathcal{M}_{\\mathrm{global}} ) drives mesoscale regional refinement ( \u2133 regional \\mathcal{M}_{\\mathrm{regional}} ) via ScaleMixer, ensuring cross-scale coupling and consistency. Right: ScaleMixer Module: Bidirectional Cross-Scale Coupling via Key Position Identification and encoding. Key components include (1) key position identification, (2) coupling regional dynamics with global context via global-to-position and position-to-regional attention, and (3) global token adaptation incorporating regional features.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28173/assets/x1.png"
+    },
+    {
+      "caption": "(a) Latitude-weighted RMSE for 7 surface variables (2024/10\u20132024/12 hindcast period)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28173/assets/x2.png"
+    },
+    {
+      "caption": "(a) Latitude-weighted RMSE for 7 surface variables (2024/10\u20132024/12 hindcast period)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28173/assets/x2.png"
+    },
+    {
+      "caption": "(b) Latitude-weighted RMSE for 7 surface variables (2025/01\u20132025/04 operational period)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28173/assets/x3.png"
+    },
+    {
+      "caption": "Figure 3 . Left: Temporal evolution of 10m wind speed predictions initialized at 2024/10/30 12 UTC over the Hengduan Mountains (25.0\u201335.0\u00b0N, 95.0\u2013105.0\u00b0E), China. Black arrows represent wind flow fields. ScaleMixer resolves enhanced resolution of orographic wind heterogeneity (peaking >10 m/s at crests and <2 m/s in valleys). Right: Corresponding temperature fields. Foehn effects are illustrated in the picture, characterized by 4\u20138\u00b0C leeward warming relative to windward slopes through adiabatic compression processes. ScaleMixer captures fine-grained temperature gradients, contrasting with IFS-HRES exhibiting spatial smoothing forecasts.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28173/assets/x4.png"
+    },
+    {
+      "caption": "Figure 4 . Station distrbution map. The station observation dataset contains 2216 weather stations across China, which record hourly observations of meteorological variables such as temperature, air pressure, and wind speed.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28173/assets/figs/stations.png"
+    },
+    {
+      "caption": "Figure 5 . 2 metre temperature forecasts over China",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28173/assets/x5.png"
+    },
+    {
+      "caption": "Figure 6 . 2 metre temperature forecasts over a subregion of latitudes in [ 30 , 40 ] [30,40] and longitudes in [ 95 , 115 ] [95,115]",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28173/assets/x6.png"
+    },
+    {
+      "caption": "Figure 7 . surface pressure forecasts over China",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28173/assets/x7.png"
+    },
+    {
+      "caption": "Figure 8 . surface pressure forecasts over a subregion of latitudes in [ 30 , 40 ] [30,40] and longitudes in [ 95 , 115 ] [95,115]",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28173/assets/x8.png"
+    },
+    {
+      "caption": "Figure 9 . 10 metre Wind speed U component forecasts over China",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28173/assets/x9.png"
+    },
+    {
+      "caption": "Figure 10 . 10 metre wind speed U component forecasts over a subregion of latitudes in [ 16.3 , 26 ] [16.3,26] and longitudes in [ 115 , 125 ] [115,125]",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28173/assets/x10.png"
+    },
+    {
+      "caption": "Figure 11 . 10 metre Wind speed V component forecasts over China",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28173/assets/x11.png"
+    },
+    {
+      "caption": "Figure 12 . 10 metre wind speed V component forecasts over a subregion of latitudes in [ 16.3 , 26 ] [16.3,26] and longitudes in [ 115 , 125 ] [115,125]",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28173/assets/x12.png"
+    },
+    {
+      "caption": "Figure 13 . surface solar radiation downwards forecasts over China",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28173/assets/x13.png"
+    },
+    {
+      "caption": "Figure 14 . surface solar radiation downwards forecasts over a subregion of latitudes in [ 35 , 50 ] [35,50] and longitudes in [ 115 , 135 ] [115,135]",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28173/assets/x14.png"
+    },
+    {
+      "caption": "Figure 15 . total cloud cover forecasts over China",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28173/assets/x15.png"
+    },
+    {
+      "caption": "Figure 16 . total cloud cover forecasts over a subregion of latitudes in [ 35 , 50 ] [35,50] and longitudes in [ 115 , 135 ] [115,135]",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28173/assets/x16.png"
+    },
+    {
+      "caption": "Figure 17 . RMSE and ACC for some key variables of various AI-based weather models on Weatherbench2",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28173/assets/figs/weatherbench.png"
+    }
+  ],
+  "ar5iv_success": true
+}

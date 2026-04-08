@@ -1,0 +1,123 @@
+{
+  "paper_id": "2603.27844",
+  "title": "Model Capability Dominates: Inference-Time Optimization Lessons from AIMO 3",
+  "abstract": "Majority voting over multiple LLM attempts improves mathematical reasoning, but correlated errors limit the effective sample size. A natural fix: assign structurally different reasoning strategies to different voters to decorrelate errors. We test this Diverse Prompt Mixer in the AIMO~3 competition: 3 models, 23+ experiments, and 50 IMO-level problems on a single H100 80 GB with a 5-hour limit. Every intervention fails. High-temperature sampling already decorrelates errors sufficiently; weaker prompt strategies reduce per-attempt accuracy more than they reduce correlation. Across a 17-point model capability gap and every inference-time optimization we tried, model capability dominates by an order of magnitude.",
+  "authors": [
+    "Natapong Nitarach"
+  ],
+  "date": "2026-03-29T20:05:18+00:00",
+  "url": "http://arxiv.org/abs/2603.27844v1",
+  "categories": [
+    "cs.CL"
+  ],
+  "primary_category": "cs.CL",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "Majority voting across N N inference attempts \u2014 self-consistency (Wang et al. , 2023 ) \u2014 is the standard approach for competition mathematics. It rests on the Condorcet Jury Theorem (de Condorcet, 1785 ) : with per-attempt accuracy p > 0.5 p>0.5 and independent errors, the majority converges to the correct answer as N N grows.\n\nIn practice, errors are correlated. The same model with the same prompt makes the same systematic mistakes regardless of random seed. The effective sample size becomes N eff = N 1 + ( N \u2212 1 ) \u200b \u03c1 N_{\\text{eff}}=\\frac{N}{1+(N-1)\\rho} (1) where \u03c1 \\rho is the mean pairwise error correlation. At \u03c1 = 0.3 \\rho=0.3 , eight attempts reduce to 2.6 effective votes.\n\nThe natural fix: assign different reasoning strategies to different voters. If \u201csmall cases first\u201d and \u201cwork backwards\u201d lead the model through different paths, their errors should be less correlated. We call this Diverse Prompt Mixer .\n\nThe idea is intuitive. It is also wrong. This paper explains why (Figure 1 )."
+    },
+    {
+      "heading": "2System Architecture",
+      "text": "Our system runs entirely on a single H100 80\u2009GB within Kaggle\u2019s 5-hour wall-clock limit. No external APIs, no multi-GPU setups, no pre-computed solutions."
+    },
+    {
+      "heading": "2.1Model and Serving",
+      "text": "We use gpt-oss-120b : 116.8B total parameters, 5.1B active via Mixture-of-Experts (MoE). The model is served locally via vLLM (Kwon et al. , 2023 ) with FP8 quantization for both weights and KV cache. Model weights consume \u223c 75 {\\sim}75 GB of GPU memory; the remaining \u223c 5 {\\sim}5 GB supports KV cache for up to N = 8 N{=}8 concurrent sequences at 65536-token context.\n\nServer startup takes \u223c 160 {\\sim}160 s (including weight loading to page cache). We pre-load weights via sequential file reads before launching vLLM to avoid cold-start latency during inference."
+    },
+    {
+      "heading": "2.2Inference Pipeline",
+      "text": "Each problem passes through a 5-stage pipeline:\n\n1. Budget allocation : Divide remaining wall-clock time equally among remaining problems. No bonus, no inflation \u2014 this guarantees total solving time \u2264 \\leq notebook limit. 2. Parallel attempts : Launch N = 8 N{=}8 concurrent inference threads, each with a different random seed but identical system prompt and temperature T = 1.0 T{=}1.0 . 3. Tool-integrated reasoning : Each attempt can generate Python code via <tool_call> tags. Code executes in a persistent Jupyter kernel sandbox with access to sympy , numpy , mpmath . Results feed back into the conversation for multi-turn reasoning. 4. Early stopping : If 4 of 8 attempts agree on a non-trivial answer ( > 1 >1 ), remaining attempts are cancelled. 5. Entropy-weighted voting : Final answer selected by weighted majority vote, where weight w = 1 + 1 / ( entropy + 0.1 ) w=1+1/(\\text{entropy}+0.1) . Low-entropy (confident) attempts contribute more."
+    },
+    {
+      "heading": "2.3Time Management",
+      "text": "The 5-hour limit is the binding constraint. Our budget system:\n\n\u2022 Total: 18000\u2009s. Reserve 540\u2009s for infrastructure variance, 360\u2009s for startup. \u2022 Solving budget: 17100\u2009s for 50 problems. \u2022 Per-problem budget: time_left / problems_remaining \\text{time\\_left}/\\text{problems\\_remaining} . Pure equal division \u2014 no bonus from saved time, no inflation. Mathematically guarantees completion. \u2022 Hard deadline: if < < 30\u2009s remain, return 0 immediately. This ensures the inference server answers all 50 problems before Kaggle\u2019s hard kill."
+    },
+    {
+      "heading": "3Diverse Prompt Mixer",
+      "text": "We design four complementary strategies, each a different system prompt with all other parameters identical:\n\n1. Original : Step-by-step with exploration, planning, and verification. 2. Small Cases First : Enumerate n = 1 , 2 , 3 , \u2026 n{=}1,2,3,\\ldots , discover patterns, conjecture, prove. 3. Work Backwards : List constraints, narrow search space, construct. 4. Classify Then Solve : Identify problem type, recall canonical techniques, apply.\n\nThree ensemble configurations plus isolated strategies:\n\nMore diversity = worse performance. The relationship is monotonic: replacing more Original prompts with diverse strategies never helps and eventually hurts (Figure 2 ). Every individual strategy is weaker than the Original. Code-first (41/50) appeared promising but confirmation runs scored 38 and 34, giving a 3-run mean of 37.7 \u2014 clearly below baseline."
+    },
+    {
+      "heading": "4.1Temperature Already Decorrelates",
+      "text": "At T = 1.0 T{=}1.0 , the model explores substantially different reasoning paths even with identical prompts:\n\nAdding prompt diversity on top of high temperature is redundant \u2014 stochastic diversity already achieves most of the achievable decorrelation."
+    },
+    {
+      "heading": "4.2Pairwise Correlation Is Already Near Zero",
+      "text": "Equation 1 assumes constant pairwise correlation \u03c1 \\rho across attempts. We measure \u03c1 ^ \\hat{\\rho} directly using the method-of-moments estimator for a binary exchangeable sequence: \u03c1 ^ = v c \u200b ( v c \u2212 1 ) / [ N \u200b ( N \u2212 1 ) ] \u2212 p ^ 2 p ^ \u200b ( 1 \u2212 p ^ ) \\hat{\\rho}=\\frac{v_{c}(v_{c}-1)/[N(N-1)]-\\hat{p}^{2}}{\\hat{p}(1-\\hat{p})} where v c v_{c} is the number of correct votes and p ^ = v c / N \\hat{p}=v_{c}/N . We compute this across all three models: gpt-oss-120b ( N = 8 N{=}8 ), Qwen3.5-35B-A3B ( N = 16 N{=}16 ), and Nemotron-Super-120B ( N = 3 N{=}3 ). Problems with p ^ \u2208 { 0 , 1 } \\hat{p}\\in\\{0,1\\} yield undefined \u03c1 ^ \\hat{\\rho} and are excluded.\n\nThis gives 8 computable points (Figure 3 ). All eight are negative. The five estimates from models with N \u2265 7 N\\geq 7 are \u03c1 ^ \u2208 { \u2212 0.167 , \u2212 0.167 , \u2212 0.100 , \u2212 0.067 , \u2212 0.067 } \\hat{\\rho}\\in\\{-0.167,-0.167,-0.100,-0.067,-0.067\\} , mean \u2212 0.113 -0.113 . The three Nemotron points all give \u03c1 ^ = \u2212 0.500 \\hat{\\rho}=-0.500 , which is the mathematical minimum for N = 3 N{=}3 , v c = 1 v_{c}{=}1 (any single-correct-vote outcome at N = 3 N{=}3 forces this value); they confirm sign but not magnitude. Across all 8 points the mean is \u2212 0.258 -0.258 . When the model is wrong, wrong answers scatter across many distinct values rather than clustering\u2014so two draws are less likely to share the correct answer than p ^ 2 \\hat{p}^{2} predicts. This leaves no correlation headroom for diversity strategies to exploit. Diverse prompts cannot decorrelate what is already at or below zero."
+    },
+    {
+      "heading": "4.3Weaker Strategies Reduce Accuracy",
+      "text": "The Mixer modifies two parameters simultaneously: it reduces \u03c1 \\rho (intended) but also reduces p \u00af \\bar{p} (unintended: weaker prompts lower per-attempt accuracy). For the intervention to succeed, decorrelation must exceed accuracy loss.\n\nThe critical test is E10: Equal mix (2+2+2+2) at T = 0.5 T{=}0.5 , where prompt diversity should help most (low stochastic diversity). It scores 36 \u2014 worse than T = 0.5 T{=}0.5 alone (38). Prompt diversity does not compensate even when temperature-based diversity is deliberately suppressed."
+    },
+    {
+      "heading": "4.4Model Capability Dominates",
+      "text": "The cross-model comparison is confounded and should not be read as a clean capability ranking. On HMMT Feb25 (hard math), Nemotron-Super-120B scores 95.4% (NVFP4) vs. 94.7% (BF16)\u2014NVFP4 quantization does not significantly degrade math performance. The most likely cause of Nemotron-Super-120B \u2019s 23/50 on AIMO\u00a03 is compute budget: N = 3 N{=}3 attempts under time constraints vs. gpt-oss-120b \u2019s N = 8 N{=}8 . Qwen3.5-35B-A3B \u2019s 23/50 reflects both its 0.6 \u00d7 0.6\\times active parameters and N = 8 N{=}8 \u201316 in limited runs. Neither comparison isolates a single variable.\n\nTo partially address the compute-budget confound, we run gpt-oss-120b at N = 3 N{=}3 (E11): LB score 36/50. At equal compute ( N = 3 N{=}3 ), gpt-oss-120b (36) outperforms Nemotron-Super-120B (23) by 13 points. E11 also changed the system prompt (elaborated reasoning scaffold), so the confound is not fully resolved\u2014but a 13-point gap at identical N N is too large to attribute to inference budget alone. The capability gap is real. The main result \u2014 that no inference-time optimization improved over the baseline within a fixed model \u2014 stands regardless of this cross-model picture."
+    },
+    {
+      "heading": "5Cross-Model Validation",
+      "text": "To rule out model-specific effects, we replicate on two additional models."
+    },
+    {
+      "heading": "6Complete Ablation",
+      "text": "Twenty-three experiments on gpt-oss-120b , each modifying one variable. None reliably improve over baseline.\n\nThe optimization landscape is flat (Figure 5 ). The best experiment (E12 Code-first, 41/50) fell to 38 and then 34 on two confirmation runs, yielding a 3-run mean of 37.7 \u2014 below baseline. The Formalize-First prompt (F-1), which forces explicit equation formulation before computation, scored 39. The original system is a local optimum."
+    },
+    {
+      "heading": "7.1AIMO Competition Progression",
+      "text": "The trend: from high- N N to high- p p (Figure 6 ). AIMO-1 used N = 48 N{=}48 with brute-force voting. AIMO-2 invested in 540K training problems with custom GenSelect. Our approach uses zero training compute on an off-the-shelf model. The lesson: model capability first, everything else second."
+    },
+    {
+      "heading": "7.2Inference-Time Scaling",
+      "text": "Recent work on scaling test-time compute (Snell et al. , 2024 ; Brown et al. , 2024 ) suggests that repeated sampling with selection can substitute for model scaling. Our results qualify this: on IMO-level problems near the capability frontier ( p ^ \u2248 0.69 \\hat{p}\\approx 0.69 ), repeated sampling with majority voting works, but modifying the sampling (prompt diversity, temperature tuning, strategy mixing) does not improve over vanilla self-consistency. The returns to inference-time optimization flatten once the base system is reasonably configured."
+    },
+    {
+      "heading": "8Submission as Lottery",
+      "text": "With \u03bc ^ = 39.7 \\hat{\\mu}=39.7 and \u03c3 ^ = 1.7 \\hat{\\sigma}=1.7 over 13 baseline runs, each submission is a lottery ticket: P \u200b ( score \u2265 44 \u2223 single ) \u2248 0.6 % , P \u200b ( max \u2265 44 \u200b in \u200b K ) = 1 \u2212 0.994 K P(\\text{score}\\geq 44\\mid\\text{single})\\approx 0.6\\%,\\qquad P(\\max\\geq 44\\text{ in }K)=1-0.994^{K} (2)\n\nThe Mixer reduces expected score ( \u03bc \\mu drops to \u223c 39.0 {\\sim}39.0 ) without improving tail probability: the lower mean is partly offset by a slightly wider spread ( \u03c3 \u2248 2.0 \\sigma{\\approx}2.0 ), leaving P \u200b ( single \u2265 44 ) P(\\text{single}\\geq 44) nearly unchanged at \u2248 0.6 % {\\approx}0.6\\% . There is no advantage to mixing. The optimal strategy is to submit the unmodified baseline repeatedly (Figure 7 )."
+    },
+    {
+      "heading": "9Infrastructure Noise",
+      "text": "Benchmark scores on shared GPU infrastructure exhibit significant variance from non-algorithmic sources (Anthropic Engineering, 2026 ) : resource contention, memory allocation timing, and kernel scheduling can shift scores by \u223c 6 {\\sim}6 percentage points. Our 13-run baseline ( \u03c3 = 1.7 \\sigma=1.7 , range 37\u201344) likely reflects a combination of genuine sampling variance and infrastructure noise. We mitigate this by reporting 13-run statistics rather than single-run scores, and by cross-validating findings across 3 different models."
+    },
+    {
+      "heading": "10When Might It Work",
+      "text": "Prompt diversity is not universally useless. It may help when: (1) temperature is low ( T \u2264 0.3 T\\leq 0.3 ), leaving insufficient stochastic diversity; (2) problems are easier, so weaker strategies still achieve high p p ; (3) diverse prompts can be designed with comparable accuracy to the original; or (4) the model is prompt-robust \u2014 its accuracy p p remains stable across diverse instruction formats. On IMO-level problems at T = 1.0 T{=}1.0 with a model near its capability frontier, conditions 1\u20133 do not hold. Condition 4 is the deeper barrier.\n\nMost mathematical reasoning models are trained on datasets with very few instruction formats: NuminaMath (Beeching et al. , 2024 ) uses two (CoT, TIR), OpenMathInstruct-2 (Toshniwal et al. , 2024 ) uses one (CoT), and OpenMathReasoning (Moshkov et al. , 2025 ) uses three (CoT, TIR, GenSelect). A model trained exclusively on these formats has not learned to maintain accuracy under format perturbation. When a different strategy prompt \u2014 \u201cWork Backwards\u201d or \u201cSmall Cases First\u201d \u2014 is substituted, accuracy drops not because the math is harder but because the instruction distribution has shifted. Ngweta et al. ( 2025 ) demonstrate this directly: training with diverse instruction formats (Mixture of Formats, MOF) improves prompt robustness and raises accuracy on held-out benchmarks. Our results are consistent \u2014 the strategies that hurt least (Code-First: \u2212 0.7 -0.7 ; Work Backwards: \u2212 0.7 -0.7 ) are those most similar in structure to the training distribution; the strategies that hurt most (Classify & Select: \u2212 3.7 -3.7 ; Small Cases: \u2212 2.7 -2.7 ) require unfamiliar reasoning scaffolds. Diverse Prompt Mixer may become viable once models are trained on MOF-style data and prompt robustness improves \u2014 but that requires a training-time intervention, not an inference-time one."
+    },
+    {
+      "heading": "11Conclusion",
+      "text": "We proposed Diverse Prompt Mixer to decorrelate errors in majority voting for mathematical reasoning. It does not work. High-temperature sampling already provides sufficient diversity; structured prompt diversity is redundant at best, harmful at worst. Across 3 models, 23+ experiments, and 50 IMO-level problems, model capability dominates all inference-time optimizations by an order of magnitude. For hardware-constrained competitions: use the largest model that fits, keep temperature high, and spend your submission budget on lottery tickets, not on prompt engineering."
+    },
+    {
+      "heading": "Acknowledgments",
+      "text": "We thank the AIMO Prize Committee and Kaggle for organizing the competition and providing GPU infrastructure. Our baseline notebook builds on the inference pipeline originally developed by nihilisticneuralnet. 1 1 1 https://www.kaggle.com/code/nihilisticneuralnet/44-50-let-me-over-cook"
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1: Model capability dominates. Per-attempt accuracy p ^ \\hat{p} vs. expected majority-vote score under Binomial voting at N = 8 , 16 , 32 N{=}8,16,32 . Four models at their empirical ( p ^ , score ) (\\hat{p},\\,\\text{score}) . The 17-point gap between gpt-oss-120b ( p ^ = 0.69 \\hat{p}{=}0.69 ) and all alternatives dwarfs every prompt optimization tested ( \u00b1 \\pm 2 points). Inference-time tricks cannot bridge a capability gap.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27844/assets/x1.png"
+    },
+    {
+      "caption": "Figure 2: Prompt diversity vs. score on gpt-oss-120b . Blue circles: individual baseline runs ( N = 13 N{=}13 ). Black diamonds: configuration means. Shaded band: baseline \u00b1 1 \u200b \u03c3 \\pm 1\\sigma . More diversity monotonically degrades performance.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27844/assets/x2.png"
+    },
+    {
+      "caption": "Figure 3: Per-problem \u03c1 ^ \\hat{\\rho} vs. p ^ \\hat{p} across three models (10 problems each). Circles = Qwen3.5-35B-A3B ( N = 16 N{=}16 ); squares = gpt-oss-120b ( N = 8 N{=}8 ); hollow triangles = Nemotron-Super-120B ( N = 3 N{=}3 , hollow because \u03c1 ^ = \u2212 0.500 \\hat{\\rho}{=}-0.500 is mathematically forced for any v c = 1 v_{c}{=}1 , N = 3 N{=}3 outcome). Teal/blue/purple = correct final answer; red/orange = wrong. All 8 computable points show \u03c1 ^ < 0 \\hat{\\rho}<0 . Orange dotted line: mean \u03c1 ^ = \u2212 0.258 \\hat{\\rho}=-0.258 (all 8); grey dotted: mean = \u2212 0.113 =-0.113 ( N \u2265 7 N{\\geq}7 only). Consensus problems ( p ^ \u2248 1 \\hat{p}{\\approx}1 ) are shown in shaded region. The independence assumption ( \u03c1 = 0 \\rho{=}0 ) is approximately valid; the true \u03c1 \\rho is slightly negative, leaving nothing for diversity strategies to exploit.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27844/assets/x3.png"
+    },
+    {
+      "caption": "Figure 4: Qwen3.5-35B-A3B ablation on 10 local problems. Blue bars: baseline ( 8 / 10 8/10 ). Orange bars: underperform ( 7 / 10 7/10 ). Red labels: crashed configs. Nothing improves beyond baseline.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27844/assets/x4.png"
+    },
+    {
+      "caption": "Figure 5: Complete ablation across all experiments. Blue bar: baseline (39.7). Orange bars: gpt-oss-120B interventions. Yellow-orange bars: diversity mixer variants. Teal: E11 N-ablation ( N = 3 N{=}3 ). Red: Nemotron-Super (cross-model). Purple: Qwen3.5-35B (cross-model). Green dashed line: baseline mean. No experiment reliably exceeds baseline.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27844/assets/x5.png"
+    },
+    {
+      "caption": "Figure 6: AIMO competition progression. Bars: winning scores (29\u219234\u219244). Red line: voters N N (48\u219264\u21928). High- N N voting gives way to high- p p capability.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27844/assets/x6.png"
+    },
+    {
+      "caption": "Figure 7: Left: score distributions. Baseline ( \u03bc = 39.7 \\mu{=}39.7 , \u03c3 = 1.7 \\sigma{=}1.7 , blue) vs. Mixer ( \u03bc \u2248 39.0 \\mu{\\approx}39.0 , \u03c3 \u2248 2.0 \\sigma{\\approx}2.0 , orange). Red dashed line: target score 44. Right: cumulative probability of max \u2265 44 \\max\\geq 44 over K K submissions. Baseline: p \u2248 0.006 p{\\approx}0.006 per run. Mixer: p \u2248 0.006 p{\\approx}0.006 . Dotted line at 13 remaining submissions.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.27844/assets/x7.png"
+    }
+  ],
+  "ar5iv_success": true
+}

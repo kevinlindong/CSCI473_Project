@@ -1,0 +1,428 @@
+{
+  "paper_id": "2603.28939",
+  "title": "Foundations of Polar Linear Algebra",
+  "abstract": "This work revisits operator learning from a spectral perspective by introducing Polar Linear Algebra, a structured framework based on polar geometry that combines a linear radial component with a periodic angular component. Starting from this formulation, we define the associated operators and analyze their spectral properties. As a proof of feasibility, the framework is evaluated on a canonical benchmark (MNIST). Despite the simplicity of the task, the results demonstrate that polar and fully spectral operators can be trained reliably, and that imposing self-adjoint-inspired spectral constraints improves stability and convergence. Beyond accuracy, the proposed formulation leads to a reduction in parameter count and computational complexity, while providing a more interpretable representation in terms of decoupled spectral modes. By moving from a spatial to a spectral domain, the problem decomposes into orthogonal eigenmodes that can be treated as independent computational pipelines. This structure naturally exposes an additional dimension of model parallelization, complementing existing parallel strategies without relying on ad-hoc partitioning. Overall, the work offers a different conceptual lens for operator learning, particularly suited to problems where spectral structure and parallel execution are central.",
+  "authors": [
+    "Giovanni Guasti"
+  ],
+  "date": "2026-03-30T19:17:40+00:00",
+  "url": "http://arxiv.org/abs/2603.28939v1",
+  "categories": [
+    "cs.LG",
+    "math.NA"
+  ],
+  "primary_category": "cs.LG",
+  "sections": [
+    {
+      "heading": "1.1Introduction",
+      "text": "Many natural and artificial signals possess inherent rotational symmetry:\nfruit cross-sections, microphone arrays, radar sweeps, and circular patterns.\nThese structures are often more naturally represented on a polar grid than on a Cartesian one.\n\nFigure 1.1 shows a pomegranate cross-section, where\nradial levels and angular sectors emerge organically from the physical morphology.\nThis motivates the introduction of polar matrices ,\noperators indexed by radius r r and angle \u03b8 \\theta : A \u200b [ r , \u03b8 ] , r = 0 , \u2026 , N r \u2212 1 , \u03b8 = 0 , \u2026 , N \u03b8 \u2212 1 . A[r,\\theta],\\quad r=0,\\dots,N_{r}-1,\\quad\\theta=0,\\dots,N_{\\theta}-1.\n\nPolar matrices form a structured algebra where the angular dimension\nis governed by circular convolution and the radial dimension acts as\na collection of independent channels.\nThis chapter develops the fundamental algebraic properties of polar operators,\ntheir symmetries, and their relevance for constructing rotation\u2013equivariant\ndeep learning architectures."
+    },
+    {
+      "heading": "1.2The Polar Grid and Polar Matrices",
+      "text": "A polar grid consists of discrete radii { r i } \\{r_{i}\\} and angular samples { \u03b8 j } \\{\\theta_{j}\\} . 1 1 1 The same design pattern extends naturally to tensors with more than one\nangular dimension, such as A \u200b [ r , \u03b8 1 , \u03b8 2 ] \u2208 \u211d N r \u00d7 N \u03b8 1 \u00d7 N \u03b8 2 . A[r,\\theta_{1},\\theta_{2}]\\in\\mathbb{R}^{N_{r}\\times N_{\\theta_{1}}\\times N_{\\theta_{2}}}.\n\nA polar matrix is a tensor: A \u2208 \u211d N r \u00d7 N \u03b8 , A \u200b [ r , \u03b8 ] = value at sector \u200b ( r , \u03b8 ) . A\\in\\mathbb{R}^{N_{r}\\times N_{\\theta}},\\qquad A[r,\\theta]=\\text{value at sector }(r,\\theta)."
+    },
+    {
+      "heading": "Example: a simple polar matrix",
+      "text": "Let N r = 2 N_{r}=2 , N \u03b8 = 4 N_{\\theta}=4 .\nA simple polar matrix is represented in figure 1.2\n\nRow r = 0 r=0 corresponds to the inner ring, row r = 1 r=1 to the outer ring; columns represent equally spaced angles."
+    },
+    {
+      "heading": "Cartesian representation of a polar matrix (counterclockwise\u03b8\\theta)",
+      "text": "In polar coordinates we adopt the standard mathematical convention: \u03b8 \\theta increases counterclockwise, with \u03b8 = 0 \\theta=0 on the positive x x \u2013axis.\n\nUnder this indexing, the polar matrix shown in Fig. 1.2 corresponds to the Cartesian form A = ( 2 1 0 1 3 2 1 0 ) , A=\\begin{pmatrix}2&1&0&1\\\\\n3&2&1&0\\end{pmatrix}, where rows represent radial levels and columns represent angular samples ( 0 , \u03c0 2 , \u03c0 , 3 \u200b \u03c0 2 ) (0,\\tfrac{\\pi}{2},\\pi,\\tfrac{3\\pi}{2}) .\nThe first row corresponds to the inner radial level, while the second row\nrepresents the outer level, with columns ordered cyclically along the angular dimension.\nThis Cartesian form is often convenient for algebraic manipulation,\nwhile preserving the underlying polar semantics."
+    },
+    {
+      "heading": "1.3Algebra on Polar Matrices",
+      "text": "In this section we define the basic algebraic operations on polar matrices:\naddition, scalar multiplication, Hadamard product, polar product, polar transpose,\nself-adjointness, and inner product/norm."
+    },
+    {
+      "heading": "1.3.1Addition",
+      "text": "Given two polar matrices A , B \u2208 \u211d N r \u00d7 N \u03b8 A,B\\in\\mathbb{R}^{N_{r}\\times N_{\\theta}} , their sum is defined pointwise: ( A + B ) \u200b [ r , \u03b8 ] = A \u200b [ r , \u03b8 ] + B \u200b [ r , \u03b8 ] . (A+B)[r,\\theta]=A[r,\\theta]+B[r,\\theta]."
+    },
+    {
+      "heading": "Example",
+      "text": "Given A = ( 1 2 3 4 2 0 1 3 ) , B = ( 4 3 2 1 1 1 1 1 ) , A=\\begin{pmatrix}1&2&3&4\\\\\n2&0&1&3\\end{pmatrix},\\quad B=\\begin{pmatrix}4&3&2&1\\\\\n1&1&1&1\\end{pmatrix}, we have A + B = ( 5 5 5 5 3 1 2 4 ) . A+B=\\begin{pmatrix}5&5&5&5\\\\\n3&1&2&4\\end{pmatrix}."
+    },
+    {
+      "heading": "1.3.2Scalar multiplication",
+      "text": "For any scalar \u03bb \u2208 \u211d \\lambda\\in\\mathbb{R} , the scalar\u2013polar matrix product is defined by ( \u03bb \u200b A ) \u200b [ r , \u03b8 ] = \u03bb \u200b A \u200b [ r , \u03b8 ] . (\\lambda A)[r,\\theta]=\\lambda\\,A[r,\\theta]."
+    },
+    {
+      "heading": "Example",
+      "text": "Let \u03bb = 3 \\lambda=3 and A = ( 1 2 3 4 2 0 1 3 ) . A=\\begin{pmatrix}1&2&3&4\\\\\n2&0&1&3\\end{pmatrix}. Then 3 \u200b A = ( 3 6 9 12 6 0 3 9 ) . 3A=\\begin{pmatrix}3&6&9&12\\\\\n6&0&3&9\\end{pmatrix}."
+    },
+    {
+      "heading": "1.3.3Hadamard (elementwise) product",
+      "text": "Given two polar matrices A,B the elementwise product (Hadamard product) is ( A \u2299 B ) \u200b [ r , \u03b8 ] = A \u200b [ r , \u03b8 ] \u200b B \u200b [ r , \u03b8 ] . (A\\odot B)[r,\\theta]=A[r,\\theta]\\,B[r,\\theta]."
+    },
+    {
+      "heading": "1.4The Polar Product (Circular Convolution)",
+      "text": "The key operation in polar linear algebra is the polar product , defined as angular circular convolution at each radius.\n\nGiven two polar matrices A,B, for each radius r r , define: ( A \u2297 B ) \u200b [ r , \u03b8 ] = \u2211 k = 0 N \u03b8 \u2212 1 A \u200b [ r , k ] \u200b B \u200b [ r , ( \u03b8 \u2212 k ) mod N \u03b8 ] . (A\\otimes B)[r,\\theta]=\\sum_{k=0}^{N_{\\theta}-1}A[r,k]\\,B[r,(\\theta-k)\\bmod N_{\\theta}]. This is just circular convolution of the angular vectors A \u200b [ r , : ] A[r,:] and B \u200b [ r , : ] B[r,:] ."
+    },
+    {
+      "heading": "Example 1: circular convolution on a single ring",
+      "text": "Let at a fixed radius r r : a = [ 2 , 1 , 0 , 1 ] , b = [ 1 , 0 , 1 , 0 ] . a=[2,1,0,1],\\quad b=[1,0,1,0]. Then ( a \u2297 b ) \u200b [ 0 ] = 2 \u22c5 1 + 1 \u22c5 0 + 0 \u22c5 1 + 1 \u22c5 0 = 2 , (a\\otimes b)[0]=2\\cdot 1+1\\cdot 0+0\\cdot 1+1\\cdot 0=2, ( a \u2297 b ) \u200b [ 1 ] = 2 \u22c5 0 + 1 \u22c5 1 + 0 \u22c5 0 + 1 \u22c5 1 = 2 , (a\\otimes b)[1]=2\\cdot 0+1\\cdot 1+0\\cdot 0+1\\cdot 1=2, and similarly one checks that a \u2297 b = [ 2 , 2 , 2 , 2 ] . a\\otimes b=[2,2,2,2]."
+    },
+    {
+      "heading": "Example 2: circular product of two2\u00d732\\times 3polar matrices",
+      "text": "Let A = ( 2 1 0 3 2 1 ) , B = ( 1 0 1 2 1 0 ) . A=\\begin{pmatrix}2&1&0\\\\\n3&2&1\\end{pmatrix},\\qquad B=\\begin{pmatrix}1&0&1\\\\\n2&1&0\\end{pmatrix}.\n\nFor each radius r r , the circular convolution is ( A \u2297 B ) \u200b [ r , \u03b8 ] = \u2211 k = 0 2 A \u200b [ r , k ] \u200b B \u200b [ r , ( \u03b8 \u2212 k ) mod 3 ] . (A\\otimes B)[r,\\theta]=\\sum_{k=0}^{2}A[r,k]\\;B[r,(\\theta-k)\\bmod 3].\n\nComputing row by row: ( A \u2297 B ) \u200b [ 0 , : ] = [ 3 , 1 , 2 ] , ( A \u2297 B ) \u200b [ 1 , : ] = [ 7 , 7 , 4 ] , (A\\otimes B)[0,:]=[3,\\;1,\\;2],\\qquad(A\\otimes B)[1,:]=[7,\\;7,\\;4], so that A \u2297 B = ( 3 1 2 7 7 4 ) . A\\otimes B=\\begin{pmatrix}3&1&2\\\\\n7&7&4\\end{pmatrix}."
+    },
+    {
+      "heading": "1.5Polar Transpose",
+      "text": "The polar transpose reflects the angular index: A T p \u200b [ r , \u03b8 ] = A \u200b [ r , ( \u2212 \u03b8 ) mod N \u03b8 ] . A^{T_{p}}[r,\\theta]=A[r,(-\\theta)\\bmod N_{\\theta}]. Intuitively, this corresponds to mirroring the pattern in \u03b8 \\theta ."
+    },
+    {
+      "heading": "Example",
+      "text": "If a = [ 2 , 1 , 0 , 1 ] a=[2,1,0,1] , then a T p = [ 2 , 1 , 0 , 1 ] (same, because symmetric) . a^{T_{p}}=[2,1,0,1]\\quad\\text{(same, because symmetric)}. But if a = [ 5 , 4 , 3 , 2 ] a=[5,4,3,2] , then: a T p = [ 5 , 2 , 3 , 4 ] . a^{T_{p}}=[5,2,3,4]."
+    },
+    {
+      "heading": "1.6Self-Adjoint Polar Matrices",
+      "text": "Let A \u2208 \u2102 N r \u00d7 N \u03b8 A\\in\\mathbb{C}^{N_{r}\\times N_{\\theta}} be a complex-valued polar matrix.\nWe define the polar adjoint as A \u2020 p \u200b [ r , \u03b8 ] = A \u200b [ r , ( \u2212 \u03b8 ) mod N \u03b8 ] \u00af , A^{\\dagger_{p}}[r,\\theta]=\\overline{A[r,(-\\theta)\\bmod N_{\\theta}]}, where the overline denotes complex conjugation.\n\nA polar matrix is said to be self-adjoint if A = A \u2020 p . A=A^{\\dagger_{p}}."
+    },
+    {
+      "heading": "Example",
+      "text": "For N \u03b8 = 4 N_{\\theta}=4 , the condition requires: A \u200b [ r , 1 ] = A \u200b [ r , 3 ] , A \u200b [ r , 0 ] \u200b arbitrary , A \u200b [ r , 2 ] \u200b arbitrary . A[r,1]=A[r,3],\\quad A[r,0]\\text{ arbitrary},\\quad A[r,2]\\text{ arbitrary}. This corresponds to angular symmetry around \u03b8 = 0 \\theta=0 ."
+    },
+    {
+      "heading": "1.7Inner Product and Norm",
+      "text": "We define the inner product between two polar matrices as the Frobenius inner product: \u27e8 A , B \u27e9 = \u2211 r = 0 N r \u2212 1 \u2211 \u03b8 = 0 N \u03b8 \u2212 1 A \u200b [ r , \u03b8 ] \u200b B \u200b [ r , \u03b8 ] , \\langle A,B\\rangle=\\sum_{r=0}^{N_{r}-1}\\sum_{\\theta=0}^{N_{\\theta}-1}A[r,\\theta]\\,B[r,\\theta], and the corresponding norm: \u2016 A \u2016 = \u27e8 A , A \u27e9 . \\|A\\|=\\sqrt{\\langle A,A\\rangle}."
+    },
+    {
+      "heading": "Example",
+      "text": "A = ( 1 2 3 4 ) \u21d2 \u2016 A \u2016 = 1 2 + 2 2 + 3 2 + 4 2 = 30 . A=\\begin{pmatrix}1&2\\\\\n3&4\\end{pmatrix}\\Rightarrow\\|A\\|=\\sqrt{1^{2}+2^{2}+3^{2}+4^{2}}=\\sqrt{30}."
+    },
+    {
+      "heading": "1.8Fourier View on Polar Operators",
+      "text": "Since the polar product is circular convolution in the angular dimension, it is natural to analyze polar matrices in the angular Fourier domain.\n\nLet N \u03b8 N_{\\theta} be the number of angular samples of a polar matrix A A . For a fixed radius r r , consider the angular vector a \u200b [ \u03b8 ] = A \u200b [ r , \u03b8 ] , \u03b8 = 0 , \u2026 , N \u03b8 \u2212 1 . a[\\theta]=A[r,\\theta],\\qquad\\theta=0,\\dots,N_{\\theta}-1. Its discrete Fourier transform (DFT) is a ^ \u200b [ m ] = \u2211 \u03b8 = 0 N \u03b8 \u2212 1 a \u200b [ \u03b8 ] \u200b e \u2212 i \u200b 2 \u200b \u03c0 \u200b m \u200b \u03b8 / N \u03b8 , m = 0 , \u2026 , N \u03b8 \u2212 1 . \\hat{a}[m]=\\sum_{\\theta=0}^{N_{\\theta}-1}a[\\theta]\\;e^{-i2\\pi m\\theta/N_{\\theta}},\\qquad m=0,\\dots,N_{\\theta}-1.\n\nThe key property is that circular convolution becomes pointwise multiplication in the Fourier domain: ( a \u2297 b ) \u200b [ \u03b8 ] \u27f7 DFT a ^ \u200b [ m ] \u200b b ^ \u200b [ m ] . (a\\otimes b)[\\theta]\\;\\stackrel{{\\scriptstyle\\text{DFT}}}{{\\longleftrightarrow}}\\;\\hat{a}[m]\\,\\hat{b}[m]. This is the spectral backbone of Aurora\u2019s Theorem."
+    },
+    {
+      "heading": "1.9Aurora\u2019s Theorem",
+      "text": "Let A ^ \u200b [ r , m ] \\hat{A}[r,m] denote the discrete Fourier transform (DFT) of A \u200b [ r , : ] A[r,:] along the angular dimension, with frequency index m \u2208 \u2124 N \u03b8 m\\in\\mathbb{Z}_{N_{\\theta}} ."
+    },
+    {
+      "heading": "1.10Numerical Examples for Aurora\u2019s Theorem",
+      "text": "We now illustrate Aurora\u2019s Theorem with explicit DFT computations for N \u03b8 = 4 N_{\\theta}=4 .\nLet \u03c9 = e \u2212 i \u200b 2 \u200b \u03c0 / 4 = e \u2212 i \u200b \u03c0 / 2 = \u2212 i , \u03c9 0 = 1 , \u03c9 1 = \u2212 i , \u03c9 2 = \u2212 1 , \u03c9 3 = i . \\omega=e^{-i2\\pi/4}=e^{-i\\pi/2}=-i,\\qquad\\omega^{0}=1,\\;\\omega^{1}=-i,\\;\\omega^{2}=-1,\\;\\omega^{3}=i."
+    },
+    {
+      "heading": "Example 1: a non-invertible polar filter",
+      "text": "Consider the angular vector a = [ 1 , 0 , 1 , 0 ] . a=[1,0,1,0]. We compute its DFT componentwise: a ^ \u200b [ m ] = \u2211 n = 0 3 a \u200b [ n ] \u200b \u03c9 m \u200b n . \\hat{a}[m]=\\sum_{n=0}^{3}a[n]\\,\\omega^{mn}."
+    },
+    {
+      "heading": "Example 2: an invertible polar filter",
+      "text": "Consider now a = [ 2 , 1 , 1 , 1 ] . a=[2,1,1,1]."
+    },
+    {
+      "heading": "Worked example: explicit computation ofa\u22121=\u2131\u22121\u200b(1/a^)a^{-1}=\\mathcal{F}^{-1}(1/\\hat{a})",
+      "text": "We continue Example\u00a02 with the invertible filter a = [ 2 , 1 , 1 , 1 ] , a ^ = [ 5 , 1 , 1 , 1 ] . a=[2,1,1,1],\\quad\\hat{a}=[5,1,1,1]."
+    },
+    {
+      "heading": "1.11Why These Foundations Matter",
+      "text": "Polar linear algebra is essential for analyzing and manipulating data with rotational or circular symmetries: radar returns, sonar signals, polar images, diffusion fields, and sensor arrays. Its core operators, like the polar product and polar transpose, naturally preserve rotational symmetry, making them ideal for tasks that require rotation-equivariance. Aurora\u2019s Theorem provides insight into when angular filters are invertible, which is key to understanding the structure of these systems.\n\nThis algebraic framework underpins rotation-equivariant deep networks, spectral polar models, and invertible polar-domain operators. Efficient implementation via FFTs along the angular dimension enables scalable and effective solutions for complex data processing tasks involving circular symmetries."
+    },
+    {
+      "heading": "2.1Polar Matrices as a Hilbert Space",
+      "text": "Let A , B \u2208 \u211d N r \u00d7 N \u03b8 A,B\\in\\mathbb{R}^{N_{r}\\times N_{\\theta}} and \u03bb \u2208 \u211d \\lambda\\in\\mathbb{R} ."
+    },
+    {
+      "heading": "2.1.1Vector Space Operations",
+      "text": "Polar matrices form a real vector space under entrywise addition and scalar multiplication: ( A + B ) \u200b [ r , \u03b8 ] = A \u200b [ r , \u03b8 ] + B \u200b [ r , \u03b8 ] , ( \u03bb \u200b A ) \u200b [ r , \u03b8 ] = \u03bb \u200b A \u200b [ r , \u03b8 ] . (A+B)[r,\\theta]=A[r,\\theta]+B[r,\\theta],\\qquad(\\lambda A)[r,\\theta]=\\lambda A[r,\\theta]."
+    },
+    {
+      "heading": "2.1.2Inner Product and Norm",
+      "text": "The natural Frobenius inner product is \u27e8 A , B \u27e9 = \u2211 r = 0 N r \u2212 1 \u2211 \u03b8 = 0 N \u03b8 \u2212 1 A \u200b [ r , \u03b8 ] \u200b B \u200b [ r , \u03b8 ] , \\langle A,B\\rangle=\\sum_{r=0}^{N_{r}-1}\\sum_{\\theta=0}^{N_{\\theta}-1}A[r,\\theta]\\,B[r,\\theta], with induced norm \u2016 A \u2016 = \u27e8 A , A \u27e9 \\|A\\|=\\sqrt{\\langle A,A\\rangle} .\nThus \u211d N r \u00d7 N \u03b8 \\mathbb{R}^{N_{r}\\times N_{\\theta}} is a real Hilbert space."
+    },
+    {
+      "heading": "2.2.1Definition",
+      "text": "The polar product is circular convolution along the angular dimension,\nperformed independently for each radius: ( A \u2297 B ) \u200b [ r , \u03b8 ] = \u2211 k = 0 N \u03b8 \u2212 1 A \u200b [ r , k ] \u200b B \u200b [ r , ( \u03b8 \u2212 k ) mod N \u03b8 ] . (A\\otimes B)[r,\\theta]=\\sum_{k=0}^{N_{\\theta}-1}A[r,k]\\;B[r,(\\theta-k)\\bmod N_{\\theta}]."
+    },
+    {
+      "heading": "2.2.2Algebraic Properties",
+      "text": "For all A , B , C \u2208 \u211d N r \u00d7 N \u03b8 A,B,C\\in\\mathbb{R}^{N_{r}\\times N_{\\theta}} and \u03bb \u2208 \u211d \\lambda\\in\\mathbb{R} : A \u2297 ( B + C ) = A \u2297 B + A \u2297 C , ( \u03bb \u200b A ) \u2297 B = \u03bb \u200b ( A \u2297 B ) , A\\otimes(B+C)=A\\otimes B+A\\otimes C,\\qquad(\\lambda A)\\otimes B=\\lambda(A\\otimes B), ( A \u2297 B ) \u2297 C = A \u2297 ( B \u2297 C ) . (A\\otimes B)\\otimes C=A\\otimes(B\\otimes C)."
+    },
+    {
+      "heading": "2.2.3Identity Kernel",
+      "text": "Define the polar identity kernel E \u200b [ r , \u03b8 ] = \u03b4 \u03b8 \u200b 0 = { 1 \u03b8 = 0 , 0 otherwise . E[r,\\theta]=\\delta_{\\theta 0}=\\begin{cases}1&\\theta=0,\\\\\n0&\\text{otherwise}.\\end{cases} Then A \u2297 E = A , E \u2297 A = A . A\\otimes E=A,\\qquad E\\otimes A=A."
+    },
+    {
+      "heading": "2.3.1Definition",
+      "text": "The polar transpose reverses the angular coordinate: A T p \u200b [ r , \u03b8 ] = A \u200b [ r , ( \u2212 \u03b8 ) mod N \u03b8 ] . A^{T_{p}}[r,\\theta]=A[r,(-\\theta)\\bmod N_{\\theta}]."
+    },
+    {
+      "heading": "2.3.2Basic Identities",
+      "text": "( A T p ) T p = A , ( A + B ) T p = A T p + B T p . (A^{T_{p}})^{T_{p}}=A,\\qquad(A+B)^{T_{p}}=A^{T_{p}}+B^{T_{p}}."
+    },
+    {
+      "heading": "2.3.3Transpose of a Polar Product",
+      "text": "( A \u2297 B ) T p = B T p \u2297 A T p . (A\\otimes B)^{T_{p}}=B^{T_{p}}\\otimes A^{T_{p}}. Since \u2297 \\otimes is commutative, this also implies ( A \u2297 B ) T p = A T p \u2297 B T p . (A\\otimes B)^{T_{p}}=A^{T_{p}}\\otimes B^{T_{p}}."
+    },
+    {
+      "heading": "2.4.1Self-Adjoint (Real-Valued) Polar Matrices",
+      "text": "A real-valued polar matrix A A is polar self-adjoint if A = A T p \u21d4 A \u200b [ r , \u03b8 ] = A \u200b [ r , ( \u2212 \u03b8 ) mod N \u03b8 ] . A=A^{T_{p}}\\quad\\Leftrightarrow\\quad A[r,\\theta]=A[r,(-\\theta)\\bmod N_{\\theta}]. This corresponds to mirror symmetry in the angular coordinate."
+    },
+    {
+      "heading": "2.4.2Symmetric Sum",
+      "text": "For real-valued A A , the operator S = A + A T p S=A+A^{T_{p}} satisfies S = S T p S=S^{T_{p}} ."
+    },
+    {
+      "heading": "2.4.3Isotropic Polar Kernels",
+      "text": "A polar kernel is isotropic if it does not depend on the angular index: K \u200b [ r , \u03b8 ] = K \u200b [ r , 0 ] \u2200 \u03b8 . K[r,\\theta]=K[r,0]\\quad\\forall\\theta. Equivalently, its angular spectrum is flat (only DC content per radius),\nand it is invariant under any angular shift of its angular coordinate."
+    },
+    {
+      "heading": "2.5Fourier Diagonalization and Invertibility",
+      "text": "For each radius r r , define the angular DFT: A ^ \u200b [ r , m ] = \u2211 \u03b8 = 0 N \u03b8 \u2212 1 A \u200b [ r , \u03b8 ] \u200b e \u2212 i \u200b 2 \u200b \u03c0 \u200b m \u200b \u03b8 / N \u03b8 . \\hat{A}[r,m]=\\sum_{\\theta=0}^{N_{\\theta}-1}A[r,\\theta]\\;e^{-i2\\pi m\\theta/N_{\\theta}}."
+    },
+    {
+      "heading": "2.5.1Convolution Theorem",
+      "text": "For all A , B A,B , A \u2297 B ^ \u200b [ r , m ] = A ^ \u200b [ r , m ] \u200b B ^ \u200b [ r , m ] . \\widehat{A\\otimes B}[r,m]=\\hat{A}[r,m]\\;\\hat{B}[r,m]."
+    },
+    {
+      "heading": "2.5.2Invertibility under\u2297\\otimes",
+      "text": "By Aurora\u2019s Theorem a polar matrix A A is invertible under \u2297 \\otimes if and only if A ^ \u200b [ r , m ] \u2260 0 \u2200 r , m . \\hat{A}[r,m]\\neq 0\\quad\\forall r,m. In this case, the inverse is given by A \u2212 1 \u200b [ r , \u03b8 ] = \u2131 \u03b8 \u2212 1 \u200b ( 1 A ^ \u200b [ r , m ] ) \u200b [ \u03b8 ] . A^{-1}[r,\\theta]=\\mathcal{F}^{-1}_{\\theta}\\!\\left(\\frac{1}{\\hat{A}[r,m]}\\right)[\\theta]."
+    },
+    {
+      "heading": "2.6.1Operators vs. Kernels",
+      "text": "A polar kernel K \u2208 \u211d N r \u00d7 N \u03b8 K\\in\\mathbb{R}^{N_{r}\\times N_{\\theta}} induces a linear operator T K : \u211d N r \u00d7 N \u03b8 \u2192 \u211d N r \u00d7 N \u03b8 , T K \u200b ( A ) = A \u2297 K . T_{K}:\\mathbb{R}^{N_{r}\\times N_{\\theta}}\\to\\mathbb{R}^{N_{r}\\times N_{\\theta}},\\qquad T_{K}(A)=A\\otimes K. In contrast, a rotor is a specific operator whose action is restricted to\nangular shifts only."
+    },
+    {
+      "heading": "2.6.2Definition of the Rotor",
+      "text": "For k \u2208 \u2124 N \u03b8 k\\in\\mathbb{Z}_{N_{\\theta}} , define the rotor R k R_{k} by ( R k \u200b A ) \u200b [ r , \u03b8 ] = A \u200b [ r , ( \u03b8 \u2212 k ) mod N \u03b8 ] . (R_{k}A)[r,\\theta]=A[r,(\\theta-k)\\bmod N_{\\theta}]. We denote by Id \\mathrm{Id} the identity operator; hence R 0 = Id R_{0}=\\mathrm{Id} ."
+    },
+    {
+      "heading": "2.6.4Matrix Representation on a Fixed Radius",
+      "text": "The action of a rotor R k R_{k} on a polar matrix A A is local with respect to the\nradial coordinate: for each fixed radius r r , the operator acts only along the\nangular dimension and does not mix different radial levels. This observation\nallows the operator to be represented, for a fixed r r , as a classical linear\ntransformation on \u211d N \u03b8 \\mathbb{R}^{N_{\\theta}} .\n\nFix a radius r r and define the angular signal x = A \u200b [ r , : ] \u22a4 \u2208 \u211d N \u03b8 . x=A[r,:]^{\\top}\\in\\mathbb{R}^{N_{\\theta}}.\n\nOn this one-dimensional angular slice, the rotor admits a standard\npermutation-matrix representation R k ( lin ) \u2208 \u211d N \u03b8 \u00d7 N \u03b8 R_{k}^{(\\mathrm{lin})}\\in\\mathbb{R}^{N_{\\theta}\\times N_{\\theta}} , where \u03b8 \\theta denotes the output angular index and j j the input angular index,\ndefined by ( R k ( lin ) ) \u03b8 , j = { 1 j = ( \u03b8 \u2212 k ) mod N \u03b8 , 0 otherwise . (R_{k}^{(\\mathrm{lin})})_{\\theta,j}=\\begin{cases}1&j=(\\theta-k)\\bmod N_{\\theta},\\\\\n0&\\text{otherwise}.\\end{cases} With this notation, the action of the polar rotor on the r r -th row of A A can be\nwritten as ( R k \u200b A ) \u200b [ r , : ] \u22a4 = R k ( lin ) \u200b A \u200b [ r , : ] \u22a4 . (R_{k}A)[r,:]^{\\top}=R_{k}^{(\\mathrm{lin})}\\,A[r,:]^{\\top}."
+    },
+    {
+      "heading": "2.7Extension to Multiple Angular Dimensions (Overview)",
+      "text": "The polar algebra extends to d d angular dimensions by replacing the single cyclic\ngroup C N \u03b8 C_{N_{\\theta}} with a direct product C N \u03b8 1 \u00d7 \u22ef \u00d7 C N \u03b8 d . C_{N_{\\theta_{1}}}\\times\\cdots\\times C_{N_{\\theta_{d}}}. A multi-angular polar tensor has entries A \u200b [ r , \u03b8 1 , \u2026 , \u03b8 d ] A[r,\\theta_{1},\\dots,\\theta_{d}] and the polar\nproduct becomes circular convolution on the d d -dimensional torus. Fourier\ndiagonalization still holds: convolution becomes pointwise multiplication in the\nmulti-dimensional DFT domain, and invertibility is characterized by the non-vanishing\nof all Fourier coefficients."
+    },
+    {
+      "heading": "2.8Summary",
+      "text": "Polar algebra mirrors classical linear algebra while incorporating angular periodicity.\nThe polar product \u2297 \\otimes , the polar transpose T p T_{p} , and the rotation operators R k R_{k} provide a consistent framework for rotation-equivariant models and efficient\nspectral analysis via the angular FFT."
+    },
+    {
+      "heading": "3.1.1Circulant Matrices",
+      "text": "In the mathematical exposition, angular signals are treated as column vectors\nand circular convolution is represented as y = C a \u200b x y=C_{a}x , where C a C_{a} is a circulant\nmatrix generated by a kernel a a . In the implementation (Chapter 4 ), angular\nsignals are stored as row arrays; this is purely representational and does not\naffect the identities below."
+    },
+    {
+      "heading": "3.1.2DFT Diagonalizes Circulant Operators",
+      "text": "Circular convolution with kernel a a can be represented as the action of the\ncirculant matrix C a C_{a} , so that a \u2297 x = C a \u200b x . a\\otimes x=C_{a}x. Since C a C_{a} is diagonalized by the DFT matrix F F , we have C a = F \u2212 1 \u200b diag \u200b ( a ^ ) \u200b F . C_{a}=F^{-1}\\,\\mathrm{diag}(\\hat{a})\\,F. Applying the Fourier transform to the convolution yields ( a \u2297 x ) ^ = F \u200b C a \u200b x = F \u200b F \u2212 1 \u200b diag \u200b ( a ^ ) \u200b F \u200b x = diag \u200b ( a ^ ) \u200b x ^ , \\widehat{(a\\otimes x)}=FC_{a}x=FF^{-1}\\,\\mathrm{diag}(\\hat{a})\\,Fx=\\mathrm{diag}(\\hat{a})\\,\\hat{x}, which shows that circular convolution corresponds to pointwise multiplication\nin the Fourier domain: ( a \u2297 x ) ^ \u200b [ m ] = a ^ \u200b [ m ] \u200b x ^ \u200b [ m ] . \\widehat{(a\\otimes x)}[m]=\\hat{a}[m]\\;\\hat{x}[m]."
+    },
+    {
+      "heading": "3.2Spectral Form of Polar Convolution Operators",
+      "text": "Let K \u2208 \u211d N r \u00d7 N \u03b8 K\\in\\mathbb{R}^{N_{r}\\times N_{\\theta}} be a polar kernel and define the\nconvolutional operator T K \u200b ( A ) = A \u2297 K T_{K}(A)=A\\otimes K . For each fixed radius r r , the action\nreduces to circular convolution on the angular slice. As a consequence,\nthe diagonalization result\u00a0( 3.1 ) applies independently at\neach r r .\n\nEquivalently, letting A ^ \u200b [ r , m ] \\hat{A}[r,m] and K ^ \u200b [ r , m ] \\hat{K}[r,m] denote the angular DFTs,\nthe operator T K T_{K} acts diagonally in the Fourier domain: T K \u200b ( A ) ^ \u200b [ r , m ] = A ^ \u200b [ r , m ] \u200b K ^ \u200b [ r , m ] . \\widehat{T_{K}(A)}[r,m]=\\hat{A}[r,m]\\;\\hat{K}[r,m].\n\nThis diagonal structure implies that each angular Fourier mode evolves\nindependently. In particular, whenever K ^ \u200b [ r , m ] \u2260 0 \\hat{K}[r,m]\\neq 0 , the action of T K T_{K} can be inverted by pointwise division in the spectral domain. This\nobservation provides the spectral mechanism underlying the inversion result\nstated in Aurora\u2019s Theorem."
+    },
+    {
+      "heading": "3.3Rotors in the Fourier Domain",
+      "text": "Recall the rotor (shift) operator ( R k \u200b A ) \u200b [ r , \u03b8 ] = A \u200b [ r , ( \u03b8 \u2212 k ) mod N \u03b8 ] , k \u2208 \u2124 N \u03b8 . (R_{k}A)[r,\\theta]=A[r,(\\theta-k)\\bmod N_{\\theta}],\\qquad k\\in\\mathbb{Z}_{N_{\\theta}}. We denote the identity operator by Id \\mathrm{Id} , hence R 0 = Id R_{0}=\\mathrm{Id} .\n\nSince R k R_{k} is a circulant operator on each angular slice, it is diagonalized by\nthe DFT: R k = F \u2212 1 \u200b diag \u200b ( e \u2212 2 \u200b \u03c0 \u200b i \u200b m \u200b k / N \u03b8 ) m = 0 N \u03b8 \u2212 1 \u200b F . R_{k}=F^{-1}\\,\\mathrm{diag}\\!\\left(e^{-2\\pi imk/N_{\\theta}}\\right)_{m=0}^{N_{\\theta}-1}\\,F. Thus, angular rotations do not mix spectral components; they only modulate\nphases frequency-by-frequency."
+    },
+    {
+      "heading": "3.5Chiara\u2019s Theorem: Polar Self-Adjointness and Real Spectra",
+      "text": "Up to this point, we have analyzed specific classes of operators, such as rotors\nand circulant operators, by explicitly constructing their action and studying their\nspectral properties. While these examples already suggest a common underlying\nstructure, the results have been presented through individual cases and concrete\nrepresentations.\n\nThe following theorem provides a unifying perspective. Rather than introducing\nnew operators, it formalizes the shared spectral structure implicit in all the\nprevious constructions, allowing the analysis to move from explicit operator\ndefinitions to a more abstract and general framework.\n\nRecall that A \u2208 \u211d N r \u00d7 N \u03b8 A\\in\\mathbb{R}^{N_{r}\\times N_{\\theta}} is polar self-adjoint if A T p = A A^{T_{p}}=A , so that A \u200b [ r , \u03b8 ] = A \u200b [ r , ( \u2212 \u03b8 ) mod N \u03b8 ] A[r,\\theta]=A[r,(-\\theta)\\bmod N_{\\theta}] .\n\nAlthough the result may appear as a natural extension of the properties previously\nestablished for rotors and circulant operators, Theorem 3.1 plays a distinct role.\nRather than introducing a new class of operators, it provides a unifying structural\nstatement that subsumes all previous cases into a single spectral framework.\nFrom this point on, we will rely on this characterization without further reference\nto individual constructions.\nThe theorem is formulated in abstract operator-theoretic terms but its\nassumptions naturally arise in a wide range of practical settings, including\nconvolutional filtering, correlation operators, and translationally invariant\nphysical systems. In these cases, the theorem provides a rigorous justification\nfor the ubiquitous use of Fourier-based representations."
+    },
+    {
+      "heading": "3.6Elisa\u2019s Theorem and Simultaneous Diagonalization",
+      "text": "By Elisa\u2019s Theorem (Chapter\u00a02), the polar product is commutative. For each fixed\nradius r r , this implies that the angular convolution operators induced by polar\nkernels commute: C a ( r ) \u200b C b ( r ) = C b ( r ) \u200b C a ( r ) . C_{a}^{(r)}C_{b}^{(r)}=C_{b}^{(r)}C_{a}^{(r)}.\n\nSince circulant operators are normal and commute, they admit a common orthonormal\neigenbasis. In the circulant case, this basis is explicitly given by the Fourier\nmodes. Consequently, the entire commutative algebra of polar convolution\noperators is simultaneously diagonalized by the DFT and reduces to pointwise\nmultiplication in the frequency domain."
+    },
+    {
+      "heading": "3.8Summary",
+      "text": "Polar convolution operators are diagonalized (radius-wise) by the DFT, rotors act\nas frequency-dependent phase shifts, and rotation equivariance forces operators\nto lie in the commutative algebra generated by the rotors. FFT-based computation\nis therefore the canonical spectral realization of polar linear algebra.\nAt this point, the algebraic and spectral structure of polar operators is\nfully characterized. In the following sections, we show how this structure\ntranslates into efficient implementations and practical architectures."
+    },
+    {
+      "heading": "4.1The PolarTensor Abstraction",
+      "text": "In order to translate the polar algebra developed in the previous chapters into\na numerical framework, we introduce the abstraction of a polar tensor .\n\nFormally, a polar tensor is an object of the form A \u200b [ r , \u03b8 1 , \u2026 , \u03b8 d ] \u2208 \u2102 N r \u00d7 N \u03b8 1 \u00d7 \u22ef \u00d7 N \u03b8 d , A[r,\\theta_{1},\\dots,\\theta_{d}]\\in\\mathbb{C}^{N_{r}\\times N_{\\theta_{1}}\\times\\cdots\\times N_{\\theta_{d}}}, where: \u2022 r r denotes the radial index; \u2022 each \u03b8 i \\theta_{i} denotes an angular index taking values in the cyclic group C N \u03b8 i C_{N_{\\theta_{i}}} ; \u2022 the radial dimension acts as a collection of independent channels; \u2022 angular dimensions are periodic and admit a Fourier representation."
+    },
+    {
+      "heading": "4.1.1Angular Axes and Spectral Structure",
+      "text": "Let \ud835\udc9c = { \u03b8 1 , \u2026 , \u03b8 d } \\mathcal{A}=\\{\\theta_{1},\\dots,\\theta_{d}\\} denote the set of angular axes.\nAll spectral operations are performed exclusively along these axes, while the\nradial axis is treated parametrically.\n\nThe discrete Fourier transform (DFT) of a polar tensor is defined as A ^ \u200b [ r , m 1 , \u2026 , m d ] = \u2131 \ud835\udc9c \u200b ( A ) \u200b [ r , m 1 , \u2026 , m d ] , \\widehat{A}[r,m_{1},\\dots,m_{d}]=\\mathcal{F}_{\\mathcal{A}}(A)[r,m_{1},\\dots,m_{d}], where \u2131 \ud835\udc9c \\mathcal{F}_{\\mathcal{A}} denotes the d d -dimensional DFT applied along\nthe angular axes.\n\nThis construction is the explicit numerical realization of the spectral\ndiagonalization proved in Chapter\u00a03."
+    },
+    {
+      "heading": "4.1.2Polar Product",
+      "text": "Given two polar tensors A A and B B with compatible dimensions, their polar product is implemented spectrally as A \u2297 B = \u2131 \ud835\udc9c \u2212 1 \u200b ( A ^ \u200b B ^ ) , A\\otimes B=\\mathcal{F}_{\\mathcal{A}}^{-1}\\bigl(\\widehat{A}\\;\\widehat{B}\\bigr), where the multiplication in the Fourier domain is pointwise.\nThis formulation directly reflects Elisa\u2019s Theorem and the diagonalization\nresults of Chapter\u00a03."
+    },
+    {
+      "heading": "4.1.3Invertibility and Pseudo-Inverse",
+      "text": "By Aurora\u2019s Theorem, a polar tensor A A is invertible under the polar product if\nand only if its Fourier coefficients are nowhere vanishing: A ^ \u200b [ r , m 1 , \u2026 , m d ] \u2260 0 \u2200 r , ( m 1 , \u2026 , m d ) . \\widehat{A}[r,m_{1},\\dots,m_{d}]\\neq 0\\quad\\forall r,\\ (m_{1},\\dots,m_{d}).\n\nIn numerical practice, invertibility is tested spectrally via thresholding.\nWhen exact invertibility fails, a spectral pseudo-inverse may be defined\nby regularized inversion of the Fourier coefficients: A ^ \u2020 = A ^ \u2217 | A ^ | 2 + \u03b5 , \\widehat{A}^{\\dagger}=\\frac{\\widehat{A}^{\\ast}}{|\\widehat{A}|^{2}+\\varepsilon}, where \u03b5 > 0 \\varepsilon>0 is a small regularization parameter.\nThis construction parallels standard Tikhonov regularization and will play a\ncentral role in learning-based applications discussed in Chapter\u00a05.\n\nFrom a learning perspective, the regularized spectral pseudo-inverse provides a\nuseful interpretation of the behavior observed during training in Chapter 5 . Spectral modes\nassociated with large Fourier coefficients are effectively inverted and\npreserved, while modes with small magnitude are automatically damped rather than\namplified. This mechanism explains the stability of the optimization process and\nthe absence of numerical instabilities, even when some spectral components are\nclose to singular. In the self-adjoint setting, where the spectrum is real-valued,\nthis effect becomes purely amplitude-based, further reinforcing the role of\nenergy-selective filtering in the learned representation."
+    },
+    {
+      "heading": "4.1.4Rotors as Special Polar Tensors",
+      "text": "Angular rotors introduced in Chapter\u00a02 admit a natural interpretation within\nthe polar tensor framework.\n\nA rotor is a polar tensor whose action corresponds to a discrete angular\nshift along one or more angular axes. For a shift vector \ud835\udc24 = ( k 1 , \u2026 , k d ) \\mathbf{k}=(k_{1},\\dots,k_{d}) , the associated rotor R \ud835\udc24 R_{\\mathbf{k}} satisfies ( R \ud835\udc24 \u200b A ) \u200b [ r , \u03b8 1 , \u2026 , \u03b8 d ] = A \u200b [ r , \u03b8 1 \u2212 k 1 , \u2026 , \u03b8 d \u2212 k d ] . (R_{\\mathbf{k}}A)[r,\\theta_{1},\\dots,\\theta_{d}]=A[r,\\theta_{1}-k_{1},\\dots,\\theta_{d}-k_{d}].\n\nSpectrally, rotors are diagonal operators. In the Fourier basis, their action\nreduces to a pointwise multiplication by a phase factor: ( R \ud835\udc24 ^ \u200b A ^ ) \u200b [ r , m 1 , \u2026 , m d ] = e \u2212 i \u200b 2 \u200b \u03c0 \u200b ( m 1 \u200b k 1 N \u03b8 1 + \u22ef + m d \u200b k d N \u03b8 d ) \u200b A ^ \u200b [ r , m 1 , \u2026 , m d ] . (\\widehat{R_{\\mathbf{k}}}\\,\\hat{A})[r,m_{1},\\dots,m_{d}]=e^{-i2\\pi\\left(\\frac{m_{1}k_{1}}{N_{\\theta_{1}}}+\\cdots+\\frac{m_{d}k_{d}}{N_{\\theta_{d}}}\\right)}\\hat{A}[r,m_{1},\\dots,m_{d}].\n\nwhere each angular coordinate \u03b8 j \\theta_{j} is discretized over N \u03b8 j N_{\\theta_{j}} samples, with \u03b8 j \u2208 \u2124 N \u03b8 j \\theta_{j}\\in\\mathbb{Z}_{N_{\\theta_{j}}} .\n\nThus, rotors appear as distinguished polar tensors whose spectra encode angular\ntranslations. This viewpoint unifies the operator-based and kernel-based\ninterpretations of rotations within a single computational object.\n\nIn the present work we mostly consider the case d = 1 d=1 , corresponding to a single\nangular coordinate \u03b8 \u2208 \u2124 N \u03b8 \\theta\\in\\mathbb{Z}_{N_{\\theta}} , but the formulation extends\nnaturally to multiple angular dimensions."
+    },
+    {
+      "heading": "4.2Python implementation",
+      "text": "The following reference implementation illustrates how the algebraic\nconstructions developed in the previous chapters translate directly into\nnumerical operations.\nThe code is intentionally minimal and mirrors the theoretical structure\none-to-one.\n\nAlthough written in Python/NumPy for clarity, the implementation is fully\ncompatible with multidimensional FFT backends and parallel hardware\narchitectures, as discussed in Chapter\u00a06."
+    },
+    {
+      "heading": "4.2.1Outlook",
+      "text": "The polar tensor abstraction introduced here provides a minimal but complete\nnumerical counterpart to the polar algebra developed in the previous chapters.\nIts design intentionally avoids restricting the number of angular dimensions,\nthereby preparing the ground for applications to rotation-equivariant learning\nand parallel spectral implementations on modern hardware\narchitectures."
+    },
+    {
+      "heading": "4.3Dense Layers as Polar Operators",
+      "text": "As a first concrete application of the polar tensor framework, we consider a\nstandard dense (fully connected) linear layer, one of the most common building\nblocks in classical neural networks.\n\nIn its simplest form, a dense layer acts on a vector x \u2208 \u211d N x\\in\\mathbb{R}^{N} as y = W \u200b x , y=Wx, where W \u2208 \u211d N \u00d7 N W\\in\\mathbb{R}^{N\\times N} is a learned weight matrix."
+    },
+    {
+      "heading": "4.3.1Dense Layers in the Polar Domain",
+      "text": "When the input signal is represented as a polar tensor A \u200b [ r , \u03b8 1 , \u2026 , \u03b8 d ] , A[r,\\theta_{1},\\dots,\\theta_{d}], the dense layer can be interpreted as a linear operator acting independently\non each angular frequency.\n\nUsing the spectral representation introduced in Chapter\u00a03, the action of a\ndense layer becomes diagonal in the angular Fourier domain: Y ^ \u200b [ r , m 1 , \u2026 , m d ] = W r \u200b ( m 1 , \u2026 , m d ) \u200b A ^ \u200b [ r , m 1 , \u2026 , m d ] , \\widehat{Y}[r,m_{1},\\dots,m_{d}]=W_{r}(m_{1},\\dots,m_{d})\\;\\widehat{A}[r,m_{1},\\dots,m_{d}], where W r W_{r} denotes a set of learnable spectral weights, possibly dependent on\nthe radial index r r .\n\nThus, a dense layer corresponds to a polar operator that performs pointwise multiplication in the angular Fourier domain , followed by an\ninverse Fourier transform. No mixing between distinct angular frequencies\noccurs."
+    },
+    {
+      "heading": "4.3.2Implementation as a Polar Operator",
+      "text": "From a numerical perspective, a dense angular layer may be implemented by: 1. transforming the polar tensor to the angular Fourier domain; 2. multiplying each frequency component by a learned weight; 3. transforming back to the spatial angular domain.\n\nThis procedure provides an intuitive interpretation of the operation in terms\nof spectral diagonalization, as established in Chapter\u00a03, and is naturally\nsupported by the PolarTensor abstraction introduced in this chapter.\nHowever, it is important to stress that the final inverse transform is not\nstrictly required. Once a convenient orthogonal basis has been identified, the\nentire computation may be carried out directly in the Fourier domain. This\nfully spectral formulation avoids\nunnecessary transformations and leads to a more compact and efficient\nimplementation."
+    },
+    {
+      "heading": "4.3.3Benefits of the Polar Formulation",
+      "text": "Interpreting dense layers as polar operators yields several advantages: \u2022 Structured parameterization : weights act independently on each\nangular frequency, reducing unnecessary coupling; \u2022 Rotation equivariance : the operator commutes with all angular\nrotors by construction; \u2022 Parallelism : all frequency components are independent and can be\nprocessed in parallel; \u2022 Spectral interpretability : learned weights admit a direct\nfrequency-domain interpretation.\n\nThese properties make polar dense layers a natural building block for\nrotation-aware and rotation-equivariant neural architectures, as discussed in\nthe next chapter."
+    },
+    {
+      "heading": "4.4Complexity of Classical Dense Layers vs. Polar Dense Layers",
+      "text": "We now compare the computational structure of a classical dense layer with its\npolar counterpart, focusing on both algebraic form and computational\ncomplexity.\n\nA classical dense layer acting on a vector x \u2208 \u211d N x\\in\\mathbb{R}^{N} is defined as y = W \u200b x , y=Wx, where W \u2208 \u211d N \u00d7 N W\\in\\mathbb{R}^{N\\times N} is a fully populated weight matrix.\n\nThe computation of y y requires: \u2022 N 2 N^{2} multiplications, \u2022 N \u200b ( N \u2212 1 ) N(N-1) additions. Hence, the time complexity of a single dense layer is T dense = O \u200b ( N 2 ) . T_{\\text{dense}}=O(N^{2}).\n\nThis cost reflects the fact that every output component depends on every input\ncomponent, with no exploitable structure.\n\nConsider now a polar tensor A \u200b [ r , \u03b8 1 , \u2026 , \u03b8 d ] , A[r,\\theta_{1},\\dots,\\theta_{d}], and let N \u03b8 = \u220f i = 1 d N \u03b8 i N_{\\theta}=\\prod_{i=1}^{d}N_{\\theta_{i}} denote the total number of angular\nsamples.\n\nA polar dense layer acts diagonally in the angular Fourier domain: Y ^ \u200b [ r , m 1 , \u2026 , m d ] = W r \u200b ( m 1 , \u2026 , m d ) \u200b A ^ \u200b [ r , m 1 , \u2026 , m d ] , \\widehat{Y}[r,m_{1},\\dots,m_{d}]=W_{r}(m_{1},\\dots,m_{d})\\;\\widehat{A}[r,m_{1},\\dots,m_{d}], where W r W_{r} denotes learned spectral weights.\n\nThe computation consists of: 1. one d d -dimensional FFT along angular axes; 2. N \u03b8 N_{\\theta} pointwise multiplications; 3. one inverse d d -dimensional FFT.\n\nUsing the FFT complexity estimate, the total cost per radial channel is T polar = O \u200b ( N \u03b8 \u200b log \u2061 N \u03b8 ) . T_{\\text{polar}}=O\\!\\left(N_{\\theta}\\log N_{\\theta}\\right).\n\nSince all radial channels are independent, the full cost scales linearly with\nthe number of radial samples N r N_{r} .\n\nFor sufficiently large angular resolution N \u03b8 N_{\\theta} , the polar formulation\nyields a substantial reduction in computational complexity.\nMoreover, the polar dense layer exposes fine-grained parallelism across angular\nfrequencies, which is not present in the classical dense formulation.\n\nThe reduction from quadratic to quasi-linear complexity is not obtained through\napproximation or sparsification, but follows directly from the algebraic\nstructure imposed by angular periodicity.\nThe FFT-based implementation is therefore a consequence of the polar algebra,\nrather than an external optimization."
+    },
+    {
+      "heading": "5.1Chapter Scope and Validation Strategy",
+      "text": "The purpose of this chapter is to provide a concrete validation of the\ntheoretical framework developed in the previous chapters.\nRather than introducing a new state-of-the-art architecture or proposing a\ngeneral replacement for existing deep learning models, the goal here is more\nfoundational and demonstrative.\n\nSpecifically, this chapter aims to show that the proposed polar\u2013spectral\nalgebraic formulation: \u2022 can be translated into an explicit computational pipeline, \u2022 can be implemented using existing deep learning frameworks without\nrequiring custom runtimes or non-standard tooling, \u2022 and can be trained end-to-end on a standard benchmark, achieving\nstrong performance despite the simplicity of the setting.\n\nThe MNIST dataset is deliberately chosen as a simple and well-understood test\ncase.\nIts role in this work is not to assess ultimate performance, but to act as a\nminimal and controlled environment in which the feasibility of the proposed\noperators can be evaluated.\nIn this sense, MNIST serves as a didactic and vintage benchmark,\nallowing the focus to remain on the structure of the operators rather than on\ndata complexity.\n\nIt is important to emphasize what this chapter does not attempt to do.\nThe objective is not to rewrite the entirety of deep learning models or\nconvolutional architectures within a polar or spectral paradigm.\nNor is the intent to claim that all operators should be expressed in polar\ncoordinates or that spectral formulations universally dominate spatial ones.\nInstead, the contribution is limited and precise: 1. the introduction of a new algebraic viewpoint for representing signals\nand operators, 2. a formal mathematical description of the problem in polar and spectral\nterms, 3. a concrete hypothesis for how common operators can be realized within\nthis framework, 4. and a proof-of-concept implementation validating these ideas on a\nsimple classification task.\n\nIn this chapter, we present a sequence of numerical experiments on MNIST designed to progressively validate and refine the proposed polar neural operator framework.\nRather than introducing a single final architecture, we deliberately follow an incremental approach, where each experiment addresses a specific conceptual question and motivates the subsequent design choices.\n\nThe experiments evolve from a minimal polar operator trained largely in the spatial domain, to a fully spectral formulation, and finally to a self-adjoint-inspired architecture explicitly biased toward real spectra and stable dynamics.\nThis progression reflects the development of the underlying research ideas and highlights the role of spectral structure in both expressivity and optimization.\n\nAll experiments presented in this chapter are implemented in a unified codebase,\nwhich is publicly available and maintained at https://github.com/giovanniguasti/polar-algebra and archived on Zenodo."
+    },
+    {
+      "heading": "Acknowledgment on Tool Support",
+      "text": "For the sake of transparency, the author notes that an indispensable contribution\nto the debugging and stabilization of the fully spectral model was provided\nthrough interactive assistance from ChatGPT.\nIn particular, the identification of silent failure modes, diagnostic strategies,\nand iterative architectural refinements benefited significantly from this support.\n\nIt should also be emphasized that early versions of the fully spectral model\ndescribed in this work did not converge or exhibited severe accuracy plateaus.\nThe final results were achieved only after extensive debugging and systematic\nanalysis of spectral energy flow."
+    },
+    {
+      "heading": "5.2FFT-Based Implementation of Polar Operators",
+      "text": "The numerical formulation developed in Chapter\u00a04 shows that polar convolution\noperators admit a particularly convenient representation in the Fourier domain,\nwhere they become diagonal (frequency-wise decoupled).\nThis observation primarily concerns the implementation of polar\noperators, rather than requiring new learning rules:\nstandard gradient-based optimization remains unchanged, but operator evaluation\ncan exploit FFT-based diagonalization.\n\nRecall from Chapter\u00a03 that, for a fixed radius r r , the polar convolution ( A \u2297 K ) \u200b [ r , \u03b8 ] (A\\otimes K)[r,\\theta] becomes, in the angular Fourier domain, ( A \u2297 K ) ^ \u200b [ r , m ] = A ^ \u200b [ r , m ] \u200b K ^ \u200b [ r , m ] , \\widehat{(A\\otimes K)}[r,m]=\\hat{A}[r,m]\\;\\hat{K}[r,m], where the product is pointwise over angular frequencies.\nAs a consequence, a polar linear layer can be interpreted as a collection of\nindependent linear transformations acting on orthogonal spectral components.\nThe learnable parameters of the layer are the spectral coefficients K ^ \u200b [ r , m ] \\hat{K}[r,m] , rather than spatial-domain kernel values.\n\nThis choice also yields a significant reduction in the number of learnable parameters.\nIn the spatial domain, a convolutional kernel of size k r \u00d7 k \u03b8 k_{r}\\times k_{\\theta} requires C in \u200b C out \u200b k r \u200b k \u03b8 C_{\\mathrm{in}}C_{\\mathrm{out}}k_{r}k_{\\theta} parameters.\nIn contrast, the spectral formulation learns only C in \u200b C out \u200b R \u200b ( 2 \u200b M + 1 ) C_{\\mathrm{in}}C_{\\mathrm{out}}R(2M+1) coefficients, where R R and M M denote the number of retained radial and angular Fourier modes."
+    },
+    {
+      "heading": "5.3Advantages of Spectral Evaluation",
+      "text": "Evaluating polar operators in the spectral domain yields several advantages:"
+    },
+    {
+      "heading": "5.3.1Staying in the Spectral Domain",
+      "text": "The previous discussion characterizes polar linear operators through their\nFourier-domain diagonalization.\nIt is important to clarify that remaining entirely in the spectral domain is possible only under specific architectural conditions.\n\nWhen a network is composed exclusively of linear polar operators that\nare simultaneously diagonalized by the same Fourier transform (e.g., sequences\nof polar convolution/dense layers without spatial-domain nonlinearities or\nnormalization), the composition remains diagonal in the spectral domain.\nIn that case, one forward transform at the input and, if needed, one inverse\ntransform at the output are sufficient.\n\nLet { \ud835\udcaf \u2113 } \u2113 = 1 L \\{\\mathcal{T}_{\\ell}\\}_{\\ell=1}^{L} be a sequence of polar linear operators.\nIn the Fourier domain, each operator acts as \ud835\udcaf \u2113 \u200b A ^ \u200b [ r , m ] = W \u2113 \u200b [ r , m ] \u200b A ^ \u200b [ r , m ] , \\widehat{\\mathcal{T}_{\\ell}A}[r,m]=W_{\\ell}[r,m]\\;\\hat{A}[r,m], and their composition satisfies A ^ out \u200b [ r , m ] = ( \u220f \u2113 = 1 L W \u2113 \u200b [ r , m ] ) \u200b A ^ in \u200b [ r , m ] . \\hat{A}_{\\mathrm{out}}[r,m]=\\Bigl(\\prod_{\\ell=1}^{L}W_{\\ell}[r,m]\\Bigr)\\;\\hat{A}_{\\mathrm{in}}[r,m].\n\nIn practical deep networks, however, normalization and nonlinear activations\nare typically defined in the spatial domain.\nAs a result, implementations alternate between spectral evaluation of linear\noperators and spatial-domain nonlinearities, requiring FFT and inverse FFT\nwithin each block.\nThis is the design choice adopted in the MNIST proof-of-concept presented\nlater in this chapter, in order to preserve the semantics of standard nonlinear\noperators."
+    },
+    {
+      "heading": "5.3.2Activation Operator vs. Spectral Gate Operator",
+      "text": "Before analyzing the empirical results, it is useful to clarify how nonlinearity\nis introduced in the proposed framework, and how this differs from conventional\nneural architectures.\n\nIn conventional convolutional neural networks, nonlinearity is introduced\nthrough pointwise activation functions, such as ReLU or SiLU, applied\nindependently to each spatial entry: y i = \u03c3 \u200b ( x i ) . y_{i}=\\sigma(x_{i}). These activations operate locally and modulate the amplitude of individual\nfeatures, acting as value-based valves that selectively amplify or suppress\nsignal magnitudes. Their role is to break global linearity while preserving\nspatial locality, enabling the composition of expressive hierarchical models.\n\nIn contrast, the polar spectral framework replaces pointwise activations with a gate operator acting along the angular dimension. Rather than operating\non individual values, the gate is defined as a circular convolution: Y k = 1 N \u03b8 \u200b \u2211 m W m \u200b X k \u2212 m , Y_{k}=\\frac{1}{N_{\\theta}}\\sum_{m}W_{m}\\,X_{k-m}, which introduces a structured, non-local modulation across angular coordinates.\nThe gate does not act on single entries, but on directional components, coupling\nneighboring angles through a smooth, band-limited kernel.\nConceptually, this choice shifts the role of nonlinearity from individual values\nto directional structures.\nDespite these differences, the two operators occupy an analogous position within\ntheir respective architectures. In both cases, the operator is responsible for\nintroducing nonlinearity between linear transformations, thereby preventing the\ncollapse of the model into a purely linear system. However, the nature of the\nnonlinearity differs fundamentally: pointwise activations act as valves on\nfeature values, whereas spectral gates act as valves on directions.\n\nFrom this perspective, the polar spectral gate can be interpreted as a\ndirection-selective analogue of classical activation functions. It enables the\nmodel to emphasize or suppress entire angular components, rather than individual\nspatial values, introducing an anisotropic and operator-valued form of\nnonlinearity. This shift from value-based to direction-based modulation is a\ndirect consequence of the underlying polar geometry and represents a distinctive\nfeature of the proposed algebraic framework.\n\nThe originality of this approach lies in redefining the concept of activation in\na way that is consistent with operator learning and spectral representations.\nRather than adapting existing pointwise nonlinearities to a new domain, the\npolar algebra framework introduces a structurally aligned alternative, tailored\nto the geometry and decomposition of the problem itself."
+    },
+    {
+      "heading": "5.4.1Baseline polar operator",
+      "text": "The first experiment serves as a feasibility study.\nHere, we investigate whether a neural operator defined in polar coordinates can be successfully trained on MNIST using largely standard components.\nThe architecture retains a predominantly spatial processing pipeline, while introducing polar indexing and angular structure only at the operator level.\n\nThe example uses a model that operates entirely in\npolar coordinates and relies on spectral operators inspired by Fourier Neural\nOperators.\nIn particular, spectral evaluation is employed for linear operators, while\nnonlinear activations are applied in the spatial polar domain, consistent with\nthe discussion in Section 5.3.1 .\nThe same framework naturally supports hybrid architectures, where polar and\nnon-polar operators coexist and are composed within a single pipeline.\n\nThis experiment demonstrates that polar representations do not inherently hinder optimization or accuracy.\nDespite the minimal use of spectral structure, the model achieves competitive performance, establishing a baseline and validating the use of polar coordinates as a viable representation for neural operators.\n\nWhile the first experiment confirms feasibility, it does not exploit the natural spectral structure induced by polar coordinates.\nIn particular, angular periodicity and radial frequency separation suggest a formulation directly in the Fourier domain."
+    },
+    {
+      "heading": "5.4.2Fully spectral polar architecture",
+      "text": "In the second experiment, we reformulate the polar operator entirely in the spectral domain.\nBoth radial and angular dimensions are processed using Fourier representations, allowing convolution, channel mixing, and gating to be expressed directly in frequency space.\nThe main objective of this experiment was to eliminate repeated transitions between\nthe spatial domain and the frequency domain inside the network, achieving a\nfully spectral pipeline of the form FFT \u2192 spectral blocks \u2192 spectral head , \\text{FFT}\\;\\rightarrow\\;\\text{spectral blocks}\\;\\rightarrow\\;\\text{spectral head}, without intermediate inverse FFTs (IFFT).\n\nThis design aims to: \u2022 reduce computational overhead caused by repeated FFT/IFFT operations; \u2022 maintain mathematical consistency with a fully spectral interpretation of the model; \u2022 investigate whether low-frequency Fourier coefficients alone can support accurate learning.\n\nThis fully spectral formulation aligns more naturally with the underlying geometry of the polar grid and removes unnecessary spatial-domain operations.\nEmpirically, the spectral model improves efficiency and stability, confirming that the polar representation is particularly well-suited to spectral processing.\n\nIn the MNIST experiment, the operators employed are not explicitly constrained\nto be self-adjoint in the classical sense of real symmetric circulant matrices.\nNevertheless, the architecture operates entirely within a Fourier-diagonalizable\nframework, where translational invariance and spectral decoupling are preserved.\nAs a result, the effective operators exhibit stability properties consistent with\nthose predicted by the theory of self-adjoint circulant operators."
+    },
+    {
+      "heading": "5.4.3Self-adjoint-inspired polar architecture",
+      "text": "As a third experiment, we investigate a polar neural architecture explicitly biased toward self-adjoint behavior.\nThe goal of this experiment is not to enforce strict self-adjointness of the full network, which would be incompatible with nonlinear components such as normalization and gating, but rather to introduce a strong inductive bias favoring real spectra and stable optimization dynamics.\n\nIn this setting, the spectral convolution is restricted to real-valued multipliers, preventing the learning of arbitrary frequency-dependent phase shifts.\nChannel mixing is implemented via a real symmetric matrix, ensuring real eigenvalues in channel space and eliminating phase rotation induced by channel interactions.\nNormalization is applied independently within each frequency quadrant, while sharing normalization parameters across quadrants with the same sign of the angular frequency.\nThis design preserves a structured symmetry with respect to angular frequency while avoiding hard tying across quadrants.\n\nThe angular gating operator is further constrained to have a real Fourier spectrum, yielding a self-adjoint angular filter.\nIn practice, this is achieved by either constructing the gate kernel as a function of cos \u2061 ( \u03b8 ) \\cos(\\theta) or by explicitly projecting its Fourier coefficients onto the real axis.\nAs a result, the gating operation acts as a real-valued spectral modulation along the angular dimension.\n\nEmpirically, this self-adjoint-inspired design leads to substantially faster convergence during training.\nOn MNIST, validation accuracy exceeds 85% after a single epoch, indicating that the imposed spectral and symmetry constraints strongly align the optimization dynamics with the underlying structure of the task.\nEigenvalues with magnitude larger than one do not indicate instability, as the corresponding operators are applied within a normalized residual framework.\n\nThe self-adjoint-inspired spectral model converges rapidly and achieves competitive performance.\nAfter 16 training epochs on MNIST, the model reaches a validation accuracy of 96.47% and a test accuracy of 96.50%, with negligible generalization gap.\nThis confirms that enforcing real-valued spectral structure does not hinder expressivity, while substantially improving training stability and early convergence.\n\nThe learned channel-mixing operators exhibit real-valued eigenvalue spectra throughout training, providing an interpretable view of the internal dynamics.\nTogether, these results indicate that self-adjoint-inspired constraints act as an effective inductive bias rather than as a limiting restriction. 3 3 3 An inductive bias does not arbitrarily reduce expressivity; rather, it reshapes the hypothesis space toward functions that are consistent with the structure of the problem. In this case, for example, we enforce a real-valued spectrum and prevent cross-mode interactions."
+    },
+    {
+      "heading": "5.5Conclusion",
+      "text": "This work introduced Polar Linear Algebra as a structured framework for operator\nlearning, grounded in a polar geometric formulation that naturally separates\nradial and angular components. Through a sequence of progressively more\nstructured experiments, we demonstrated that polar and fully spectral operators\ncan be trained reliably, even under additional algebraic constraints.\n\nA central outcome of this study is that imposing structure, such as\nself-adjoint-inspired spectral constraints, does not arbitrarily restrict\nexpressivity, but instead acts as an effective inductive bias. By enforcing\nreal-valued spectra and preventing unnecessary cross-mode interactions, the\nlearning process becomes more stable and converges more rapidly, while\nmaintaining competitive accuracy.\nMore broadly, these results support a shift in perspective from spatial to\nspectral operator design. The polar formulation exposes a representation in\nwhich modes are naturally decoupled, interpretable, and amenable to independent\nprocessing.\n\nBeyond the specific benchmark considered, the proposed framework offers a\ndifferent conceptual lens for operator design. By moving from spatial to\nspectral representations, the problem decomposes into orthogonal modes that are\nnaturally interpretable and amenable to independent processing. This intrinsic\ndecoupling exposes a new dimension of model parallelization that arises from the\nmathematical structure itself, rather than from architectural heuristics.\nOverall, the results suggest that polar spectral formulations provide a coherent\nand promising foundation for exploring structured, parallel, and interpretable\noperator learning models."
+    },
+    {
+      "heading": "6.1Group-Equivariant and Steerable Neural Networks",
+      "text": "Group-equivariant and steerable neural networks aim to guarantee equivariance of learned representations with respect to transformations such as translations,\nrotations, and reflections, particularly for spherical data [ 1 ] [ 3 ] .\nFoundational work in this area includes group\nconvolutional neural networks (G-CNNs), where convolution is generalized to act\nover symmetry groups rather than Euclidean space.\n\nSteerable CNNs [ 6 ] further exploit representation theory to construct filters that\ntransform predictably under group actions, enforcing equivariance by\nconstraining the space of admissible filters and explicitly modeling group\nrepresentations.\n\nWhile these approaches share a focus on rotation equivariance, they are\ntypically formulated at the level of network layers and feature\nrepresentations. In contrast, the present work introduces an explicit\nalgebraic structure on polar tensors, from which equivariance, convolution,\nand spectral properties arise as intrinsic consequences of the formulation."
+    },
+    {
+      "heading": "6.2Fourier-Based Neural Operators",
+      "text": "Fourier Neural Operators [ 5 ] (FNOs) and related architectures leverage the Fourier\ntransform to perform efficient global convolutions, particularly in the\ncontext of learning operators arising from partial differential equations.\nIn these models, convolution is carried out in the spectral domain, and\nlearnable weights act directly on Fourier coefficients, enabling\nresolution-invariant representations and efficient computation via FFTs.\n\nWhile Fourier-based operators share the use of spectral representations with\nthe present approach, they are primarily introduced as architectural\nconstructions rather than as instances of an explicit algebraic framework.\nIn particular, they do not define a closed algebra of operators equipped with\nwell-defined products, adjoints, or invertibility criteria.\n\nBy contrast, the polar algebra developed in this work provides an explicit\noperatorial structure, in which commutativity, diagonalization, and spectral\ndecoupling emerge directly from the underlying geometric formulation."
+    },
+    {
+      "heading": "6.3Polar and Log-Polar Representations",
+      "text": "Polar and log-polar coordinate systems [ 2 ] have long been used in computer vision to\nachieve approximate rotation and scale invariance. Several neural architectures\nexploit polar transformations to simplify the learning of rotational patterns\nor to reduce data variability.\n\nIn most cases, however, the polar transform is treated as a preprocessing step,\nafter which standard convolutional operators are applied in the transformed\ndomain. As a result, the algebraic structure induced by angular periodicity is\nnot explicitly modeled.\n\nBy contrast, the present work treats the polar structure as fundamental. Rather\nthan acting as an external coordinate change, polar geometry defines the domain\non which operators, products, and symmetries are constructed, forming an\nexplicit algebraic framework on polar tensors."
+    },
+    {
+      "heading": "6.4Spectral Convolution and Harmonic Analysis on Groups",
+      "text": "Convolution on compact groups and homogeneous spaces is a classical topic in\nharmonic analysis.\nOn abelian groups, convolution is diagonalized by the Fourier transform, while\non non-abelian groups it is diagonalized by irreducible representations. [ 4 ]\n\nSeveral recent works apply harmonic analysis on groups such as SO \u200b ( 2 ) \\mathrm{SO}(2) or SO \u200b ( 3 ) \\mathrm{SO}(3) to design equivariant neural networks, particularly for\nspherical or rotational data. [ 3 ]\n\nThe polar algebra can be viewed as a discrete realization of convolution on\ncyclic groups, combined with a radial parameter.\nWhat distinguishes our approach is the explicit construction of a commutative\nalgebra of polar operators, together with a computational framework that\ndirectly reflects this structure."
+    },
+    {
+      "heading": "6.5Positioning of the Present Work",
+      "text": "While the use of Fourier transforms, group equivariance, and polar coordinates\nhas been explored in various forms, the contribution of this work is to unify\nthese ideas into a single algebraic and spectral framework.\n\nWe introduce a polar\nalgebra whose fundamental operations (convolution, rotation, diagonalization,\nand inversion) are defined abstractly and implemented numerically.\nNeural architectures then arise naturally as compositions of polar operators.\n\nThis viewpoint shifts the focus from designing equivariant layers to designing\nalgebras with built-in symmetry, from which equivariant learning models follow\nas a consequence."
+    },
+    {
+      "heading": "Acknowledgments",
+      "text": "The author would like to acknowledge the support provided by ChatGPT, which was\nused as an interactive technical assistant during the development and debugging\nof the fully spectral models described in this work.\n\nIn particular, iterative discussions on architectural choices, diagnostic\nstrategies, and failure modes proved valuable during the stabilization of early\nmodel implementations, which initially failed to converge or exhibited severe\nperformance plateaus.\n\nThe author is also deeply grateful to Alireza Khodamoradi for a scrupulous and\nthoughtful review of the manuscript. His careful reading and constructive\ncomments significantly helped improve the clarity, structure, and presentation\nof the work.\n\nThe author also acknowledges the broader scientific community, whose prior work\non Fourier Neural Operators and spectral methods provided essential theoretical\ncontext. The architectural design, implementation, and experimental analysis\npresented in this work are original contributions of the author.\n\nThe views and opinions expressed in this work are solely those of the author and\ndo not necessarily reflect the views or positions of AMD."
+    },
+    {
+      "heading": "A.1Multi-Level Parallelism in Polar Algebra",
+      "text": "Let A \u2208 \u211d N r \u00d7 N \u03b8 A\\in\\mathbb{R}^{N_{r}\\times N_{\\theta}} be a polar matrix, where the radial dimension is non-cyclic and the angular\ndimension is cyclic.\n\nThe polar product admits several independent and composable forms of\nparallelism."
+    },
+    {
+      "heading": "A.1.1Radial Parallelism",
+      "text": "For each fixed radius r r , the polar product satisfies ( A \u2297 B ) \u200b [ r , : ] = A \u200b [ r , : ] \u2297 B \u200b [ r , : ] . (A\\otimes B)[r,:]=A[r,:]\\otimes B[r,:].\n\nIn the configurations considered in this work, radial slices are processed\nindependently, yielding an embarrassingly parallel structure along the\nradial dimension. This allows for straightforward distribution across threads,\ncores, or compute units, with no inter-radius communication.\n\nWe emphasize, however, that this independence is not a fundamental limitation\nof the polar algebra. Coupling across different radii can be introduced through\nadditional operators, at the cost of breaking strict radial parallelism. Such\nextensions may be beneficial in settings where interactions across radial\nscales are relevant, and are left for future investigation."
+    },
+    {
+      "heading": "A.1.2Spectral (Angular) Parallelism",
+      "text": "Applying the discrete Fourier transform along the angular dimension yields A \u2297 B ^ \u200b [ r , m ] = A ^ \u200b [ r , m ] \u200b B ^ \u200b [ r , m ] . \\widehat{A\\otimes B}[r,m]=\\hat{A}[r,m]\\;\\hat{B}[r,m].\n\nIn the spectral domain, the polar product reduces to pointwise multiplication.\nEach frequency component m m and each radius r r can be computed independently.\n\nAs a result, the computation decomposes fully over the index set ( r , m ) \u2208 { 0 , \u2026 , N r \u2212 1 } \u00d7 \u2124 N \u03b8 . (r,m)\\in\\{0,\\dots,N_{r}-1\\}\\times\\mathbb{Z}_{N_{\\theta}}.\n\nThe emergence of spectral parallelism is a direct consequence of the algebraic\nproperties established earlier: \u2022 Elisa\u2019s Theorem guarantees commutativity of the polar product. \u2022 This commutativity implies the existence of a common spectral basis. \u2022 The discrete Fourier transform provides this basis explicitly. \u2022 Aurora\u2019s Theorem characterizes invertibility as pointwise non-vanishing\nin the spectral domain.\n\nThus, FFT-based implementations are not heuristic accelerations, but the\nnatural computational realization of the underlying commutative algebra."
+    },
+    {
+      "heading": "A.1.3Hardware Implications",
+      "text": "Once expressed in spectral form, polar operators consist solely of\nindependent scalar operations. This structure aligns naturally with: \u2022 SIMD and vector processors, \u2022 GPUs and many-core architectures, \u2022 dedicated FFT pipelines, \u2022 AI accelerators and NPUs.\n\nThe polar algebra therefore provides a mathematically grounded pathway from\noperator theory to efficient parallel execution.\nTo make these concepts concrete without loss of generality, we anchor the\ndiscussion to a fully spectral MNIST model used throughout this work as a\ndidactic reference."
+    },
+    {
+      "heading": "A.2Parallelization Opportunities in a Fully Spectral MNIST Model",
+      "text": "In the remainder of this chapter, we will formalize these observations and\nexplore concrete mappings of polar operators to parallel and spectral\narchitectures, highlighting both theoretical scalability and practical\nperformance considerations.\n\nAlthough the fully spectral MNIST model considered in this work is deliberately\nsmall and does not require distributed execution in practice, it provides a\nclear and didactic setting to analyze the parallelization opportunities offered\nby spectral operators.\n\nBy relying on a compact and well-understood task, we are able to focus on the\nstructural properties of the operators involved\u2014such as Fourier transforms,\nspectral convolutions, reductions, and linear heads\u2014without conflating the\nanalysis with scale-dependent engineering constraints. The goal of this section\nis therefore not to propose a distributed implementation for MNIST, but to use\nthis example as a conceptual scaffold to reason about how fully spectral models\nwould scale to larger resolutions, higher channel counts, or deeper architectures.\n\nIn particular, we examine the dataflow of the spectral pipeline and identify, for\neach operator, the axes along which parallel execution is naturally supported,\nas well as the communication patterns that would arise under different sharding\nstrategies.\n\nWe consider the fully spectral MNIST pipeline developed in this work, where the\nspatial-to-spectral transform is performed only once at the input, and all\ninternal blocks operate in the frequency domain. The classifier head also\nconsumes spectral features directly, avoiding any final inverse FFT.\nFigure A.1 highlights that communication is not intrinsic to most operators, but emerges from the chosen sharding strategy (DP/TP/FP/PP), with collectives mainly appearing in gradient synchronization, tensor-parallel partitions, and reduction-based pooling."
+    },
+    {
+      "heading": "A.2.1Parallelization Axes",
+      "text": "Throughout the pipeline, tensors have the generic structure: z ^ \u2208 \u2102 B \u00d7 C \u00d7 R \u00d7 T , \\hat{z}\\in\\mathbb{C}^{B\\times C\\times R\\times T}, where B B is batch size, C C channels, and ( R , T ) (R,T) are polar grid sizes.\nWe will discuss parallelism along: \u2022 Batch parallelism (data parallelism): split B B across devices. \u2022 Channel parallelism : split C C across devices/threads. \u2022 Frequency parallelism : split indices ( k r , k \u03b8 ) (k_{r},k_{\\theta}) , especially low modes. \u2022 Layer parallelism (pipeline parallelism): split blocks along depth L L ."
+    },
+    {
+      "heading": "A.4.1Definition of the DFT",
+      "text": "Given a length- N N sequence x \u200b [ n ] \u2208 \u2102 x[n]\\in\\mathbb{C} , its discrete Fourier transform (DFT) is X \u200b [ k ] = \u2211 n = 0 N \u2212 1 x \u200b [ n ] \u200b \u03c9 N n \u200b k , k = 0 , \u2026 , N \u2212 1 , X[k]\\;=\\;\\sum_{n=0}^{N-1}x[n]\\;\\omega_{N}^{nk},\\qquad k=0,\\dots,N-1, (A.1) where \u03c9 N = e \u2212 i \u200b 2 \u200b \u03c0 / N \\omega_{N}=e^{-i2\\pi/N} is the primitive N N -th root of unity.\n\nEquation\u00a0( A.1 ) can be seen as a matrix-vector product: \ud835\udc17 = \ud835\udc05 N \u200b \ud835\udc31 , ( \ud835\udc05 N ) k , n = \u03c9 N n \u200b k . \\mathbf{X}=\\mathbf{F}_{N}\\,\\mathbf{x},\\qquad(\\mathbf{F}_{N})_{k,n}=\\omega_{N}^{nk}. (A.2)"
+    },
+    {
+      "heading": "A.4.2Embarrassingly Parallel View (Row Partition)",
+      "text": "A first parallelization view follows directly from\u00a0( A.2 ):\neach output coefficient X \u200b [ k ] X[k] is an inner product between \ud835\udc31 \\mathbf{x} and the k k -th row\nof \ud835\udc05 N \\mathbf{F}_{N} . Therefore, X \u200b [ k ] X[k] can be computed independently across different k k .\n\nWith two GPUs, we split the output indices into two halves: \ud835\udca6 0 = { 0 , \u2026 , N / 2 \u2212 1 } , \ud835\udca6 1 = { N / 2 , \u2026 , N \u2212 1 } . \\mathcal{K}_{0}=\\{0,\\dots,N/2-1\\},\\qquad\\mathcal{K}_{1}=\\{N/2,\\dots,N-1\\}. GPU0 computes { X \u200b [ k ] } k \u2208 \ud835\udca6 0 \\{X[k]\\}_{k\\in\\mathcal{K}_{0}} and GPU1 computes { X \u200b [ k ] } k \u2208 \ud835\udca6 1 \\{X[k]\\}_{k\\in\\mathcal{K}_{1}} : X \u200b [ k ] \\displaystyle X[k] = \u2211 n = 0 N \u2212 1 x \u200b [ n ] \u200b \u03c9 N n \u200b k , k \u2208 \ud835\udca6 0 , \\displaystyle=\\sum_{n=0}^{N-1}x[n]\\;\\omega_{N}^{nk},\\quad k\\in\\mathcal{K}_{0}, (A.3) X \u200b [ k ] \\displaystyle X[k] = \u2211 n = 0 N \u2212 1 x \u200b [ n ] \u200b \u03c9 N n \u200b k , k \u2208 \ud835\udca6 1 . \\displaystyle=\\sum_{n=0}^{N-1}x[n]\\;\\omega_{N}^{nk},\\quad k\\in\\mathcal{K}_{1}. (A.4)"
+    },
+    {
+      "heading": "A.4.3Cooley\u2013Tukey Factorization (Compute-Efficient Parallel Form)",
+      "text": "In practice, FFT implementations exploit the Cooley\u2013Tukey factorization.\nFor clarity, assume N N is even and split the sum into even and odd indices: X \u200b [ k ] \\displaystyle X[k] = \u2211 n = 0 N \u2212 1 x \u200b [ n ] \u200b \u03c9 N n \u200b k = \u2211 m = 0 N / 2 \u2212 1 x \u200b [ 2 \u200b m ] \u200b \u03c9 N ( 2 \u200b m ) \u200b k + \u2211 m = 0 N / 2 \u2212 1 x \u200b [ 2 \u200b m + 1 ] \u200b \u03c9 N ( 2 \u200b m + 1 ) \u200b k \\displaystyle=\\sum_{n=0}^{N-1}x[n]\\;\\omega_{N}^{nk}=\\sum_{m=0}^{N/2-1}x[2m]\\;\\omega_{N}^{(2m)k}+\\sum_{m=0}^{N/2-1}x[2m+1]\\;\\omega_{N}^{(2m+1)k} = \u2211 m = 0 N / 2 \u2212 1 x e \u200b [ m ] \u200b \u03c9 N / 2 m \u200b k + \u03c9 N k \u200b \u2211 m = 0 N / 2 \u2212 1 x o \u200b [ m ] \u200b \u03c9 N / 2 m \u200b k , \\displaystyle=\\sum_{m=0}^{N/2-1}x_{e}[m]\\;\\omega_{N/2}^{mk}+\\omega_{N}^{k}\\sum_{m=0}^{N/2-1}x_{o}[m]\\;\\omega_{N/2}^{mk}, (A.5) where x e \u200b [ m ] = x \u200b [ 2 \u200b m ] x_{e}[m]=x[2m] and x o \u200b [ m ] = x \u200b [ 2 \u200b m + 1 ] x_{o}[m]=x[2m+1] .\n\nDefine two length- N / 2 N/2 DFTs: E \u200b [ k ] = \u2211 m = 0 N / 2 \u2212 1 x e \u200b [ m ] \u200b \u03c9 N / 2 m \u200b k , O \u200b [ k ] = \u2211 m = 0 N / 2 \u2212 1 x o \u200b [ m ] \u200b \u03c9 N / 2 m \u200b k . E[k]=\\sum_{m=0}^{N/2-1}x_{e}[m]\\;\\omega_{N/2}^{mk},\\qquad O[k]=\\sum_{m=0}^{N/2-1}x_{o}[m]\\;\\omega_{N/2}^{mk}. Then the DFT is reconstructed by the butterfly : X \u200b [ k ] \\displaystyle X[k] = E \u200b [ k ] + \u03c9 N k \u200b O \u200b [ k ] , \\displaystyle=E[k]+\\omega_{N}^{k}O[k], (A.6) X \u200b [ k + N / 2 ] \\displaystyle X[k+N/2] = E \u200b [ k ] \u2212 \u03c9 N k \u200b O \u200b [ k ] , k = 0 , \u2026 , N / 2 \u2212 1 . \\displaystyle=E[k]-\\omega_{N}^{k}O[k],\\qquad k=0,\\dots,N/2-1. (A.7)"
+    },
+    {
+      "heading": "A.4.4Two-GPU Parallel FFT (Conceptual Schedule)",
+      "text": "A compute-efficient two-GPU schedule can be expressed as:"
+    },
+    {
+      "heading": "A.5.1Is complex a problem?",
+      "text": "Complex tensors are conceptually natural in spectral models. The practical\nchallenge is hardware support: many accelerators provide limited or no native\ncomplex GEMM."
+    },
+    {
+      "heading": "A.5.2Real-Imag decomposition",
+      "text": "Any complex multiplication can be expressed via real arithmetic: ( a + i \u200b b ) \u200b ( x + i \u200b y ) = ( a \u200b x \u2212 b \u200b y ) + i \u200b ( a \u200b y + b \u200b x ) , (a+ib)(x+iy)=(ax-by)+i(ay+bx), which maps complex linear layers to coupled real-valued GEMMs plus elementwise\nops. This transformation preserves parallelism and often improves portability\nto NPUs/compilers that are optimized for real-valued kernels."
+    },
+    {
+      "heading": "A.7Concluding Remarks",
+      "text": "The fully spectral formulation concentrates computational cost into a small set\nof highly parallel operators (FFT, low-mode spectral mixing, and small-kernel\ncircular gating). Most computations are embarrassingly parallel across batch,\nchannels, and frequency indices, with reductions appearing only in normalization\nand pooling. Complex arithmetic is not a conceptual obstacle; when native complex\nkernels are unavailable, a real-imag decomposition enables efficient execution\non real-valued accelerators while preserving model structure.\nRather than being motivated by immediate computational necessity, this analysis\nis intended to expose the intrinsic parallel structure of spectral operators,\nwhich becomes critical at scale."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1.1: A natural example of polar symmetry: a pomegranate cross-section.\nRadial layers and angular segmentation align with a polar grid.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28939/assets/x1.jpg"
+    },
+    {
+      "caption": "Figure 1.2: A polar matrix represented in its natural radial\u2013angular form.\nThe inner ring contains the values ( 2 , 1 , 0 , 1 ) (2,1,0,1) and the outer ring the values ( 3 , 2 , 1 , 0 ) (3,2,1,0) .",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28939/assets/figures/polar_matrix_example.png"
+    },
+    {
+      "caption": "Figure 3.1: Logical structure of three foundational results in polar linear algebra.\nElisa\u2019s Theorem provides the commutative spectral framework underlying the theory.\nWithin this framework, Aurora\u2019s Theorem gives the invertibility criterion for a general polar matrix, while Chiara\u2019s Theorem specializes to the self-adjoint case and establishes reality of the spectrum.",
+      "image_path": ""
+    },
+    {
+      "caption": "Figure 5.1: End-to-end MNIST pipeline used in the proof-of-concept implementation:\npolar resampling (cached on disk), training/validation loops, and exported artifacts.",
+      "image_path": ""
+    },
+    {
+      "caption": "Figure 5.2: PolarFNOBlock used in the MNIST experiment: the spectral operator is applied on retained low-frequency modes. The spectral pointwise path is the frequency-space analogue of a 1x1 convolution, performing channel mixing on the intermediate spectral tensor. Normalization and nonlinearity are applied in the spatial domain, thus requiring one FFT/iFFT pair per block.",
+      "image_path": ""
+    },
+    {
+      "caption": "Figure 5.3: Training and validation curves (loss and accuracy) for the MNIST PolarFNO proof-of-concept. The horizontal axis tracks training progression, and the vertical axes show the corresponding loss and accuracy values.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28939/assets/figures/mnist_train.png"
+    },
+    {
+      "caption": "Figure 5.4: Periodic spectral gate used in the self-adjoint experiment.\nLeft: spatial-domain representation W \u200b ( \u03b8 ) W(\\theta) obtained via inverse Fourier transform.\nRight: magnitude of the corresponding Fourier coefficients | W m | |W_{m}| .\nThe gate is fixed by construction and acts as a smooth, band-limited periodic\nmodulation in the angular domain.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28939/assets/figures/theta_gate.png"
+    },
+    {
+      "caption": "Figure A.1: Fully spectral MNIST pipeline annotated with parallelization axes and\ncommunication requirements. DP: data parallelism; TP/CP: tensor/channel parallelism;\nFP: frequency-domain sharding; PP: pipeline parallelism. Communication depends on\nthe chosen sharding strategy (single-device vs multi-device).",
+      "image_path": ""
+    }
+  ],
+  "ar5iv_success": true
+}

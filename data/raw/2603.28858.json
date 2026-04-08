@@ -1,0 +1,166 @@
+{
+  "paper_id": "2603.28858",
+  "title": "OptiMer: Optimal Distribution Vector Merging Is Better than Data Mixing for Continual Pre-Training",
+  "abstract": "Continual pre-training is widely used to adapt LLMs to target languages and domains, yet the mixture ratio of training data remains a sensitive hyperparameter that is expensive to tune: they must be fixed before training begins, and a suboptimal choice can waste weeks of compute. In this work, we propose OptiMer, which decouples ratio selection from training: we train one CPT model per dataset, extract each model's distribution vector, which represents the parameter shift induced by that dataset, and search for optimal composition weights post-hoc via Bayesian optimization. Experiments on Gemma 3 27B across languages (Japanese, Chinese) and domains (Math, Code) show that OptiMer consistently outperforms data mixture and model averaging baselines with 15-35 times lower search cost. Key findings reveal that 1) the optimized weights can be interpreted as data mixture ratios, and retraining with these ratios improves data mixture CPT, and 2) the same vector pool can be re-optimized for a given objective without any retraining, producing target-tailored models on demand. Our work establishes that data mixture ratio selection, traditionally a pre-training decision, can be reformulated as a post-hoc optimization over distribution vectors, offering a more flexible paradigm for continual pre-training.",
+  "authors": [
+    "Haiyue Song",
+    "Masao Utiyama"
+  ],
+  "date": "2026-03-30T18:00:02+00:00",
+  "url": "http://arxiv.org/abs/2603.28858v2",
+  "categories": [
+    "cs.CL",
+    "cs.AI",
+    "cs.LG"
+  ],
+  "primary_category": "cs.CL",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "Adapting large language models (LLMs) to specific languages and domains is a central challenge, driven by demand for both multilingual coverage and domain expertise Ng et al. ( 2025 ); Alnumay et al. ( 2025 ); Yang et al. ( 2025 ); Lu et al. ( 2026 ) .\n\nContinual pre-training (CPT) is a common approach for such adaptation Gururangan et al. ( 2020 ); Ibrahim et al. ( 2024 ); Y\u0131ld\u0131z et al. ( 2025 ) , where the training corpus is typically a mixture of multiple datasets Fujii et al. ( 2024 ); Dou et al. ( 2025 ) .\nHowever, the mixing ratio of these datasets is a critical yet sensitive hyperparameter: a suboptimal ratio can degrade model performance Xie et al. ( 2023 ); Ye et al. ( 2025 ) .\nAlthough recent methods estimate ratios via proxy models or small-scale experiments Xie et al. ( 2023 ); Liu et al. ( 2025 ); Ye et al. ( 2025 ); Cao et al. ( 2026a ) , these estimates must be fixed before training begins and cannot be corrected afterward, meaning a poor choice may waste days or even weeks of GPU cluster time before its effect becomes apparent.\n\nTo address this, we propose OptiMer , which decouples data ratio selection from model training.\nAs illustrated in Figure 1 , instead of fixing the data mixture ratio before training , we train a separate CPT model on each dataset independently and extract the corresponding distribution vector (the parameter shift from the base PT model) after training .\nFurthermore, rather than weight averaging, which leads to suboptimal performance Yadav et al. ( 2023 ) , OptiMer searches for optimal merge weights via Bayesian optimization using the Tree-structured Parzen Estimator (TPE) Akiba et al. ( 2019 ); Watanabe ( 2023 ) . We find vector merging viable because vectors from distinct datasets are approximately orthogonal, allowing linear combination with minimal interference.\n\nExperiments on Gemma 3 27B Team et al. ( 2025 ) with distribution vectors across languages (Japanese, Chinese) and domains (Math, Code) show that OptiMer consistently outperforms data mixture baselines across all dataset combinations, while requiring 15\u201335 \u00d7 \\times lower search time.\nMoreover, the same collection of distribution vectors can be re-optimized toward different objectives, yielding multiple target-tailored models without any retraining.\nOur contributions are as follows: \u2022 We introduce the concept of distribution vectors for CPT and propose OptiMer , a post-hoc framework that decouples data ratio selection from model training by optimizing merge weights via Bayesian optimization. \u2022 Experimental results on 16 benchmarks covering five task groups (English, Japanese, Chinese, Math, Code) show that OptiMer outperforms data mixture CPT and four model merging methods across three dataset combinations with 15\u201335 \u00d7 \\times lower search cost. It further enables objective-specific re-optimization from a single vector pool without any re-CPT. \u2022 Our analysis reveals that distribution vectors are approximately orthogonal (cosine 0.03\u20130.31), enabling composition without severe interference. Training dynamics show that CPT trajectories are approximately linear in parameter space, linking merge weights to effective training duration. OptiMer search dynamics illustrate the sharp nature of the optimization landscape, thus highlighting the necessity of efficient searching rather than grid search. Additionally, optimized weights can serve as interpretable data mixture ratios and can be negative to remove cross-distribution interference."
+    },
+    {
+      "heading": "3Methodology",
+      "text": "We define the notation and introduce distribution vectors in\u00a0Section 3.1 . In\u00a0Section 3.2 , we present OptiMer , an automatic merge weight optimization approach via Bayesian optimization."
+    },
+    {
+      "heading": "4Experimental Settings",
+      "text": "This section describes continued pre-training configuration (\u00a7 4.1 ), merge settings and OptiMer hyperparameters (\u00a7 4.2 ), baseline settings (\u00a7 4.3 ), and evaluation settings (\u00a7 4.4 )."
+    },
+    {
+      "heading": "4.1Continual Pre-Training Settings",
+      "text": "We sampled training data from the LLM-jp Corpus v4 LLM-jp et al. ( 2024 ) 2 2 2 https://gitlab.llm-jp.nii.ac.jp/datasets/llm-jp-corpus-v4 to construct CPT datasets across languages (Japanese, Chinese) and domains (Math, Code), each containing 1B tokens.\nFor data mixture baselines, datasets were combined at equal ratios with n n B tokens in total.\nWe continually pre-trained gemma-3-27b-pt Team et al. ( 2025 ) for 1 epoch (2,000 steps) on each dataset, with sequences packed to 4,096 tokens and an effective batch size of 128.\nFollowing Fujii et al. ( 2024 ) , we use AdamW Loshchilov and Hutter ( 2019 ) ( \u03b2 1 = 0.90 \\beta_{1}{=}0.90 , \u03b2 2 = 0.95 \\beta_{2}{=}0.95 , weight decay 0.1 0.1 , gradient clipping 1.0 1.0 ) with a peak learning rate of 4 \u00d7 10 \u2212 5 4{\\times}10^{-5} and cosine decay to 1 % 1\\% . We report the effect of different hyperparameter settings in Appendix A .\nTraining used BFloat16 with DeepSpeed ZeRO Stage\u00a03 on 8 NVIDIA H200 GPUs (141\u2009GB) on the ABCI 3.0 cluster."
+    },
+    {
+      "heading": "4.2Merge Settings",
+      "text": "We used gemma-3-27b-it Team et al. ( 2025 ) to calculate \u03c4 it \\tau_{\\mathrm{it}} .\nMerges were performed with DARE-Linear Yu et al. ( 2024 ) via mergekit Goddard et al. ( 2024 ) , excluding embedding and positional layers ( embed_tokens , lm_head , rotary ) to preserve the base model\u2019s token representations.\n\nFor OptiMer , we ran T = 100 T{=}100 trials with the TPE sampler ( N 0 = 20 N_{0}{=}20 random startup trials), executed in parallel across 8 GPUs.\nThe search space was set to \u03b1 it \u2208 [ 0.3 , 1.0 ] \\alpha_{\\mathrm{it}}\\in[0.3,1.0] and \u03b1 C \u200b P \u200b T i \u2208 [ 0.0 , 1.0 ] \\alpha_{CPT_{i}}\\in[0.0,1.0] .\n\nProxy tasks were selected to match the target axes of each merge experiment (e.g., gsm8k and ja_leaderboard_mgsm for a Japanese \u00d7 \\times Math merge).\nDuring the search, each trial was scored on the first 100 samples per proxy task for efficiency.\nThe top- K = 3 K{=}3 trials were then re-evaluated on the first 300 samples per task as the development set."
+    },
+    {
+      "heading": "4.3Baselines",
+      "text": "We compared with the following baseline methods.\n\nDataMix. We trained a single CPT model on the concatenation of all datasets in each combination ( n n B tokens in total for n n datasets), and merged it with the IT vector with optimized hyperparameter \u03b1 it = 0.6 \\alpha_{\\mathrm{it}}{=}0.6 (\u00a7 A ) to recover IT capability.\n\nDataMix OptiMer ratio {}_{\\text{OptiMer ratio}} models were trained on the same n n B tokens with the data mixing ratio directly derived from the optimal merge weights found by OptiMer .\n\nAverage Merge. We merged n n CPT vectors and the IT vector using equal weights via Task Arithmetic Ilharco et al. ( 2023 ) , TIES Yadav et al. ( 2023 ) , and DARE Yu et al. ( 2024 ) ."
+    },
+    {
+      "heading": "4.4Evaluation Settings",
+      "text": "We used the lm-evaluation-harness Gao et al. ( 2024 ) framework with the vLLM backend Kwon et al. ( 2023 ) , using 1-shot prompting across all tasks on these five task groups: En (MMLU Hendrycks et al. ( 2021 ) , ARC-Challenge Clark et al. ( 2018 ) , HellaSwag Zellers et al. ( 2019 ) , TruthfulQA Lin et al. ( 2022 ) ), Ja (8 tasks from the Japanese Leaderboard Cobbe et al. ( 2021 ); Hasan et al. ( 2021 ); Kurihara et al. ( 2022 ); Tikhonov and Ryabinin ( 2021 ) 3 3 3 https://github.com/EleutherAI/lm-evaluation-harness/blob/main/lm_eval/tasks/japanese_leaderboard/README.md )\n, Zh (C-Eval Huang et al. ( 2023 ) ), Math (GSM8K Cobbe et al. ( 2021 ) ),\nand Code (HumanEval Chen et al. ( 2021 ) , MBPP Austin et al. ( 2021 ) ). Detailed descriptions of each benchmark are provided in Appendix B .\nWe also report Avg. , which is the unweighted mean of all tasks, with the Japanese Leaderboard benchmark calculated as one task."
+    },
+    {
+      "heading": "5Results and Analysis",
+      "text": "We compare OptiMer to baselines (\u00a7 5.1 ), analyze distribution vectors (\u00a7 5.2 ), training dynamics (\u00a7 5.3 ), and optimization dynamics (\u00a7 5.4 ) to understand how and why OptiMer works. We further conduct experiments with negative vector weight (\u00a7 5.5 ).\nFinally, we apply OptiMer to build a Japanese-optimized LLM (\u00a7 5.6 )."
+    },
+    {
+      "heading": "5.2Analysis of Distribution Vectors",
+      "text": "We show the pair-wise cosine similarity of distribution vectors (i.e. \u03b8 \u2212 \u03b8 pt \\theta-\\theta_{\\mathrm{pt}} ) in Figure 3 . We found CPT and IT vectors are nearly orthogonal (cosine \u2248 \\approx 0.03), and different CPT vectors also exhibited low similarity (0.29\u20130.31), indicating that each distribution modifies an independent subspace, which supports the feasibility of linear composition.\nLayer-wise similarity analysis and cosine similarity of more models are shown in Appendix C .\n\nFigure 4 visualizes the same vectors (sparsified through layer-wise truncated SVD) via PCA. The accompanying bar charts show the optimal merge weights. Both confirm that CPT vectors lie far from the IT vector.\nTwo additional insights emerge from combining both figures:\n(i) DataMix models with more datasets drift further from IT (in both cosine similarity and PCA distance), showing that CPT dilutes IT capability, while OptiMer is unaffected, maintaining a cosine similarity of greater than 0.97 with \u03b8 i \u200b t \\theta_{it} . This explains the widening performance gap in Table 1 (+2.1 for 2-way vs. +6.7 for 3-way).\n(ii) OptiMer assigns large weight to IT and small weights to CPT vectors, suggesting that IT-targeted perturbation is more effective than uniform averaging."
+    },
+    {
+      "heading": "5.3Continual Pre-Training Dynamics",
+      "text": "We show the vector trajectories during training in\u00a0Figure 5 . We observed that both the CPT and CPT merged with IT vector trajectories move away from the IT vector, with rapid change in early steps. We found performance reacheed peak in the early stage with small vector norm, which is consistent with the thicket regime phenomenon Gan and Isola ( 2026 ) , and decreased gradually, possibly due to the divergence from the base model Bolton et al. ( 2026 ) .\nFurthermore, the CPT trajectory is approximately linear, indicating that adjusting the merge weight \u03b1 i \\alpha_{i} is analogous to controlling the effective training duration, which also explains why OptiMer assigns small CPT weights."
+    },
+    {
+      "heading": "5.4OptiMer Search Dynamics",
+      "text": "Figure 6 visualizes the search dynamics of OptiMer on the Ja+Math setting.\nWe found that (i) weight combinations with high scores are concentrated in a narrow region with large w IT w_{\\text{IT}} and small CPT weights.\nThis sharp optimum makes grid search impractical, whereas TPE quickly approaches the promising region and focuses exploration within it, and\n(ii) OptiMer converges within 100 trials, confirming the sample efficiency of TPE-based search for this problem. Visualizations for other dataset combinations are shown in Appendix D . We also provide a version of 500 trials in Figure 11(a) where we see a clearer trend with more data points in the space."
+    },
+    {
+      "heading": "5.5Search with Negative Weights",
+      "text": "We conducted experiments extending the search range from [ 0 , 1 ] [0,1] to [ \u2212 1 , 1 ] [-1,1] , allowing OptiMer to assign negative weights that subtract a distribution\u2019s effect from the model Ilharco et al. ( 2023 ) .\nThis improves performance for the Ja and Zh objectives (Table 4 ). Notably, the English vector often receives negative weights, suggesting it may introduce interference and OptiMer actively removes its effect as a regularization process."
+    },
+    {
+      "heading": "5.6Generalization to SEA-LION Model",
+      "text": "We apply OptiMer to the Gemma-SEA-LION-v4-27B model, 4 4 4 https://huggingface.co/aisingapore/Gemma-SEA-LION-v4-27B an Gemma 3 based model pre-trained on Southeast Asian languages Ng et al. ( 2025 ) .\nWe continual pre-trained on five datasets (Ja, Zh, En, Math, Code) and compose the distribution vectors with the IT vector extracted from Gemma-SEA-LION-v4-27B-IT, optimizing for Japanese task performance.\nAs shown in Table 3 , we found optimer improves Japanese leaderboard (JA LB) tasks from 66.34 to 74.40 (+8.1) and overall Avg from 54.37 to 70.19 (+15.8) over the base SEA-LION-v4-27B-IT, while maintaining the ASEAN language task performance. Detailed settings and more analysis are shown in Appendix E ."
+    },
+    {
+      "heading": "6Conclusion",
+      "text": "In this paper, we present OptiMer , a framework that decouples data mixture ratio selection from model training in continual pre-training. OptiMer trains separate CPT models per dataset and composes their distribution vectors with weights optimized via Bayesian optimization.\nExperimental results show OptiMer consistently outperforms data mixture baselines while requiring 15\u201335 \u00d7 \\times lower search time. We further demonstrate OptiMer \u2019s flexibility to produce multiple objective-tailored models from a single vector pool without retraining.\nOur work suggests that data mixture ratio selection in continual pre-training can be reformulated as a post-hoc optimization problem instead of being fixed before training."
+    },
+    {
+      "heading": "Limitations",
+      "text": "While we demonstrated that OptiMer is effective when merging CPT models trained on 1B tokens, for larger-scale CPT it becomes necessary to actively prevent CPT models from diverging too far from the base model, where the iterative train-merge approach has shown to be effective Li et al. ( 2022 ); Feng et al. ( 2025 ) . Therefore, a promising direction is iterative OptiMer , which we leave for future work.\n\nAdditionally, while our experiments were conducted on two SOTA LLMs, Gemma 3 27B and Gemma-SEA-LION-v4-27B, constrained by the high computational cost of CPT, we did not verify whether OptiMer generalizes to other architectures (e.g., Llama-3, Qwen-3), which we leave to future investigation.\n\nFurthermore, although OptiMer outperforms DataMix and four model merging baselines, we only verified uniform mixing ratios, which is a common practice, in the DataMix baseline setting. Recent ratio optimization methods such as DoReMi Xie et al. ( 2023 ) and RegMix Liu et al. ( 2025 ) could narrow the gap between DataMix and OptiMer . A direct comparison with these methods at the 27B scale remains an important direction for future work.\n\nFinally, our experiments adopt 1-shot prompting setting across all benchmarks to ensure a controlled comparison between methods.\nAs a result, absolute scores may differ from those reported on public leaderboards that use task-specific few-shot configurations (e.g., 5-shot for MMLU, 8-shot for GSM8K).\nAlthough this does not affect the relative ranking of methods, readers should take caution when comparing our numbers directly with results from different evaluation settings."
+    },
+    {
+      "heading": "Acknowledgements",
+      "text": "This work was supported by JSPS KAKENHI Grant-in-Aid for Early-Career Scientists 25K21290."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1: Data Mix vs. OptiMer . ( a )\u00a0Continual pre-training on a fixed data mixture requires\nthe mixing ratios { w i } {\\color[rgb]{0.9921875,0.46484375,0.34375}\\definecolor[named]{pgfstrokecolor}{rgb}{0.9921875,0.46484375,0.34375}\\{w_{i}\\}} to be specified\nbefore training begins. Each attempt costs days to weeks of\nGPU time.\n( b )\u00a0Our approach trains one CPT model per dataset independently\nand extracts a distribution vector \u03c4 i \\tau_{i} from each, which are then composed via a merge function \u03a6 \\Phi (e.g. DARE-Linear) with weights { \u03b1 i } {\\color[rgb]{0.9921875,0.46484375,0.34375}\\definecolor[named]{pgfstrokecolor}{rgb}{0.9921875,0.46484375,0.34375}\\{\\alpha_{i}\\}} optimized post-hoc.\nEach trial completes in minutes . The instruction-tuned vector is additionally merged in both settings.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28858/assets/x1.png"
+    },
+    {
+      "caption": "Figure 2: Computational cost comparison between data mixture CPT and OptiMer across different numbers of datasets during ratio optimization . Training cost excluded as it is identical for both approaches.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28858/assets/x2.png"
+    },
+    {
+      "caption": "Figure 3: Pairwise cosine similarity and norm of distribution vectors.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28858/assets/x3.png"
+    },
+    {
+      "caption": "Figure 4: PCA projection of distribution vectors with OptiMer merge weights in bar charts.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28858/assets/x4.png"
+    },
+    {
+      "caption": "Figure 5: Distribution vector trajectories during CPT on 1B Japanese data, projected onto the same PCA space as used in Figure 4 .",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28858/assets/x5.png"
+    },
+    {
+      "caption": "(a) Exploration of the merge weight space. Each point represents one trial; color indicates proxy score.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28858/assets/x6.png"
+    },
+    {
+      "caption": "(a) Exploration of the merge weight space. Each point represents one trial; color indicates proxy score.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28858/assets/x6.png"
+    },
+    {
+      "caption": "(b) Optimization progress. Each point represents one trial; color indicates parallel batch.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28858/assets/x7.png"
+    },
+    {
+      "caption": "Figure 7: Pairwise cosine similarity of all evaluated models we obtained.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28858/assets/x8.png"
+    },
+    {
+      "caption": "Figure 8: Layer-wise cosine similarity between distribution vectors.\n(a)\u00a0IT vector vs. CPT vectors; (b)\u00a0CPT vector pairs.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28858/assets/x9.png"
+    },
+    {
+      "caption": "(a) Weight space exploration.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28858/assets/x10.png"
+    },
+    {
+      "caption": "(a) Weight space exploration.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28858/assets/x10.png"
+    },
+    {
+      "caption": "(b) Optimization progress.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28858/assets/x11.png"
+    },
+    {
+      "caption": "(a) Weight space exploration.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28858/assets/x12.png"
+    },
+    {
+      "caption": "(a) Weight space exploration.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28858/assets/x12.png"
+    },
+    {
+      "caption": "(b) Optimization progress.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28858/assets/x13.png"
+    },
+    {
+      "caption": "(a) Weight space exploration.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28858/assets/x14.png"
+    },
+    {
+      "caption": "(a) Weight space exploration.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28858/assets/x14.png"
+    },
+    {
+      "caption": "(b) Optimization progress.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28858/assets/x15.png"
+    },
+    {
+      "caption": "Figure 12: PCA projection of SEA-LION models onto the same space as the Gemma-based models.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28858/assets/x16.png"
+    }
+  ],
+  "ar5iv_success": true
+}

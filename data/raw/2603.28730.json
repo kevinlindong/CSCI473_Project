@@ -1,0 +1,254 @@
+{
+  "paper_id": "2603.28730",
+  "title": "SOLE-R1: Video-Language Reasoning as the Sole Reward for On-Robot Reinforcement Learning",
+  "abstract": "Vision-language models (VLMs) have shown impressive capabilities across diverse tasks, motivating efforts to leverage these models to supervise robot learning. However, when used as evaluators in reinforcement learning (RL), today's strongest models often fail under partial observability and distribution shift, enabling policies to exploit perceptual errors rather than solve the task. To address this limitation, we introduce SOLE-R1 (Self-Observing LEarner), a video-language reasoning model explicitly designed to serve as the sole reward signal for online RL. Given only raw video observations and a natural-language goal, SOLE-R1 performs per-timestep spatiotemporal chain-of-thought (CoT) reasoning and produces dense estimates of task progress that can be used directly as rewards. To train SOLE-R1, we develop a large-scale video trajectory and reasoning synthesis pipeline that generates temporally grounded CoT traces aligned with continuous progress supervision. This data is combined with foundational spatial and multi-frame temporal reasoning, and used to train the model with a hybrid framework that couples supervised fine-tuning with RL from verifiable rewards. Across four different simulation environments and a real-robot setting, SOLE-R1 enables zero-shot online RL from random initialization: robots learn previously unseen manipulation tasks without ground-truth rewards, success indicators, demonstrations, or task-specific tuning. SOLE-R1 succeeds on 24 unseen tasks and substantially outperforms strong vision-language rewarders, including GPT-5 and Gemini-3-Pro, while exhibiting markedly greater robustness to reward hacking.",
+  "authors": [
+    "Philip Schroeder",
+    "Thomas Weng",
+    "Karl Schmeckpeper",
+    "Eric Rosen",
+    "Stephen Hart",
+    "Ondrej Biza"
+  ],
+  "date": "2026-03-30T17:46:31+00:00",
+  "url": "http://arxiv.org/abs/2603.28730v1",
+  "categories": [
+    "cs.RO",
+    "cs.CL",
+    "cs.CV"
+  ],
+  "primary_category": "cs.RO",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "Large language models (LLMs) and vision-language models (VLMs) have demonstrated impressive capabilities across a wide range of reasoning and perception tasks [ 16 , 52 ] . These capabilities have motivated growing efforts to leverage foundation models as sources of supervision for robot learning, replacing or reducing the need for task-specific reward engineering and human annotation. Ideally, a robot could acquire new skills entirely from scratch by interacting with the world, while receiving guidance derived solely from pretrained foundation models.\n\nIn practice, however, this idealized paradigm remains out of reach. When used as reward functions or evaluators for reinforcement learning (RL), current state-of-the-art models, such as GPT-5 and Gemini-3-Pro, exhibit systematic failures in grounded visual reasoning.\nDespite exhibiting impressive visual captioning and question-answering abilities,\nthey lack robustness to partial observability and distribution shift [ 20 , 50 ] .\nAs a result, when robot policies are trained using rewards derived from these models, the policies quickly discover behaviors that exploit failures in perception or reasoning,\neliciting high predicted reward, or perceived success, without achieving true success.\n\nTo address this limitation, we introduce SOLE-R1, a foundation model with video-language reasoning explicitly designed to guide online RL. SOLE-R1 ( S elf- O bserving LE arner) generates per-timestep chain-of-thought (CoT) reasoning directly from raw video observations, yielding a dense estimate of task progress relative to goals specified in natural language. To generate the training data for SOLE-R1, we develop a video trajectory and reasoning synthesis pipeline which produces CoT traces that reason about changes over time, aligned with continuous progress signals. We generate over one million CoT reasoning examples from more than 40,000 real-world and simulated videos. We also carefully curate a diverse collection of general spatial and multi-frame temporal reasoning data to serve as a foundational layer of our training mixture. Together, this training induces video-native reasoning that explicitly integrates both spatial and temporal structure (Figure 2 ). We propose a two-stage hybrid recipe for training SOLE-R1: (1) supervised fine-tuning (SFT) to develop high-quality spatiotemporal CoT reasoning, (2) RL with verifiable rewards (RLVR) to further develop accurate progress prediction, boosted by the strong CoT reasoning developed during SFT.\n\nWe demonstrate that SOLE-R1 reasoning can successfully serve as the SOLE signal for learning unseen tasks through online RL.\nIn this setting, the robot begins with a random policy and learns entirely through interaction, guided only by SOLE-R1\u2019s predicted rewards - without access to any ground-truth rewards, task-specific tuning, demonstrations, or other off-policy trajectories. In total, SOLE-R1 achieves zero-shot success on 24 unseen manipulation tasks across 4 simulator environments and a real-robot setting, while strong baseline reasoning models (e.g., GPT-5, Gemini-3, and other VLM rewarders) succeed on fewer than 10 tasks. SOLE-R1 generalizes to unseen task families (pick-and-place, articulated object manipulation, button/lever/knob interactions), scene layouts, camera viewpoints, and robot embodiments. We further demonstrate that SOLE-R1 can steer strong pre-trained policies to learn novel tasks and validate its reasoning through large-scale offline evaluations.\n\nOur contributions include the following: \u2022 We introduce SOLE-R1 , a video-language reasoning model designed for guiding online RL with per-timestep CoT reasoning and progress prediction. \u2022 We introduce a video trajectory and reasoning synthesis pipeline to generate training data for video-based spatiotemporal CoT reasoning and progress estimation using videos from real-world and simulation. \u2022 We propose a hybrid training framework combining SFT for strong multi-frame spatial and temporal CoT reasoning with RLVR to emphasize progress prediction quality and calibration. \u2022 We perform extensive experiments showing SOLE-R1 reasoning can serve as the sole signal for learning unseen tasks through online RL , generalizing to new tasks and environments better than strong baseline vision-language reasoning models. \u2022 We release the SOLE-R1 model checkpoints and full training dataset, along with the online RL code and algorithms for reproducing all experiments."
+    },
+    {
+      "heading": "2SOLE-R1",
+      "text": "SOLE-R1 is a vision-language model designed to perform grounded natural language reasoning over videos of robot trajectories and predict task progress estimates, which can directly serve as dense rewards for online RL. To develop this form of reasoning, we construct a video trajectory and reasoning synthesis pipeline to generate video-based spatiotemporal CoT reasoning and progress estimation training data, layered on top of a foundational mixture of general spatial and multi-frame temporal reasoning, and integrated with a hybrid training framework.\n\nIn Section 2.1 , we introduce our framework for SOLE-R1 video-language reasoning and its integration as a dense reward for online RL. In Section 3 , we describe our method for generating diverse video trajectories with CoT reasoning traces for video-based progress prediction training and our layering of this with a carefully curated foundation of general spatial and temporal reasoning data. Finally, in Section 4 , we outline our hybrid training framework."
+    },
+    {
+      "heading": "2.1Video-native temporal progress reasoning",
+      "text": "We design SOLE-R1 to perform video-native temporal reasoning for goal-conditioned tasks. Given a natural-language goal g \u2208 G g\\in G and a video stream of observations { o t } t = 1 T \\{o_{t}\\}_{t=1}^{T} , the model produces (i) a per-timestep CoT explanation { m t } t = 1 T \\{m_{t}\\}_{t=1}^{T} describing what has changed since the last timestep and what remains to be done , and (ii) a dense scalar progress estimate { p t } t = 1 T \\{p_{t}\\}_{t=1}^{T} used as a reward signal for online RL.\n\nTemporal conditioning. At timestep t t , the input x t x_{t} comprises the goal g g , a sliding temporal context window of frames up to the present and the previous prediction, x t = [ g , o 0 ; o t \u2212 K + 1 : t , p t \u2212 1 ] , x_{t}=[g,\\;o_{0};o_{t-K+1:t},\\;p_{t-1}], where o 0 o_{0} is the first video frame, o t \u2212 K + 1 : t o_{t-K+1:t} denotes the most recent K K frames (or all available frames if t < K t<K ), and p t \u2212 1 p_{t-1} is the model\u2019s previous progress prediction. Conditioning on a multi-frame window encourages explicit reasoning about motion, contact events, and state transitions (e.g., grasping, opening, insertion) rather than single-frame captioning. During training, the choice of K K can vary to elicit greater flexibility in the granularity of task progress increments. Further, we sparsely use K = 0 K=0 and dropout p t \u2212 1 p_{t-1} during training to force the model to reason about the video globally, avoiding the bias from its previous prediction.\n\nOutputs and format. SOLE-R1 autoregressively generates language tokens that form a structured response, y t = [ <think> \u200b m t \u200b </think> , <answer> \u200b p t \u200b </answer> ] , y_{t}=\\small[\\texttt{<think>}~m_{t}~\\texttt{</think>},\\;\\texttt{<answer>}~p_{t}~\\texttt{</answer>}\\small], where m t m_{t} is free-form natural-language reasoning and p t \u2208 [ \u2212 100 , 100 ] p_{t}\\in[-100,100] denotes task progress at time t t .\nThe reasoning m t m_{t} is trained to focus on (1) salient visual changes since t \u2212 1 t\\!-\\!1 , (2) whether those changes advance or regress the goal, and (3) the next to-be-completed subgoal implied by g g ."
+    },
+    {
+      "heading": "3SOLE-R1 training data synthesis",
+      "text": "SOLE-R1 produces (i) multi-frame CoT explanations grounded in visual evidence and (ii) a dense progress signal suitable for online RL. To elicit robust reasoning, we build the training data in two stages: (1) foundational reasoning over space (single-image + depth) and time (multi-image/video), and (2) robot-video spatiotemporal reasoning specialized for dense progress estimation ."
+    },
+    {
+      "heading": "3.2Foundational spatiotemporal reasoning",
+      "text": "Before specializing on robot-video progress supervision (Section 3.1 ), we first train SOLE-R1 for general spatiotemporal grounding: extracting state-relevant spatial facts from pixels and explaining what changed across frames.\n\nReasoning over space. We supervise spatial grounding with explicit 3D relations (relative position, distance, containment, occlusion). We leverage SSR-CoT [ 25 ] , curating 1.2M image\u2013depth\u2013question\u2013rationale\u2013answer tuples covering relations such as left/right , in front/behind , closest/farthest , and inside/on top of . To diversify beyond depth cues, we add synthesized spatial CoT from SpaceOm and SpaceThinker (via VQASynth [ 42 ] ), reproducing the SpatialVLM synthesis pipeline [ 8 ] and emphasizing explanations grounded in visual evidence rather than textual priors. We also include robotics-relevant spatial rationales from embodied reasoning datasets (Embodied CoT [ 64 ] , Robo2VLM-Reasoning [ 9 ] ).\n\nReasoning over time (video/multi-image). To make reasoning temporal , we train on supervision that requires explicit comparison across moments. We include multi-image \u201cspot-the-difference\u201d data [ 18 ] to identify what has and has not changed (e.g., an object moved), and add embodied video QA/reasoning datasets with action-relevant temporal evidence (RoboVQA [ 45 ] , From Seeing to Doing [ 63 ] ). During preprocessing, we normalize all sources into the same multi-frame prompting and structured output format used by SOLE-R1 (Section 2.1 ), so the model learns to ground per-step rationales in frame-to-frame changes and maintain consistency across varying temporal contexts."
+    },
+    {
+      "heading": "4SOLE-R1 hybrid training framework",
+      "text": "SOLE-R1 produces (i) temporally grounded CoT reasoning over video and (ii) a scalar progress value in <answer> to serve as a dense reward for online RL. To train SOLE-R1, we propose a two-stage hybrid recipe: SFT teaches high-quality CoT reasoning, while RLVR directly emphasizes accurate progress prediction, which is under-emphasized during SFT, as the final answer occupies only a small fraction of response tokens. To explore the impact of each stage of training, in Appendix E , we compare the SFT-only model performance with that of the full SFT+RLVR model."
+    },
+    {
+      "heading": "4.1Stage 1: Supervised fine-tuning (SFT)",
+      "text": "We fine-tune on spatiotemporal reasoning data (Section 3 ). Each example is ( i , q , r , a ) (i,q,r,a) with image/video i i , query q q , rationale r r , and answer a a . SFT maximizes likelihood of the structured output y = [ r ; a ] y=[r;a] : \u2112 SFT \u200b ( \u03d5 ) = \u2212 \ud835\udd3c ( i , q , r , a ) \u223c \ud835\udc9f \u200b [ \u2211 t = 1 | y | log \u2061 p \u03d5 \u200b ( y t \u2223 i , q , y < t ) ] . \\mathcal{L}_{\\text{SFT}}(\\phi)=-\\mathbb{E}_{(i,q,r,a)\\sim\\mathcal{D}}\\Bigg[\\sum_{t=1}^{|y|}\\log p_{\\phi}(y_{t}\\mid i,q,y_{<t})\\Bigg]. This supervision encourages attention to visually grounded state and changes across frames, yielding transferable video-native reasoning. However, it provides a relatively weak learning signal for reward/progress prediction , since the scalar in <answer> is a small part of the response."
+    },
+    {
+      "heading": "4.2Stage 2: RLVR for progress prediction",
+      "text": "After strong CoT reasoning is learned through SFT, we refine the model with RL from verifiable rewards while preserving the <think> / <answer> interface. Using GRPO on the progress dataset (Section 3.1 ), for each query q q we sample G G candidates { o i } i = 1 G \u223c p \u03d5 old ( \u22c5 \u2223 q ) \\{o_{i}\\}_{i=1}^{G}\\sim p_{\\phi_{\\text{old}}}(\\cdot\\mid q) , score them with rule-based rewards r i r_{i} , and compute within-group standardized advantages A i = r i \u2212 mean \u2061 ( { r j } j = 1 G ) std \u2061 ( { r j } j = 1 G ) . A_{i}=\\frac{r_{i}-\\operatorname{mean}(\\{r_{j}\\}_{j=1}^{G})}{\\operatorname{std}(\\{r_{j}\\}_{j=1}^{G})}.\n\nGRPO optimizes \ud835\udca5 GRPO ( \u03d5 ) = \ud835\udd3c q , { o i } [ 1 G \u2211 i = 1 G min ( \u03c1 i ( \u03d5 ) A i , \\displaystyle\\mathcal{J}_{\\text{GRPO}}(\\phi)=\\mathbb{E}_{q,\\{o_{i}\\}}\\small[\\frac{1}{G}\\sum_{i=1}^{G}\\min\\!\\small(\\rho_{i}(\\phi)A_{i}, clip ( \u03c1 i ( \u03d5 ) , 1 \u2212 \u03f5 , 1 + \u03f5 ) A i ) ] \u2212 \u03b2 D KL ( p \u03d5 \u2225 p ref ) , \\displaystyle\\text{clip}(\\rho_{i}(\\phi),1-\\epsilon,1+\\epsilon)A_{i}\\small)\\small]-\\beta\\,D_{\\mathrm{KL}}\\!\\left(p_{\\phi}\\,\\|\\,p_{\\text{ref}}\\right),\n\nwhere \u03c1 i \u200b ( \u03d5 ) = exp \u2061 ( log \u2061 p \u03d5 \u200b ( o i \u2223 q ) \u2212 log \u2061 p \u03d5 old \u200b ( o i \u2223 q ) ) \\rho_{i}(\\phi)=\\exp(\\log p_{\\phi}(o_{i}\\mid q)-\\log p_{\\phi_{\\text{old}}}(o_{i}\\mid q)) and p ref p_{\\text{ref}} is the SFT reference p SFT p_{\\text{SFT}} .\n\nVerifiable reward. We define r \u200b ( o ) = r format \u200b ( o ) + r acc \u200b ( o ) r(o)=r_{\\text{format}}(o)+r_{\\text{acc}}(o) , where r format r_{\\text{format}} enforces a parseable output structure and r acc r_{\\text{acc}} measures progress accuracy by comparing the predicted value p ^ t \\hat{p}_{t} in <answer> to the ground-truth progress p t p_{t} . The accuracy reward is defined from the absolute prediction error: r acc \u200b ( o ) = \u03b1 \u200b exp \u2061 ( \u2212 | p ^ t \u2212 p t | \u03c4 ) . r_{\\text{acc}}(o)=\\alpha\\,\\exp\\!\\left(-\\frac{\\lvert\\hat{p}_{t}-p_{t}\\rvert}{\\tau}\\right). We scale r acc \u200b ( o ) \u2208 [ 0 , 1.5 ] r_{\\text{acc}}(o)\\in[0,1.5] and scale r format \u200b ( o ) \u2208 [ 0 , 0.5 ] r_{\\text{format}}(o)\\in[0,0.5] , yielding r \u200b ( o ) \u2208 [ 0 , 2 ] r(o)\\in[0,2] , where 2 2 indicates correct format and accurate progress."
+    },
+    {
+      "heading": "5Experiments",
+      "text": "We test the following hypotheses: 1. SOLE-R1 outperforms much larger general-purpose reasoning models and special-purpose reward models in zero-shot reward prediction for online RL (Section 5.3 ). 2. SOLE-R1 is less susceptible to reward hacking than current state-of-the-art reasoning models, including GPT-5 and Gemini-3-Pro (Section 5.4 ). 3. SOLE-R1\u2019s performance is specifically facilitated by CoT reasoning and by including authentic non-expert trajectories during training (Section 5.5 ). 4. Our data synthesis and training recipe follows a scaling law driven by diversity of training tasks (Section 5.6 ). 5. SOLE-R1 can successfully steer a strong pre-trained VLA policy for learning novel tasks (Section 5.7 ). 6. SOLE-R1 outperforms strong baseline reasoning models in offline evaluations, including large-scale correlation-based analysis (Section 5.8 ) and general-purpose spatial reasoning (Section 5.9 ). We provide camera images of all tasks in Appendix A ."
+    },
+    {
+      "heading": "5.1Data synthesis and model training",
+      "text": "Our generated training data comprises 1.2M spatiotemporal CoT traces extracted from 41K real-world and simulated videos. We combine this with a curated collection of foundational spatial and multi-frame temporal reasoning data, yielding a total of 10M images and video frames and 4M CoT reasoning traces. We fine-tune Qwen3-VL-8B-Instruct using the hybrid recipe described above. During SFT, each batch is balanced across (i) general reasoning, (ii) embodied reasoning and planning, and (iii) video progress prediction. SFT is run for one epoch over the full mixture. We then run RLVR with the video-based progress prediction dataset. Full training hyperparameters and data synthesis details are provided in Appendix K and J , respectively."
+    },
+    {
+      "heading": "5.2Baselines",
+      "text": "We test the current best general-purpose reasoning models , including OpenAI\u2019s GPT-5 and Google\u2019s Gemini-3-Pro and Gemini Robotics-ER 1.5 using their public APIs. We exclude open-source VLMs, such as Qwen3-VL-72B-Instruct, because they do not achieve meaningful success.\n\nWe also include the strongest existing special-purpose reward models : LIV [ 33 ] , ReWiND [ 67 ] , VLAC [ 69 ] , and RoboReward [ 20 ] . Relying on vision-language pre-training, these models are trained to predict task progress estimates on videos of robots performing tasks, without intermediate reasoning."
+    },
+    {
+      "heading": "5.3Zero-shot online RL",
+      "text": "We evaluate whether SOLE-R1 can serve as the sole supervision signal for learning manipulation skills from scratch via online RL.\nWe run experiments across four simulation benchmark suites\u2014RoboSuite, ManiSkill, Meta-World, and LIBERO\u2014and in a real-world tabletop manipulation setting with a Franka arm.\nAcross all settings, we evaluate a total of 50 tasks, spanning pick-and-place, articulation, button/lever/knob interactions, and mobile manipulation.\nAll hyperparameters and details are provided in Appendix G .\n\nWe use a SERL implementation of DrQv2 as the learning algorithm.\nThe policy observes two RGB streams (a wrist camera and an external/shoulder camera) along with robot proprioception.\nActions are end-effector delta motions and a gripper open/close command.\nWe do not use any additional privileged state, depth, object poses, or task-specific sensors.\n\nUnlike prior work that (i) learns from ground-truth rewards and/or (ii) tunes reward models or policies on task demonstrations [ 33 , 67 , 69 , 20 , 50 , 5 ] ,\nwe evaluate in a fully zero-shot online RL setting: \u2022 No ground-truth rewards. The policy never observes ground-truth/external rewards (dense or sparse) and receives no success labels during training. \u2022 No demonstrations or offline trajectories. The policy starts with random actions and learns only from on-policy interaction. \u2022 No task-specific tuning or calibration. Reward models are used as-is, with fixed prompting across tasks.\n\nSOLE-R1 enables zero-shot online RL from scratch. SOLE-R1 achieves at least 50 % 50\\% success on 24 tasks, substantially outperforming all baselines (Figure 3 ).\nThe strongest baselines include GPT-5 and Gemini, but they reach 50 % 50\\% success on only 7 and 5 tasks, respectively.\nThe non-reasoning models achieve near-zero success on most tasks, with the exception of ReWiND in Meta-World, where it achieves higher success since it is trained on hundreds of Meta-World demonstrations [ 67 ] .\n\nSOLE-R1 generalizes to unseen tasks and environments. SOLE-R1 succeeds with tasks that significantly differ from the task types seen during training, such as sliding a puck into a net, opening and closing windows, and manipulating unseen levers and handles in novel ways based on the natural language task specification. This suggests that SOLE-R1 does not merely memorize task templates, but instead learns reusable spatiotemporal progress primitives (e.g., establishing contact, aligning a grasp, changing articulation state, placing/settling objects) that transfer to unseen tasks.\n\nSOLE-R1 generalizes to unseen embodiments and camera viewpoints. SOLE-R1 solves tasks with the Franka, along with embodiments not seen during training, including the Sawyer robot in Meta-World, the WidowX AI and Fetch Mobile Manipulator in ManiSkill, and the modified Franka with different gripper fingers and wrist camera angle in real-world. We also see SOLE-R1 solve tasks with camera views that were not used during training.\nThis indicates that SOLE-R1 reward predictions are not narrowly tied to a particular kinematic chain or gripper appearance, but instead track goal-relevant object state changes across morphology and camera placement."
+    },
+    {
+      "heading": "5.4Failure analysis",
+      "text": "We provide full details on the failure analysis in Appendix C . We analyze failures at two levels: (i) task-level reward pathologies (is the reward exploitable, miscalibrated, or too weak to drive learning?) and (ii) frame-level reasoning errors (what perceptual/temporal evidence is missed when progress is incorrect).\n\nWe use the perceived-vs-true success plot (Figure 4 ) to separate failures into two types: reward-hacking (high perceived, low true) versus signal-limited (low perceived, low true). General-purpose VLM rewarders (GPT-5 and Gemini) predominantly fail via reward hacking: online RL discovers behaviors that elicit inflated progress predictions without completing the task. We show an example of reward hacking with picking up the cube in Figure 4 and an extended set of examples in Figure 7 . SOLE-R1 failures more often fall into the signal-limited failure type, suggesting the model typically recognizes non-success but can still provide rewards that are too flat/noisy to bootstrap exploration within the episode budget (as shown in the correlation analyses between predicted and true rewards in Appendix C ).\n\nQualitative review of rollouts highlights three recurring SOLE-R1 error modes: (1) temporal under-detection of brief events (contact, latch release, button actuation, insertion \u201cclick\u201d), especially when they occur between reward-query steps or under occlusion; (2) ambiguous object state in clutter/partial views (uncertain grasp, insertion, or seating), where conservative progress reduces hacking but weakens stepping-stone reinforcement; and (3) occasional goal-consistent appearance shortcuts (e.g., proximity/alignment scored as partial progress without completion), typically saturating at moderate progress instead of full completion."
+    },
+    {
+      "heading": "5.5Ablations",
+      "text": "We test the following ablations of SOLE-R1 to identify components responsible for (i) usable learning signal and (ii) robustness to exploitation (full details in Appendix D ). For the ablations, we again use the perceived-vs-true success analysis (Figure 6 ) to classify failure types.\n\nNo-CoT progress training: We remove the <think> channel and train to emit only <answer> progress. This degrades learning and shifts failures toward signal-limited : progress becomes flatter/noisier, with long plateaus that under-react to small but task-critical transitions.\n\nExpert-only video progress supervision: We train progress prediction using only near-expert trajectories (keeping simple reversal augmentation). This substantially increases reward-hacking failures: states that merely look goal-adjacent (near handle, aligned object, occluding failure) receive inflated progress, enabling exploitation.\n\nNo foundational spatial & multi-frame reasoning data: remove the general spatial + temporal grounding mixture and train only on embodied/planning + robot progress data. This reduces overall success and again increases reward hacking, indicating poorer generalization across viewpoints, textures, and embodiments."
+    },
+    {
+      "heading": "5.6Zero-shot scaling",
+      "text": "We find that our data synthesis and training recipe follows a scaling law driven by the diversity of training tasks (Figure 6 ). We train variants of SOLE-R1 with an increasing number of task types included in our training data synthesis (details in Appendix M ). Figure 6 plots the number of downstream tasks that achieve different success thresholds as a function of training task diversity."
+    },
+    {
+      "heading": "5.7VLA RL steering",
+      "text": "We further explore whether SOLE-R1 rewards can be used to semantically steer a strong pre-trained vision-language-action (VLA) policy. We start with offline evaluation on SmolVLA rollouts in LIBERO, observing that SOLE-R1 reliably distinguishes semantically correct versus incorrect grasps and placements on unseen objects (Figures 12 and 13 in the Appendix), assigning consistently higher progress to goal-consistent outcomes despite not being trained on these objects. Further, using SmolVLA as a base policy, we show that SOLE-R1 enables diffusion-based RL steering toward a specific goal interpretation under language ambiguity, increasing success from 2% to a median of 12% without task-specific tuning or additional supervision. Notably, this improvement arises in a long-horizon, cluttered setting where sparse-reward steering fails entirely, highlighting SOLE-R1\u2019s ability to provide informative dense guidance even when absolute success remains challenging."
+    },
+    {
+      "heading": "5.8OpenX Embodiment Value-Order-Correlation",
+      "text": "Using 1,000 videos from 50 OXE datasets, we perform the same large-scale Value-Order-Correlation (VOC) analysis conducted in [ 31 ] in for Generative Value Learning (GVL). SOLE-R1 achieves higher VOC on real-world expert demonstrations compared to GVL. In Table 7 , we show that SOLE-R1 achieves higher VOC across nearly all datasets, most of which contain human-collected expert demonstrations. For known high-quality datasets collected from human teleoperators with fixed cameras, such as Bridge, RT-1, and Dobb-E, SOLE-R1 achieves a significantly higher VOC than GVL (highlighted in yellow)."
+    },
+    {
+      "heading": "5.9General spatial and vision-language reasoning",
+      "text": "In Table 6 , SOLE-R1 shows improved performance on three general vision reasoning benchmarks relative to baselines. SOLE-R1 achieves consistent gains over the strong SSR spatial reasoning model across SpatialBench, SSRBench, and CV-Bench . This suggests our data synthesis and training recipe not only yields strong progress prediction, but also improves general-purpose reasoning in these settings."
+    },
+    {
+      "heading": "6Related work",
+      "text": "On-Robot reinforcement learning. Seminal works that perform reinforcement learning on physical hardware rely on carefully hand-engineered reward functions, reset policies and safety constraints [ 22 , 23 ] . Recent works improve the scalability and sample-efficiency of on-robot reinforcement learning using pre-trained policies [ 21 , 17 ] , shaped rewards [ 60 , 5 ] and human-in-the-loop learning [ 28 ] . Despite these advances, on-robot RL requires significant task-specific engineering.\n\nVision-language reward learning. In recent years, the use of VLMs as a source of supervision for robot learning has become an active area of research [ 44 , 32 ] . Most relevant to our work, LIV [ 33 ] , ReWiND [ 68 ] , VLAC [ 69 ] , and RoboReward [ 20 ] train models to predict task progress from videos. However, these models are typically trained on near-optimal trajectories and do not perform intermediate reasoning.\nFurther, [ 51 ] propose a concurrent process-reward modeling approach for high-precision manipulation. While complementary, their work focuses on narrow task families and does not study zero-shot online RL across diverse robots and environments. More discussion in Appendix F ."
+    },
+    {
+      "heading": "Broader impact",
+      "text": "This paper advances machine learning for robotics by introducing SOLE-R1, a video-language reasoning model that can provide dense, interpretable progress estimates from raw robot video and natural-language goals, enabling zero-shot online RL. If broadly successful, this direction could lower the barrier to training robots for new tasks and environments, reducing the manual effort typically required to specify rewards and supervision. At the same time, reward reasoning models that interpret video and language can have societal and ethical implications. First, such systems may be misused to increase the autonomy and capability of robotic agents in ways that enable unsafe behavior or malicious applications. Second, because SOLE-R1 is trained on large-scale curated and synthesized reasoning traces and diverse robot video data, it may inherit biases or systematic errors that affect which behaviors are reinforced, particularly under distribution shift, partial observability, or for environments and objects underrepresented in the training data. Third, using model-generated progress as the sole learning signal can create new failure modes (e.g., conservative or miscalibrated rewards that impede learning, or residual reward hacking) that could translate to real-world safety risks if deployed without appropriate safeguards."
+    },
+    {
+      "heading": "7Conclusion",
+      "text": "We introduced SOLE-R1, a video-language reasoning model for guiding online RL via per-timestep CoT reasoning and dense progress prediction. SOLE-R1 is trained using a video trajectory and reasoning synthesis pipeline that generates spatiotemporal CoT and progress supervision, combined with a foundational mixture of spatial and multi-frame temporal reasoning and a hybrid training framework. We show that SOLE-R1 enables zero-shot learning of unseen tasks from scratch and substantially outperforms both general-purpose and specialized reward models. Together, these results indicate that grounded spatiotemporal reasoning is a promising route toward general, reusable reward models."
+    },
+    {
+      "heading": "G.1Evaluation protocol and success rate computation",
+      "text": "We evaluate the learned policies using a task-level success rate that is computed from ground-truth environment signals and task-specific termination conditions, and is never observed by the agent during training."
+    },
+    {
+      "heading": "H.1Inference speed",
+      "text": "We send a batch of 2 videos of 20 frames each to SOLE-R1, which is hosted on a node with a single H100, and to GPT-5 and Gemini-3-Pro using public APIs. We set the Gemini-3-Pro thinking setting to \u201cLOW\u201d. On average, SOLE-R1 takes 40 seconds to annotate rewards (1 s per frame), GPT-5 takes 366 seconds (9.15 s per frame) and Gemini-3-Pro takes 322 seconds (8.05 s per frame). All three models produce a chain of thought for each frame, and the inference speed may vary according to the output length each model chooses to produce. We note that the speed of the public APIs varies day by day."
+    },
+    {
+      "heading": "H.2Prompts",
+      "text": "Each model receives a system prompt followed by a user prompt. A sequence images follows. In user prompt, we replace \u201c{task_description}\u201d with the task description and \u201c{prev_progress}\u2019\u0301 with the previous model prediction. Since we give the model its previous prediction, we have to perform inference sequentially."
+    },
+    {
+      "heading": "J.1Design Principles",
+      "text": "The data synthesis pipeline is guided by three core principles:\n\n1. Explicit coverage of partial success and failure states. Online RL policies frequently visit intermediate, incorrect, or regressive states that are underrepresented in expert demonstrations. To prevent optimistic extrapolation and reward hacking, training data must include authentic non-expert behaviors spanning varying degrees of task completion. 2. Temporal locality of supervision. Progress supervision and reasoning are provided at the granularity of individual timesteps, forcing the model to reason about what changed between consecutive frames rather than relying on static appearance or final outcomes. 3. Task-structure-aware decomposition. Manipulation tasks admit natural decompositions into subgoals (approach, contact, grasp, transport, release, articulation). We explicitly encode this structure in the non-expert trajectory design so that the model learns reusable progress primitives rather than task-specific heuristics."
+    },
+    {
+      "heading": "J.2Non-expert trajectory level taxonomy",
+      "text": "Table 4 enumerates the non-expert trajectory levels used in our synthesis pipeline. Each level corresponds to a prefix of a canonical task decomposition, where all preceding subgoals are assumed to be successfully completed, and the failure or termination occurs at the current level.\n\nFor example, in pick-and-place tasks, a level-3 trajectory ( Contact ) assumes the robot has successfully approached the object but fails to establish a stable grasp. This structure ensures that trajectories across levels are semantically ordered by task progress, enabling consistent supervision of advance versus regress events.\n\nWe allocate approximately uniform probability mass across levels within each task family . This prevents overrepresentation of near-expert states and ensures that the model is exposed to both early-stage failures (e.g., failure to approach) and late-stage failures (e.g., dropping an object after grasp). Uniform per-level sampling was empirically found to reduce optimistic progress extrapolation compared to expert-heavy mixtures."
+    },
+    {
+      "heading": "J.3Simulation-based trajectory synthesis",
+      "text": "For simulation environments (RoboCasa), non-expert trajectories are generated by injecting random action deviations into expert demonstrations, as described in Section 3.1 . Each deviation produces either:\n(i) a terminal failure trajectory, or\n(ii) a recovery trajectory that interpolates back to a downstream expert state.\n\nCrucially, injected deviations are sampled across the full trajectory, not only near the start. This yields failures that occur after partial task completion (e.g., grasp achieved but object dropped), which are particularly important for teaching the model to distinguish true completion from visually similar near-success states.\n\nProgress supervision is derived from ground-truth simulator geometry and normalized per-trajectory, ensuring that progress values are comparable across different deviation points and trajectory lengths."
+    },
+    {
+      "heading": "J.4Real-world video perturbations",
+      "text": "For real-world videos (OXE), where simulator state is unavailable, we synthesize non-expert behavior directly in observation space via temporal perturbations. Temporal reversal windows induce visually plausible regressions (e.g., an object moving away from a goal configuration) while preserving realistic appearance statistics.\n\nBy inheriting progress labels from the corresponding expert timestep, reversed segments are explicitly labeled as negative progress, anchoring the model\u2019s reasoning about regression events. This strategy avoids relying on heuristic visual similarity alone and enforces a consistent temporal ordering signal across all real-world data."
+    },
+    {
+      "heading": "J.5Grounded chain-of-thought generation",
+      "text": "For each timestep, we generate a chain-of-thought (CoT) explanation describing:\n(i) salient visual changes since the previous timestep,\n(ii) whether those changes advance or regress the specified goal, and\n(iii) the next implied subgoal.\n\nIn simulation, CoT traces are initially templated using ground-truth distance and contact signals, then paraphrased using foundation vision-language models to increase linguistic diversity while preserving factual grounding.\n\nIn real-world videos, CoT traces are generated directly by a foundation VLM conditioned on the temporal context and the known progress direction. Progress supervision constrains the explanation to remain temporally consistent (e.g., reversed segments must be described as regression), mitigating hallucinated success narratives."
+    },
+    {
+      "heading": "J.6Dataset mixture and balancing",
+      "text": "The full dataset mixture is summarized in Table 5 . We group data into three high-level categories:\n\n\u2022 Video-based CoT reasoning and progress prediction , which directly supervises the SOLE-R1 reward signal. \u2022 Embodied reasoning and planning , which provides object-centric and task-structured reasoning grounded in manipulation semantics. \u2022 General spatial and temporal reasoning , which supplies broad visual grounding across viewpoints, textures, and domains.\n\nAlthough the raw counts differ substantially across sources, we do not sample proportionally to dataset size. Instead, we apply category-level balancing during SFT (Section K ), ensuring that progress prediction data remains a substantial fraction of each batch without overwhelming general reasoning capabilities."
+    },
+    {
+      "heading": "J.7Why authentic non-expert data matters",
+      "text": "Ablation results in Section D show that removing authentic non-expert trajectories (while keeping synthetic reversals) significantly increases reward-hacking failures. This suggests that visually realistic but causally incorrect states\u2014produced only by real random deviations\u2014are critical for teaching the model distinctions such as: \u2022 \u201cnear the handle\u201d vs. \u201chandle actuated\u201d, \u2022 \u201cobject aligned\u201d vs. \u201cobject released\u201d, \u2022 \u201ccontact\u201d vs. \u201cstable grasp\u201d.\n\nThese distinctions are frequently exploited by online RL agents and are difficult to learn from expert-only or temporally monotonic data."
+    },
+    {
+      "heading": "J.8Summary",
+      "text": "In summary, the training data synthesis pipeline for SOLE-R1 combines:\n(i) structured non-expert trajectory levels aligned with task decompositions,\n(ii) simulation-grounded progress supervision,\n(iii) observation-space perturbations for real-world video,\nand (iv) dense, temporally grounded chain-of-thought reasoning. Together, these design choices produce a dataset that explicitly exposes the model to the states most likely to be encountered\u2014and exploited\u2014during zero-shot online reinforcement learning."
+    },
+    {
+      "heading": "K.1Backbone architecture and initialization",
+      "text": "SOLE-R1 is initialized from Qwen3-VL-8B-Instruct , a vision-language transformer with a ViT-style visual encoder and an autoregressive language decoder. We retain the full multimodal architecture and do not freeze any layers during training. All parameters are updated jointly in both SFT and RLVR stages.\n\nVideo inputs are encoded by uniformly sampling frames from the temporal context window described in Section 2.1 . Each frame is resized to 384 \u00d7 384 384\\times 384 pixels and passed independently through the vision encoder; frame embeddings are concatenated in temporal order and fused with text tokens using the backbone\u2019s native cross-attention mechanism. No explicit temporal positional embeddings beyond the backbone defaults are introduced."
+    },
+    {
+      "heading": "K.2Input and output formatting",
+      "text": "All training examples are normalized into a unified multimodal prompt format: x = [ <goal> \u200b g \u200b </goal> , <video> \u200b o t \u2212 K + 1 : t \u200b </video> ] , x=[\\texttt{<goal>}~g~\\texttt{</goal>},\\;\\texttt{<video>}~o_{t-K+1:t}~\\texttt{</video>}], optionally including <prev_progress> \u200b p t \u2212 1 \u200b </prev_progress> \\texttt{<prev\\_progress>}~p_{t-1}\\texttt{</prev\\_progress>} during training with probability 1 \u2212 \u03b4 1-\\delta , where \u03b4 = 0.3 \\delta=0.3 .\n\nThe model is trained to emit a structured response: y = [ <think> \u200b m t \u200b </think> , <answer> \u200b p t \u200b </answer> ] , y=[\\texttt{<think>}~m_{t}~\\texttt{</think>},\\texttt{<answer>}~p_{t}~\\texttt{</answer>}], where m t m_{t} is free-form natural language reasoning and p t p_{t} is a scalar progress value represented as a signed integer token in [ \u2212 100 , 100 ] [-100,100] . We discretize progress into integer values during training to ensure stable parsing and reward computation."
+    },
+    {
+      "heading": "K.4Reinforcement learning with verifiable rewards (RLVR)",
+      "text": "After SFT, we further train the model using GRPO-based RLVR, focusing exclusively on the robot video progress prediction dataset."
+    },
+    {
+      "heading": "K.5Compute and infrastructure",
+      "text": "Training is conducted on clusters of NVIDIA H100 GPUs.\nSFT requires approximately 1 week on a node of 8 GPUs, while RLVR requires an additional 2 days."
+    },
+    {
+      "heading": "K.6Reproducibility Details",
+      "text": "We release:\n(i) the full training mixture with dataset identifiers and sampling weights,\n(ii) exact prompt templates and output parsers,\n(iii) SFT and RLVR training scripts with configuration files,\n(iv) final model checkpoints after SFT and RLVR.\nThis enables exact reproduction of the training procedure."
+    },
+    {
+      "heading": "M.1Training task-type taxonomy",
+      "text": "To study scaling with respect to task diversity, we group all robot-video progress supervision into a set of seven canonical task types . Each task type corresponds to a distinct manipulation primitive with characteristic spatiotemporal progress structure, contact dynamics, and failure modes. The full list is:\n\n1. PickOnly : Grasping and lifting a single object from a support surface, without placement. 2. Pick-and-Place (Pick \u2192 \\rightarrow Counter) : Picking an object from a receptacle (e.g., cabinet, microwave, sink, stove) and placing it onto a counter or open surface. 3. Pick-and-Place (Counter \u2192 \\rightarrow Receptacle) : Picking an object from a counter and placing it into a target receptacle (e.g., cabinet, microwave, sink). 4. Open/Close Drawer : Articulated manipulation involving sliding drawers, including approach, contact, actuation, and completion states. 5. Open/Close Door : Articulated manipulation of hinged doors, requiring handle interaction and rotational motion. 6. Button-Press : Discrete actuation of buttons or switches (e.g., microwave, coffee machine), characterized by brief contact events and state changes with minimal visual motion. 7. Lever / Knob Actuation : Continuous rotational or pulling actions on levers or knobs, including turning appliances on or off."
+    },
+    {
+      "heading": "M.2Scaling protocol",
+      "text": "We construct a sequence of SOLE-R1 variants by progressively increasing the number of task types included in the video-based progress prediction portion of the training data. Concretely:\n\n\u2022 All models share the same backbone (Qwen3-VL-8B-Instruct), training recipe (SFT + RLVR), optimizer settings, and total number of training steps. \u2022 Foundational spatial reasoning and multi-frame temporal reasoning data are held constant across all variants. \u2022 Only the set of task types used to generate robot-video progress supervision is varied."
+    },
+    {
+      "heading": "M.3Evaluation metric",
+      "text": "Each trained model is evaluated on the full zero-shot online RL benchmark described in Section 5.3 , comprising tasks not used for training progress supervision. For each model, we report the number of downstream tasks achieving success rates above fixed thresholds (e.g., 10%, 30%, 50%).\nFigure 6 plots the number of tasks solved above threshold as a function of training task-type diversity."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1 : SOLE-R1 is a video-language reasoning model designed to guide online RL with per-timestep chain-of-thought reasoning and progress prediction. In large-scale experiments across 40 tasks, SOLE-R1 outperforms strong baseline models with zero-shot online RL.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28730/assets/figures/fig1_v3.png"
+    },
+    {
+      "caption": "Figure 2 : SOLE-R1 Training Data Mixture. The dataset combines foundational spatial reasoning (single-image and depth), multi-frame temporal reasoning, and our synthesized video trajectories with chain-of-thought explanations and dense progress supervision, jointly enabling reasoning over space and time for progress prediction.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28730/assets/figures/fig2_v2.png"
+    },
+    {
+      "caption": "Figure 3 : Zero-shot Success Rate of Online RL across 40 Tasks. We plot the mean and standard error across three random seeds (real-world experiments use a single seed, shown as a single value). In all experiments, the robot begins with a random policy and learns entirely through interaction with the task, guided only by the predicted rewards. We do not use any ground-truth rewards (sparse or dense), task-specific tuning, or demonstrations at any point of learning.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28730/assets/x1.png"
+    },
+    {
+      "caption": "Figure 4 : Perceived vs True Success in Zero-shot RL. We compute perceived success as the average max progress predicted by each model (since LIV predicts values between -1 and 1, we re-scale to 0 to 100). RoboReward is excluded as it does not provide a dense reward. We compute true success as the average max ground-truth reward achieved. Failure types: reward-hacking (bottom-right quadrant: low true success, but high perceived success) versus signal-limited (bottom-left quadrant: low true success and low perceived success)",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28730/assets/figures/res_fig2.png"
+    },
+    {
+      "caption": "Figure 5 : Ablated-models zero-shot success.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28730/assets/x2.png"
+    },
+    {
+      "caption": "Figure 5 : Ablated-models zero-shot success.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28730/assets/x2.png"
+    },
+    {
+      "caption": "Figure 6 : Tasks solved vs training task diversity.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28730/assets/x3.png"
+    },
+    {
+      "caption": "",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28730/assets/x4.png"
+    },
+    {
+      "caption": "Figure 7 : Extended reasoning examples across all models.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28730/assets/x5.png"
+    },
+    {
+      "caption": "Figure 8 : Zero-shot RL Success vs Correlation between Predicted and Ground-truth Progress",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28730/assets/x6.png"
+    },
+    {
+      "caption": "Figure 9 : SFT-only vs SFT+RLVR model in Zero-shot Success Rate of Online RL",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28730/assets/x7.png"
+    },
+    {
+      "caption": "Figure 10 : Zero-shot Success Rate of Online RL on 10 Simple Meta-World Tasks across Varying Prompting Strategies.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28730/assets/x8.png"
+    },
+    {
+      "caption": "Figure 11 : Left: workcell with two Franka FR3 arms. Right: example shoulder and wrist views from the right robot.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28730/assets/figures/robot_fig2x.jpg"
+    },
+    {
+      "caption": "",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28730/assets/figures/robot_fig2x.jpg"
+    },
+    {
+      "caption": "",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28730/assets/figures/shoulder.png"
+    },
+    {
+      "caption": "Figure 12 : Example of a successful (top) and failed (bottom) manipulation trajectory generated by SmolVLA in Libero. We predict and plot (red) SOLE-R1 task progress predictions based on the prompt \u201cput the bowl on the cabinet\u201d.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28730/assets/figures/smolvla_bowl_success.png"
+    },
+    {
+      "caption": "Figure 13 : Example of a successful (top) and failed (bottom) manipulation trajectory generated by SmolVLA in Libero. We predict and plot (red) SOLE-R1 task progress predictions based on the prompt \u201cput the cream cheese in the bowl\u201d.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28730/assets/figures/smolvla_place_box_in_bowl_success.png"
+    }
+  ],
+  "ar5iv_success": true
+}

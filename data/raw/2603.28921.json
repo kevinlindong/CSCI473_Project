@@ -1,0 +1,200 @@
+{
+  "paper_id": "2603.28921",
+  "title": "Beta-Scheduling: Momentum from Critical Damping as a Diagnostic and Correction Tool for Neural Network Training",
+  "abstract": "Standard neural network training uses constant momentum (typically 0.9), a convention dating to 1964 with limited theoretical justification for its\n  optimality. We derive a time-varying momentum schedule from the critically damped harmonic oscillator: mu(t) = 1 - 2*sqrt(alpha(t)), where alpha(t) is\n  the current learning rate. This beta-schedule requires zero free parameters beyond the existing learning rate schedule. On ResNet-18/CIFAR-10,\n  beta-scheduling delivers 1.9x faster convergence to 90% accuracy compared to constant momentum. More importantly, the per-layer gradient attribution\n  under this schedule produces a cross-optimizer invariant diagnostic: the same three problem layers are identified regardless of whether the model was\n  trained with SGD or Adam (100% overlap). Surgical correction of only these layers fixes 62 misclassifications while retraining only 18% of parameters.\n  A hybrid schedule -- physics momentum for fast early convergence, then constant momentum for the final refinement -- reaches 95% accuracy fastest\n  among five methods tested. The main contribution is not an accuracy improvement but a principled, parameter-free tool for localizing and correcting\n  specific failure modes in trained networks.",
+  "authors": [
+    "Ivan Pasichnyk"
+  ],
+  "date": "2026-03-30T18:53:03+00:00",
+  "url": "http://arxiv.org/abs/2603.28921v2",
+  "categories": [
+    "cs.LG",
+    "cs.AI"
+  ],
+  "primary_category": "cs.LG",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "When a neural network confuses cats with dogs, standard tools\u2014confusion matrices, per-class accuracy\u2014tell you that the confusion exists. They do not tell you which layers are responsible for the confusion, what features those layers are confusing (furry texture? face shape? silhouette?), or how to fix it without retraining the entire model. This diagnostic gap is increasingly costly as models scale: retraining a large language model to address a specific failure mode can cost as much as the original training.\n\nWe present a diagnostic pipeline that answers all three questions. The pipeline integrates three existing ideas into a new working system:\n\n1. Damping-regime classification (background from Qian [ 12 ] ). The well-known equivalence between SGD with momentum and a damped harmonic oscillator lets us classify each training epoch as underdamped, critically damped, or overdamped. The oscillator model itself is not our contribution; its use as a diagnostic classifier for training dynamics is. 2. Error-specific gradient attribution (new application). Prior work uses gradient norms across the full dataset for layer importance weighting [ 6 ] . We compute gradient norms exclusively on misclassified images \u2014asking \u201cwhich layers are most confused on the images the model gets wrong?\u201d This produces a binary layer-level diagnostic (problem/healthy) rather than a continuous weighting, and is, to our knowledge, a new application. 3. Surgical correction with physics-derived momentum (new integration). Surgical fine-tuning as a concept was established by Lee et al. [ 6 ] . Using physics-derived momentum ( \u03bc = 1 \u2212 2 \u200b \u03b1 \\mu=1-2\\sqrt{\\alpha} ) for the correction, guided by error-specific gradient attribution, is new.\n\nThe pipeline yields four main findings:"
+    },
+    {
+      "heading": "3Background: The Oscillator Model",
+      "text": "This section reviews known results [ 12 , 17 , 13 ] and derives the explicit schedule used throughout this paper. The oscillator model itself is not our contribution; we include the derivation to set notation."
+    },
+    {
+      "heading": "3.1SGD with Momentum as a Damped Oscillator",
+      "text": "SGD with momentum updates parameters \u03b8 \\theta via: v t + 1 \\displaystyle v_{t+1} = \u03bc \u200b v t \u2212 \u03b1 \u200b \u2207 \u2112 \u200b ( \u03b8 t ) , \\displaystyle=\\mu\\,v_{t}-\\alpha\\,\\nabla\\mathcal{L}(\\theta_{t}), (1) \u03b8 t + 1 \\displaystyle\\theta_{t+1} = \u03b8 t + v t + 1 , \\displaystyle=\\theta_{t}+v_{t+1}, (2) where v t v_{t} is the velocity buffer, \u03b1 \\alpha is the learning rate, \u03bc \\mu is the momentum coefficient, and \u2207 \u2112 \\nabla\\mathcal{L} is the loss gradient.\n\nEliminating v t v_{t} by substituting Eq. 1 into Eq. 2 and taking the continuous-time limit, we obtain the equation of a forced damped harmonic oscillator [ 12 ] : x \u00a8 + \u03b3 \u200b x \u02d9 + \u03c9 2 \u200b x = F \u200b ( t ) , \\ddot{x}+\\gamma\\,\\dot{x}+\\omega^{2}\\,x=F(t), (3) with the correspondence shown in Table 1 .\n\nThe second-order recurrence obtained by eliminating v t v_{t} from Eqs. 1 \u2013 2 is: \u03b8 t + 1 \u2212 ( 1 + \u03bc ) \u200b \u03b8 t + \u03bc \u200b \u03b8 t \u2212 1 = \u2212 \u03b1 \u200b \u2207 \u2112 \u200b ( \u03b8 t ) . \\theta_{t+1}-(1+\\mu)\\,\\theta_{t}+\\mu\\,\\theta_{t-1}=-\\alpha\\,\\nabla\\mathcal{L}(\\theta_{t}). (4) Dividing by \u0394 \u200b t 2 \\Delta t^{2} and identifying \u03b3 = ( 1 \u2212 \u03bc ) / \u0394 \u200b t \\gamma=(1-\\mu)/\\Delta t and \u03c9 2 = \u03b1 / \u0394 \u200b t 2 \\omega^{2}=\\alpha/\\Delta t^{2} , we recover Eq. 3 with \u03b3 = 1 \u2212 \u03bc \\gamma=1-\\mu and \u03c9 = \u03b1 \\omega=\\sqrt{\\alpha} (setting \u0394 \u200b t = 1 \\Delta t=1 )."
+    },
+    {
+      "heading": "3.2Three Damping Regimes",
+      "text": "The behavior of a damped oscillator depends on the discriminant \u0394 = \u03b3 2 \u2212 4 \u200b \u03c9 2 \\Delta=\\gamma^{2}-4\\omega^{2} : \u2022 Underdamped ( \u03b3 < 2 \u200b \u03c9 \\gamma<2\\omega , \u0394 < 0 \\Delta<0 ): the system oscillates around equilibrium before converging. In optimization, this manifests as fluctuating loss and accuracy curves. \u2022 Overdamped ( \u03b3 > 2 \u200b \u03c9 \\gamma>2\\omega , \u0394 > 0 \\Delta>0 ): the system approaches equilibrium without oscillation but unnecessarily slowly. \u2022 Critically damped ( \u03b3 = 2 \u200b \u03c9 \\gamma=2\\omega , \u0394 = 0 \\Delta=0 ): the unique regime that reaches equilibrium in minimum time without oscillation."
+    },
+    {
+      "heading": "3.3The Critical Damping Schedule",
+      "text": "Setting \u03b3 = 2 \u200b \u03c9 \\gamma=2\\omega and substituting \u03b3 = 1 \u2212 \u03bc \\gamma=1-\\mu and \u03c9 = \u03b1 \\omega=\\sqrt{\\alpha} : 1 \u2212 \u03bc = 2 \u200b \u03b1 \u27f9 \u03bc \u200b ( t ) = 1 \u2212 2 \u200b \u03b1 \u200b ( t ) . 1-\\mu=2\\sqrt{\\alpha}\\quad\\Longrightarrow\\quad\\boxed{\\mu(t)=1-2\\sqrt{\\alpha(t)}}. (5)\n\nGiven any learning rate schedule \u03b1 \u200b ( t ) \\alpha(t) , Eq. 5 determines a momentum trajectory that targets critical damping throughout training. We call this \u03b2 \\beta -scheduling .\n\nCaveat: curvature dependence. The natural frequency is properly \u03c9 = \u03bb \u22c5 \u03b1 \\omega=\\sqrt{\\lambda\\cdot\\alpha} where \u03bb \\lambda is the local curvature (Hessian eigenvalue). Our global formula assumes unit curvature ( \u03bb = 1 \\lambda=1 ). Each parameter\u2019s \u201ctrue\u201d critical momentum is \u03bc i = 1 \u2212 2 \u200b \u03bb i \u200b \u03b1 \\mu_{i}=1-2\\sqrt{\\lambda_{i}\\alpha} ; the per-parameter generalization connects to Yang et al. [ 20 ] . Despite this simplification, the global formula produces the qualitative predictions verified in Section 4 ."
+    },
+    {
+      "heading": "3.4Qualitative Predictions",
+      "text": "The critical damping condition makes three testable predictions: 1. Fastest early convergence. Critically damped systems have the shortest settling time. 2. No oscillation. Training curves should improve monotonically during the high-LR phase. 3. Competitive final accuracy. The oscillator model captures macroscopic dynamics but not the fine structure of the loss landscape. Final accuracy should be comparable but not necessarily superior."
+    },
+    {
+      "heading": "3.5Retroactive Explanations of Empirical Heuristics",
+      "text": "Equation 5 retroactively explains several established practices: \u2022 Why \u03bc = 0.9 \\mu=0.9 is a common default. At \u03b1 = 0.01 \\alpha=0.01 : \u03bc c = 1 \u2212 2 \u200b 0.01 = 0.8 \\mu_{c}=1-2\\sqrt{0.01}=0.8 . The value 0.9 is close\u2014slightly underdamped but workable. \u2022 Why 1cycle couples momentum inversely to LR. Higher \u03b1 \\alpha requires lower \u03bc \\mu for critical damping. The 1cycle policy [ 14 ] approximates this curve. \u2022 Why learning rate warmup helps. Starting with small \u03b1 \\alpha gives \u03bc c \u2248 1 \\mu_{c}\\approx 1 (near-zero damping), allowing velocity to build smoothly."
+    },
+    {
+      "heading": "4Experiment 1: Validating the Physics",
+      "text": "Before using the oscillator model for diagnostics, we verify that its qualitative predictions hold empirically. The headline result is convergence speed ( 1.9 \u00d7 1.9\\times to 90%), not final accuracy (which is within seed-to-seed variance)."
+    },
+    {
+      "heading": "4.1Setup",
+      "text": "Architecture. ResNet-18 [ 2 ] (11.2M parameters), modified for CIFAR-10 [ 5 ] : 3 \u00d7 3 3\\times 3 initial convolution with stride\u00a01 and padding\u00a01 (replacing the standard 7 \u00d7 7 7\\times 7 ), max-pooling replaced with identity, final FC layer mapping 512 \u2192 10 512\\to 10 .\n\nTraining. 200 epochs, batch size 128, weight decay 5 \u00d7 10 \u2212 4 5\\times 10^{-4} , seed 42, cosine annealing from \u03b1 max = 0.1 \\alpha_{\\max}=0.1 to \u03b1 min = 10 \u2212 4 \\alpha_{\\min}=10^{-4} . Data augmentation: random crop (32, padding 4) and random horizontal flip.\n\nHardware. NVIDIA Tesla P100 (16\u00a0GB), PyTorch 2.4.1, CUDA 12.1.\n\nThree conditions. All conditions use the same cosine LR schedule; only the momentum schedule differs:\n\nClamping. The physics momentum is clamped to [ 0.5 , 0.99 ] [0.5,0.99] for numerical stability. At \u03b1 max = 0.1 \\alpha_{\\max}=0.1 , the raw formula gives \u03bc \u2248 0.37 \\mu\\approx 0.37 , clamped to 0.50 0.50 ; at \u03b1 min = 10 \u2212 4 \\alpha_{\\min}=10^{-4} , \u03bc = 0.98 \\mu=0.98 , within bounds. This means the physics model is not perfectly critically damped during the high-LR phase (approximately epochs 1\u201330 where \u03b1 > 0.063 \\alpha>0.063 ): it is slightly underdamped due to clamping. However, the deviation is much smaller than the baseline\u2019s ( \u0394 \u200b \u03bc = + 0.13 \\Delta\\mu=+0.13 vs. + 0.53 +0.53 at epoch\u00a01). See Figure 1 ."
+    },
+    {
+      "heading": "4.2Results: Final Accuracy",
+      "text": "All three methods achieve comparable accuracy within 0.52 percentage points. Training time is identical\u2014the physics schedule has no computational overhead."
+    },
+    {
+      "heading": "4.3Results: Convergence Speed",
+      "text": "The physics method reaches 90% accuracy at epoch\u00a052\u2014a 1.9 \u00d7 1.9\\times speedup over baseline (epoch\u00a0100) and 2.8 \u00d7 2.8\\times over 1cycle (epoch\u00a0144). This is consistent with the oscillator model\u2019s prediction that critical damping produces the shortest settling time."
+    },
+    {
+      "heading": "4.4Prediction Verification",
+      "text": "All three qualitative predictions are confirmed: 1. Fastest early convergence\u2014confirmed. Physics reaches 90% in approximately half the epochs of baseline. 2. No oscillation\u2014confirmed. Physics exhibits monotonically improving accuracy during epochs 1\u201360. Baseline shows non-monotonic fluctuations in the same range. 3. Competitive final accuracy\u2014confirmed. The 0.52% gap is within seed-to-seed variance."
+    },
+    {
+      "heading": "4.5Damping Regime Analysis",
+      "text": "For each epoch, we classify the regime by comparing the actual momentum \u03bc \\mu to the critical value \u03bc c = 1 \u2212 2 \u200b \u03b1 \\mu_{c}=1-2\\sqrt{\\alpha} , using a tolerance of | \u03bc \u2212 \u03bc c | \u2264 0.05 |\\mu-\\mu_{c}|\\leq 0.05 for the critical band.\n\nThe baseline operates in the underdamped regime for 85% of training \u2014the standard configuration ( \u03bc = 0.9 \\mu=0.9 ) spends the vast majority of training oscillating rather than converging optimally. Physics maintains critical or near-critical damping for all 200 epochs; during the clamped phase, | \u0394 \u200b \u03bc | \u2264 0.13 |\\Delta\\mu|\\leq 0.13 \u2014an order of magnitude closer to critical than the baseline\u2019s \u0394 \u200b \u03bc = + 0.53 \\Delta\\mu=+0.53 at epoch\u00a01.\n\nWhy this matters for diagnostics. The damping regime analysis is not just a training diagnostic\u2014it is the foundation for the error-localization pipeline in Section 5 . The fact that the baseline is heavily underdamped suggests that its learned representations may be suboptimal in specific layers, which we can now identify and correct."
+    },
+    {
+      "heading": "5Experiment 2: The Diagnostic Pipeline",
+      "text": "This is the central experiment. We demonstrate a complete Scan \u2192 \\to Localize \u2192 \\to Diagnose \u2192 \\to Treat \u2192 \\to Verify pipeline that identifies which layers cause specific errors, explains why, and surgically corrects them. The analogy is medical: from \u201cthe patient is sick, administer broad-spectrum antibiotics\u201d to \u201cMRI shows a lesion in region\u00a0X, operate on X, verify the outcome.\u201d"
+    },
+    {
+      "heading": "5.1Hypotheses",
+      "text": "H1: Error-specific gradient attribution localizes problem layers. On misclassified test images, gradient norms should concentrate in specific layers rather than being uniformly distributed, producing a sparse layer-level diagnostic. Note: gradient attribution is a well-established technique; what is new here is computing it exclusively on misclassified images to identify \u201csick\u201d layers rather than generally important ones.\n\nH2: Targeted correction is more efficient than full retraining. Retraining only the identified problem layers should fix errors with \u2265 \\geq 80% compute savings.\n\nH3: Different damping trajectories produce different errors. Models trained with different momentum schedules should make qualitatively different errors."
+    },
+    {
+      "heading": "5.2Step 1 \u2014 Scan: Cross-Model Error Analysis",
+      "text": "We compute per-image predictions for all three models on the 10,000-image CIFAR-10 test set:\n\nThe 172 images correctly classified by the physics model but not by the baseline provide direct evidence that optimization trajectory affects learned representations (H3\u00a0confirmed). These are not random differences: they cluster around specific feature confusions, as shown below."
+    },
+    {
+      "heading": "5.3Step 2 \u2014 Localize: Gradient Attribution on Misclassified Images",
+      "text": "We compute per-layer gradient norms on the baseline model\u2019s 452 misclassified test images. Critically, we restrict the computation to errors only \u2014this asks \u201cwhich layers are most confused on the specific images the model gets wrong?\u201d rather than \u201cwhich layers are generally most important?\u201d\n\nResult (H1 confirmed). Gradient norms concentrate in three layers ( layer3 , conv1 , layer2 ), with a 12.3 \u00d7 12.3\\times ratio between the highest ( layer3 : 10.56) and lowest ( fc : 0.86) layers, and a 1.4 \u00d7 1.4\\times ratio between the third-highest problem layer and the fourth-highest normal layer. The distribution is sparse, not uniform\u2014the pipeline produces a clear cut between \u201csick\u201d and \u201chealthy\u201d layers."
+    },
+    {
+      "heading": "5.4Step 3 \u2014 Diagnose: Error Taxonomy",
+      "text": "The most frequent confusion pairs cluster around texture\u2013shape confusions in the problem layers:\n\nEach error has a causal explanation : conv1 confuses based on texture (brown \u2192 \\to dog, green \u2192 \\to bird); layer2 confuses based on shape (compact silhouette, horizontal shape); layer3 confuses based on mid-level features (face shape, fur, color). The diagnostic pipeline does not just identify that errors exist\u2014it explains why each error occurs and which layer is responsible."
+    },
+    {
+      "heading": "5.5Step 4 \u2014 Treat: Surgical Correction",
+      "text": "Protocol. We freeze all 120 parameter tensors in the baseline model, then unfreeze only the three problem layers ( layer3 , conv1 , layer2 ; 35 tensors). We retrain for 30 epochs with physics momentum at \u03b1 max = 0.01 \\alpha_{\\max}=0.01 (10 \u00d7 \\times lower than original training).\n\nResult (H2 confirmed). Surgical correction fixed 55 errors by retraining only 29% of parameters (35/120 tensors) for 15% of the original training duration\u201482% compute savings versus full retraining. The net improvement (+6) in this initial experiment is modest; a stronger variant is tested in Section 6 ."
+    },
+    {
+      "heading": "5.6Step 5 \u2014 Verify: Analysis of Side Effects",
+      "text": "The 49 new errors after correction are expected: retraining at the layer-group level affects many parameters simultaneously, and some previously correct features are perturbed. This can be mitigated through: (1)\u00a0per-residual-block correction instead of per-layer-group, (2)\u00a0elastic weight consolidation [ 4 ] to preserve correct features, and (3)\u00a0iterative diagnose\u2013correct\u2013verify cycles. Section 6 shows that choosing layers more carefully (via iKFAD-guided selection) reduces new errors from 55 to 40, achieving net +22."
+    },
+    {
+      "heading": "6Experiment 3: Cross-Optimizer Invariance and Diagnostic Comparison",
+      "text": "This experiment tests the most important question for scaling: does the diagnostic generalize across optimizers? If gradient attribution on misclassified images identifies the same problem layers regardless of how the model was trained, then the pipeline can be applied to any model\u2014including LLMs trained with Adam variants."
+    },
+    {
+      "heading": "6.1Setup",
+      "text": "We train five models under identical conditions (ResNet-18, CIFAR-10, 200 epochs, cosine LR, seed\u00a042): 1. Baseline : SGD + constant \u03bc = 0.9 \\mu=0.9 . 2. Physics (ours) : SGD + \u03bc \u200b ( t ) = 1 \u2212 2 \u200b \u03b1 \u200b ( t ) \\mu(t)=1-2\\sqrt{\\alpha(t)} . 3. iKFAD [ 20 ] : per-parameter adaptive friction \u03be i \\xi_{i} tracking kinetic energy. 4. CD [ 20 ] : cubically damped SGD ( c = 0.1 c=0.1 ). 5. Adam [ 3 ] : lr = 10 \u2212 3 \\text{lr}=10^{-3} , cosine decay to 10 \u2212 5 10^{-5} , weight decay 5 \u00d7 10 \u2212 4 5\\times 10^{-4} .\n\nWe compare two diagnostic methods and five correction strategies: \u2022 Method\u00a0A (ours): gradient attribution on misclassified images \u2192 \\to layer-group surgical correction with physics momentum. \u2022 Method\u00a0B (Yang et al.): per-parameter friction \u03be i \\xi_{i} from iKFAD training \u2192 \\to rank layers by accumulated friction \u2192 \\to layer-group surgical correction. \u2022 Methods\u00a0C, D: per-parameter correction using top 30% and 15% highest- \u03be \\xi parameters. \u2022 Method\u00a0E: cross-optimizer transfer\u2014diagnose the Adam model with our gradient attribution, then correct with physics momentum. All corrections retrain for 30 epochs with \u03bc = 1 \u2212 2 \u200b \u03b1 \\mu=1-2\\sqrt{\\alpha} ."
+    },
+    {
+      "heading": "6.2Results: Training Accuracy",
+      "text": "All four SGD-momentum variants achieve comparable accuracy within a 0.50\u00a0pp range (95.12\u201395.62%). Adam trails by \u223c 1.8 {\\sim}1.8 pp, consistent with the known generalization gap between SGD and Adam on image classification [ 19 ] ."
+    },
+    {
+      "heading": "6.3Results: Cross-Optimizer Invariance (Key Finding)",
+      "text": "This is the central finding of the paper. Gradient attribution on misclassified images identifies exactly the same three problem layers on the SGD baseline and the Adam model\u2014100% overlap. This is not obvious a priori : SGD and Adam traverse fundamentally different optimization trajectories, use different update rules, and produce models with different error counts (453 vs. 647). Yet the architectural bottlenecks that cause errors are the same.\n\nThe implication is that gradient attribution on misclassified images measures a property of the architecture \u2014specifically, which layers have insufficient capacity or receive insufficient gradient signal for the hardest examples\u2014rather than an artifact of the optimizer. The diagnostic pipeline is therefore optimizer-agnostic , which is essential for applicability to large models trained with Adam variants.\n\nNote the difference from iKFAD: our gradient attribution identifies conv1 (first convolutional layer, learnable feature detectors), while iKFAD identifies bn1 (batch normalization, only scale/shift parameters). Since conv1 contains the features responsible for texture\u2013shape confusions, the gradient-attribution diagnosis is more causally meaningful."
+    },
+    {
+      "heading": "6.4Results: Surgical Correction Comparison",
+      "text": "Three findings emerge:"
+    },
+    {
+      "heading": "7Experiment 4: Hybrid Momentum Scheduling",
+      "text": "Experiments\u00a01\u20133 revealed a tension: physics momentum ( \u03bc = 1 \u2212 2 \u200b \u03b1 \\mu=1-2\\sqrt{\\alpha} ) converges to 90% accuracy 1.9 \u00d7 1.9\\times faster than baseline, but baseline ( \u03bc = 0.9 \\mu=0.9 ) reaches the final 95% sooner (epoch\u00a0175 vs. 183). The physics schedule is near-critically damped, which suppresses the oscillation that helps escape shallow local minima in the late-training landscape. Baseline\u2019s underdamped regime acts as implicit exploration, beneficial when the remaining errors involve subtle feature distinctions.\n\nThis motivates a hybrid schedule : use physics momentum for fast early convergence, then switch to baseline momentum for the final push."
+    },
+    {
+      "heading": "7.1Setup",
+      "text": "We compare five methods on the same setup (ResNet-18, CIFAR-10, 200 epochs, cosine LR, batch\u00a0128, seed\u00a042): 1. Baseline : constant \u03bc = 0.9 \\mu=0.9 . 2. Physics : \u03bc \u200b ( t ) = clamp \u200b ( 1 \u2212 2 \u200b \u03b1 \u200b ( t ) , 0.5 , 0.99 ) \\mu(t)=\\text{clamp}(1-2\\sqrt{\\alpha(t)},\\;0.5,\\;0.99) . 3. 1cycle [ 15 ] : \u03bc \u2208 [ 0.85 , 0.95 ] \\mu\\in[0.85,0.95] , inversely coupled to LR. 4. Hybrid-90 : physics momentum until test accuracy \u2265 90 % \\geq 90\\% , then \u03bc = 0.9 \\mu=0.9 . 5. Hybrid-ep52 : physics momentum until epoch\u00a052 (fixed), then \u03bc = 0.9 \\mu=0.9 .\n\nThe two hybrid variants test adaptive (accuracy-triggered) versus fixed (epoch-triggered) switching. Epoch\u00a052 was chosen based on Experiment\u00a01 results where physics reached 90% at epoch\u00a052."
+    },
+    {
+      "heading": "7.3Analysis",
+      "text": "Three findings emerge:"
+    },
+    {
+      "heading": "8Implications for Large Models",
+      "text": "The diagnostic pipeline operates on a small model (ResNet-18, 11.2M parameters). Here we discuss why the underlying principles may scale to large language models and propose concrete experiments."
+    },
+    {
+      "heading": "8.1The Layer-Level Repair Problem",
+      "text": "Large language models exhibit failure modes\u2014hallucination, bias, harmful outputs\u2014that are currently addressed by retraining the entire model via RLHF or DPO [ 21 ] . This introduces an \u201calignment tax\u201d: fixing one failure mode may degrade performance elsewhere. Surgical fine-tuning [ 6 ] and hierarchical alignment [ 21 ] demonstrate that targeting specific layers can reduce interference.\n\nThe key missing ingredient is which layers to target . Our diagnostic provides a principled answer: gradient attribution on failure cases identifies the layers most confused by the errors. The cross-optimizer invariance result (Section 6 ) suggests this diagnostic measures an architectural property, which is essential for LLMs trained with Adam variants."
+    },
+    {
+      "heading": "8.2Connection to Existing Methods",
+      "text": "Our gradient attribution identifies which layers are responsible for specific errors. This is complementary to: \u2022 ROME/MEMIT [ 8 , 9 ] : localize factual associations to MLP layers via causal tracing. Our method localizes error-causing computation via gradient norms. The two could be combined: use gradient attribution to identify candidate layers, then apply ROME-style editing within them. \u2022 Representation Engineering [ 22 ] : identifies directions in activation space encoding concepts (honesty, harmfulness). Our method identifies layers . RepE\u2019s control vectors could be applied selectively to identified problem layers. \u2022 Surgical fine-tuning [ 6 ] : demonstrates that partial retraining works. Our contribution is a diagnostic that tells you which part to retrain."
+    },
+    {
+      "heading": "8.3Proposed Experiments",
+      "text": "Tier\u00a01: LLM error localization. Take a pre-trained LLM (e.g., Llama-3-8B) and a benchmark with known failure cases (TruthfulQA for hallucination, BBQ for bias). Compute per-layer gradient norms on failure cases. Hypothesis: gradient norms will concentrate in a sparse set of transformer layers, analogous to our ResNet-18 finding.\n\nTier\u00a02: Surgical LoRA. Apply LoRA adapters only to the layers identified in Tier\u00a01 (\u201csurgical LoRA\u201d) versus full-model LoRA. Hypothesis: surgical LoRA will fix a comparable number of errors with fewer side effects, at a fraction of the compute.\n\nTier\u00a03: Cross-architecture invariance. Repeat Tier\u00a01 on models with different architectures (Llama, Mistral, GPT-2-XL). Hypothesis: error-causing layers will cluster at similar relative depths (e.g., 30\u201350% of model depth), suggesting a universal property of transformer architectures.\n\nIf confirmed, these results would establish gradient attribution on failure cases as a general-purpose diagnostic for large models\u2014\u201cmedical imaging\u201d for neural networks."
+    },
+    {
+      "heading": "9.1A Diagnostic Framework, Not an Optimizer",
+      "text": "The oscillator model of SGD with momentum [ 12 ] has been known for 27 years. The formula \u03bc = 1 \u2212 2 \u200b \u03b1 \\mu=1-2\\sqrt{\\alpha} is a direct consequence. Our contribution is not the formula but what it enables : a diagnostic pipeline that identifies error-causing layers, explains why errors occur, and surgically corrects them with verified outcomes. The cross-optimizer invariance (Table 12 ) elevates the diagnostic from a training-specific tool to a general-purpose method applicable to any trained model."
+    },
+    {
+      "heading": "9.2Hyperparameter Reduction",
+      "text": "A standard hyperparameter search treats \u03b1 \\alpha and \u03bc \\mu as independent axes in a 2D grid. Eq. 5 collapses this to a 1D curve: given any \u03b1 \\alpha , the optimal \u03bc \\mu is determined. This halves the search space for momentum-based optimizers\u2014a useful byproduct of the physics, though not the primary contribution."
+    },
+    {
+      "heading": "9.3Explanations for Model Errors",
+      "text": "Standard debugging identifies what a model gets wrong. The diagnostic pipeline adds why : the error taxonomy (Table 9 ) attributes each confusion pair to a specific layer and a specific feature confusion (texture, shape, color). This transforms debugging from a statistical exercise into an explanatory one."
+    },
+    {
+      "heading": "9.4The Medical Analogy",
+      "text": "The five-step pipeline mirrors medical diagnostics: 1. Scan: compute damping regime at each epoch\u2014the \u201cvital signs.\u201d 2. Localize: gradient attribution on errors\u2014the \u201cMRI.\u201d 3. Diagnose: map errors to feature confusions\u2014the \u201cpathology report.\u201d 4. Treat: freeze healthy layers, retrain problem layers\u2014the \u201csurgery.\u201d 5. Verify: before/after comparison on specific images\u2014the \u201cfollow-up.\u201d"
+    },
+    {
+      "heading": "9.5Layer-Level vs. Parameter-Level Correction",
+      "text": "Experiment\u00a03 provides evidence that layer-group granularity outperforms per-parameter selection (Table 13 ). Both layer-level methods fix 62 errors; parameter-level methods fix only 42\u201346 with negative net improvement. We hypothesize that individual parameter selection introduces too many degrees of freedom, causing the correction to overfit to specific errors while destabilizing adjacent features. Layer-group correction constrains the optimization sufficiently to avoid this."
+    },
+    {
+      "heading": "9.6Implications for Model Auditing",
+      "text": "The ability to (1)\u00a0identify which layers caused which errors, (2)\u00a0attribute errors to specific feature confusions, and (3)\u00a0surgically correct them without disturbing other layers has direct implications for model auditing and targeted repair of safety-critical failure modes. The cross-optimizer invariance means this capability extends to models trained with any optimizer."
+    },
+    {
+      "heading": "10Limitations and Future Work",
+      "text": "Single seed. All experiments use seed\u00a042. The accuracy differences between methods (0.2\u20130.5\u00a0pp) are within typical seed-to-seed variance ( \u00b1 \\pm 0.2\u20130.3\u00a0pp) and should not be interpreted as significant. What is robust despite this: convergence speed differences (45 vs. 96 epochs to 90%, Experiment\u00a04) are large enough to survive seed variation. The hybrid schedule\u2019s advantage in reaching 95% (epoch\u00a0170 vs. 175) is modest and requires multi-seed confirmation. The cross-optimizer invariance (100% layer overlap) is a discrete structural result unlikely to be seed-dependent\u2014if it were noise, we would not expect perfect overlap between two fundamentally different optimizers.\n\nSingle architecture and dataset. ResNet-18 on CIFAR-10 ( 32 \u00d7 32 32\\times 32 , 10 classes) is a small-scale setting. What is robust despite this: the cross-optimizer invariance suggests the diagnostic measures architecture, not training details. A convincing validation requires: at least one additional CNN (e.g., VGG-16), CIFAR-100, and a Vision Transformer. We estimate approximately 5 seeds \u00d7 \\times 3 architectures \u00d7 \\times 2 datasets = 30 =30 training runs.\n\nNew errors from correction. Surgical correction introduces new errors alongside fixes (40\u201355 new errors per 62 fixed at the layer level). What mitigates this: iKFAD-guided layer selection already reduces new errors from 55 to 40 (net +22). Per-residual-block correction, elastic weight consolidation [ 4 ] , and iterative correction cycles are natural next steps.\n\nGlobal vs. per-layer momentum. Equation 5 applies a single \u03bc \\mu to all layers. Each layer has its own effective curvature, suggesting a per-layer critical momentum. This connects to Yang et al. [ 20 ] .\n\nCross-optimizer correction tuning. The diagnostic generalizes perfectly (100% layer overlap SGD\u2013Adam), but correction with physics momentum does not yet improve Adam-trained models (Method\u00a0E, net \u2212 - 2). Adapting correction hyperparameters to Adam\u2019s parameter scale is needed.\n\nUntested on large models. Whether gradient attribution on failure cases produces sparse layer-level signal in transformer LLMs with billions of parameters is an open question (Section 8 ). What supports optimism: the cross-optimizer invariance suggests the diagnostic measures architecture, not optimizer specifics, and ROME/MEMIT [ 8 ] have demonstrated that factual knowledge in LLMs is layer-localized.\n\nPlanned extensions: (1)\u00a0multi-seed validation (5 seeds); (2)\u00a0scale to CIFAR-100 + ImageNet with ResNet-50 and ViT-B/16; (3)\u00a0Tier\u00a01 LLM experiment: gradient attribution on Llama-3 failure cases from TruthfulQA; (4)\u00a0optimizer-specific correction hyperparameters for Adam/AdamW."
+    },
+    {
+      "heading": "11Conclusion",
+      "text": "We have presented a diagnostic pipeline for neural networks that connects the classical oscillator model of SGD with momentum [ 12 ] to practical error localization and surgical repair. The formula \u03bc = 1 \u2212 2 \u200b \u03b1 \\mu=1-2\\sqrt{\\alpha} is not our theoretical contribution\u2014it has been implicit in the physics since 1999. Our contribution is showing what it enables :\n\n1. Error localization. Gradient attribution on misclassified images identifies a sparse set of error-causing layers. Surgical correction fixes 62 errors; the best variant (iKFAD-guided layer selection) achieves net +22 improvement with 82% compute savings versus full retraining. Layer-level correction outperforms per-parameter selection. 2. Optimizer-agnostic diagnostics. The pipeline identifies the same problem layers on SGD and Adam models (100% overlap), measuring architectural bottlenecks rather than optimizer artifacts. This is the finding most relevant to scaling. 3. Faster convergence. As a secondary benefit, \u03b2 \\beta -scheduling delivers 1.9 \u00d7 1.9\\times faster convergence to 90% accuracy with zero free parameters. A hybrid schedule (physics until 90%, then \u03bc = 0.9 \\mu=0.9 ) reaches 95% at epoch\u00a0170\u2014fastest among five methods tested\u2014validating the oscillator intuition that different training phases benefit from different damping regimes.\n\nThe most promising direction is scaling the diagnostic to large language models (Section 8 ). If gradient attribution on failure cases identifies sparse problem layers in LLMs\u2014as the cross-optimizer invariance suggests it should\u2014then surgical correction could offer an efficient, targeted alternative to full-model retraining for fixing specific failure modes. The pipeline opens a research direction: from \u201cthe model is wrong, retrain everything\u201d to \u201cthe model is wrong in layer\u00a0X because of feature confusion\u00a0Y, correct X, verify the outcome.\u201d"
+    },
+    {
+      "heading": "Reproducibility",
+      "text": "All code and results are publicly available on Kaggle: Experiments\u00a01\u20133: https://kaggle.com/code/johnpasichnyk/beta-scheduling-v2 Experiment\u00a04: https://kaggle.com/code/johnpasichnyk/hybrid-momentum-v4"
+    },
+    {
+      "heading": "Acknowledgments",
+      "text": "Experiments were conducted on Kaggle Notebooks (NVIDIA Tesla P100, 16\u00a0GB). The author thanks the Kaggle platform for providing free GPU compute."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1: Left: cosine annealing learning rate schedule. Right: momentum trajectories for the three methods. The gray dashed line shows the unclamped critical damping curve \u03bc c = 1 \u2212 2 \u200b \u03b1 \\mu_{c}=1-2\\sqrt{\\alpha} . Shaded regions indicate underdamped (red, above curve) and overdamped (blue, below curve) zones. The physics method (green) tracks the critical curve, clamped to [ 0.5 , 0.99 ] [0.5,0.99] .",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28921/assets/x1.png"
+    },
+    {
+      "caption": "Figure 2: Test accuracy during training. The physics method (green) converges fastest to intermediate thresholds, reaching 90% at epoch\u00a052 versus epoch\u00a0100 (baseline) and epoch\u00a0144 (1cycle). All methods converge to comparable final accuracy.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28921/assets/x2.png"
+    },
+    {
+      "caption": "Figure 3: Damping regime classification across 200 epochs. Red = underdamped ( \u03bc > \u03bc c + 0.05 \\mu>\\mu_{c}+0.05 ), green = critically damped ( | \u03bc \u2212 \u03bc c | \u2264 0.05 |\\mu-\\mu_{c}|\\leq 0.05 ), blue = overdamped ( \u03bc < \u03bc c \u2212 0.05 \\mu<\\mu_{c}-0.05 ). The baseline is underdamped for 85% of training; physics maintains near-critical damping throughout.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28921/assets/x3.png"
+    }
+  ],
+  "ar5iv_success": true
+}

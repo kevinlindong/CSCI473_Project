@@ -1,0 +1,169 @@
+{
+  "paper_id": "2603.28387",
+  "title": "The Scaffold Effect: How Prompt Framing Drives Apparent Multimodal Gains in Clinical VLM Evaluation",
+  "abstract": "Trustworthy clinical AI requires that performance gains reflect genuine evidence integration rather than surface-level artifacts. We evaluate 12 open-weight vision-language models (VLMs) on binary classification across two clinical neuroimaging cohorts, \\textsc{FOR2107} (affective disorders) and \\textsc{OASIS-3} (cognitive decline). Both datasets come with structural MRI data that carries no reliable individual-level diagnostic signal. Under these conditions, smaller VLMs exhibit gains of up to 58\\% F1 upon introduction of neuroimaging context, with distilled models becoming competitive with counterparts an order of magnitude larger. A contrastive confidence analysis reveals that merely \\emph{mentioning} MRI availability in the task prompt accounts for 70-80\\% of this shift, independent of whether imaging data is present, a domain-specific instance of modality collapse we term the \\emph{scaffold effect}. Expert evaluation reveals fabrication of neuroimaging-grounded justifications across all conditions, and preference alignment, while eliminating MRI-referencing behavior, collapses both conditions toward random baseline. Our findings demonstrate that surface evaluations are inadequate indicators of multimodal reasoning, with direct implications for the deployment of VLMs in clinical settings.",
+  "authors": [
+    "Doan Nam Long Vu",
+    "Simone Balloccu"
+  ],
+  "date": "2026-03-30T12:58:10+00:00",
+  "url": "http://arxiv.org/abs/2603.28387v1",
+  "categories": [
+    "cs.AI",
+    "cs.LG"
+  ],
+  "primary_category": "cs.AI",
+  "sections": [
+    {
+      "heading": "1Introduction",
+      "text": "The application of vision-language models to clinical decision-making has attracted growing interest, with recent work exploring their potential for diagnostic classification from multimodal patient data Moor et al. ( 2023 ); Singhal et al. ( 2023 ); Li et al. ( 2023 ) . A natural expectation is that providing richer inputs should improve model performance, but only insofar as the additional modalities supply relevant diagnostic evidence. While spurious correlations and hallucination in VLMs have received growing attention zhong-etal-2024-investigating ; howard-etal-2025-uncovering , to our knowledge no prior work has directly examined how models respond when a clinically related but diagnostically uninformative modality is introduced alongside structured tabular data. This distinction matters: a model changing its behaviour upon receiving an uninformative modality is not integrating evidence but responding to context, a failure mode that standard multimodal benchmarks are not designed to detect. We investigate this using two clinical cohorts where prior work has established that neuroimaging markers carry no reliable individual-level diagnostic signal Winter et al. ( 2022 , 2024 ) , and where we further exclude trivially discriminative features in consultation with domain experts, ensuring models must reason rather than exploit shortcuts.\n\nAcross 12 open-weight VLMs, smaller models exhibit substantial genuine, calibrated performance gains upon introduction of neuroimaging context, with Qwen2.5-VL-3B Xu et al. ( 2025 ) improving up to 58% F1 score, with distilled models becoming competitive with counterparts an order of magnitude larger. Yet these gains carry no diagnostic grounding: the overwhelming majority of the shift is driven by the textual mention of MRI availability alone, persisting even when the MRI visualization is replaced by an unrelated out-of-domain image. We characterize this as a scaffold effect , a domain-specific instance of modality collapse sim-etal-2025-vlms ; parcalabescu-frank-2023-mm arising from a convergence of prompt sensitivity lu-etal-2024-prompts ; ismithdeen-etal-2025-promptception and the priming effect Jones and Steinhardt ( 2022 ); yoshida-etal-2025-visual that produces confident, evidence-styled justifications decoupled from actual diagnostic inputs. Critically, this vulnerability persists across model families and resists correction via preference alignment, suggesting it reflects a structural property of how these models process domain-specific multimodal prompts rather than an incidental artifact of any single architecture. Our contributions are: \u2022 A systematic evaluation of 12 open-weight VLMs on FOR2107 Kircher et al. ( 2019 ) and OASIS-3 LaMontagne et al. ( 2019 ) across five input conditions, revealing genuine calibrated gains of up to 58% F1 gains not attributable to benchmark memorization. \u2022 A contrastive confidence analysis showing \u2248 \\approx 70\u201380% of the performance shift stems from textual priming, characterized as a scaffold effect via phrase-level probe and false-modality ablation. \u2022 An expert case study with a clinical psychologist, showing that multimodal context measurably improves reasoning trace quality, yet faithfulness remains below acceptable thresholds, indicating that gains are partly driven by confidence rather than evidence-grounded inference. \u2022 Evidence that preference alignment via MPO which suppresses MRI-referencing behavior but induces symmetry-without-recovery , collapsing both conditions toward random baseline rather than selectively removing modality dependence. Our findings reveal the vulnerabilities in the reliability of VLMs for clinical diagnosis. We demonstrate that surface evaluations are fragile indicators of genuine multimodal reasoning and can exaggerate a model\u2019s diagnostic ability."
+    },
+    {
+      "heading": "2Related Works",
+      "text": "We review related work on prompt sensitivity, the priming effect and modality collapse in vision-language models (VLMs)."
+    },
+    {
+      "heading": "2.1Prompt Sensitivity in VLMs",
+      "text": "While prompt sensitivity has been extensively studied in large language models (LLMs) ishibashi-etal-2023-evaluating ; lu-etal-2024-prompts , it remains underexplored in VLMs. To the best of our knowledge, only ismithdeen-etal-2025-promptception have explicitly demonstrated that VLMs suffer from severe prompt sensitivity, a vulnerability that leads to inconsistent classification performance and a concerning reliance on language priors.\n\nIn healthcare, sensitivity to instruction phrasing can severely impact reliability:\nprompt variations cause F1 fluctuations of up to 0.25 in LLMs ceballos-arroyo-etal-2024-open and accuracy variations of up to 6% in VLMs on health benchmarks ismithdeen-etal-2025-promptception ."
+    },
+    {
+      "heading": "2.2Priming Effect in VLMs",
+      "text": "The priming effect is a cognitive phenomenon in which prior exposure to a stimulus\ninfluences subsequent judgments or behaviors, often without conscious awareness Meyer and Schvaneveldt ( 1971 ) . Rather than altering decision-making through explicit alternative descriptions, priming operates by activating related concepts, associations, or response tendencies that shape how later inputs are interpreted koo-etal-2024-benchmarking .\n\nIn the context of VLMs, priming in vision-language models refers to how prompts, both textual and visual cues, shape model outputs, mirroring the priming concept from cognitive science. yoshida-etal-2025-visual directly investigate this phenomenon in large-scale VLMs, demonstrating that model responses systematically shift in the direction intended by an accompanying image, suggesting that VLMs actively incorporate visual information into language processing rather than treating it as incidental. Recent research has further revealed both the power and limitations of priming in adapting VLMs to new tasks and domains Jones and Steinhardt ( 2022 ); koo-etal-2024-benchmarking . As these models increasingly incorporate multimodal inputs, such priming effects can be further intensified by interactions between textual and visual signals Gulati et al. ( 2025 ); Zhang et al. ( 2026 ) . For instance, Zhang et al. ( 2026 ) show that in fact-checking settings, VLMs may favor previously introduced textual context over salient visual evidence, and related behaviors have been observed in general VQA tasks Shu et al. ( 2025 ) ."
+    },
+    {
+      "heading": "2.3Modality Collapse in VLMs",
+      "text": "Modality collapse refers to the phenomenon whereby a unimodal model achieves comparable accuracy to a multimodal model on a vision-language task, revealing that one modality is not meaningfully utilized Javaloy et al. ( 2022 ); parcalabescu-frank-2023-mm . A recent survey by sim-etal-2025-vlms provides a systematic taxonomy of contributing factors, including dataset bias, model behavior, lack of fine-grained supervisory signal, and task setup, and reviews methods for quantifying modality contribution and cross-modal interaction. A consistent finding across this literature is that the text modality dominates, with visual input failing to influence predictions even when it is ostensibly required by the task zhu-etal-2022-diagnosing .\n\nOur work moves from detection to diagnosis. Prior modality collapse work establishes that text dominates, we instead identify which part of the textual input triggers the collapse in a clinical setting, and show that conventional suppression strategies cannot disentangle the trigger from the model\u2019s broader inferential capacity."
+    },
+    {
+      "heading": "3Methodology",
+      "text": "Figure 1 illustrates our pipeline, integrating two primary data\nmodalities: tabular clinical data (provided in CSV format) and structural brain\nMRI (sMRI) scans. It comprises three sequential phases: (i) Clinical Tabular Data\nSerialization, (ii) sMRI Information Extraction, and (iii) Multimodal\nPrediction, each described below."
+    },
+    {
+      "heading": "4.1Experiments Results",
+      "text": "Figure 2 reports the F1 scores across all models and input conditions on OASIS-3 and FOR2107 . Several models fail to exceed the random baseline threshold under the text(arcf) condition, most strikingly on FOR2107 where Ministral-3-3B (0.064) and Qwen2.5-VL-3B (0.153) fall far below it, indicating that raw textual features alone are apparently insufficient for reliable diagnosis classification in these models.\n\nLarger models dominate under text-only conditions, with Qwen2.5-VL-72B achieving 0.786 and 0.849 F1 on OASIS-3 and FOR2107 respectively. This narrative inverts once multimodal context enters: smaller models respond most dramatically, with Qwen2.5-VL-3B and Ministral-3-3B gaining + 0.58 +0.58 and + 0.66 +0.66 F1 on FOR2107 , while larger counterparts barely move. Larger models, already well-calibrated on tabular evidence, appear less susceptible to framing effects. The swap image\ncondition confirms this directly: replacing the MRI plot with an unrelated image preserves the performance gain. Qualitative inspection further reveals that larger models also produce MRI-referencing justifications despite stable F1, decoupling fabrication from the performance signal entirely."
+    },
+    {
+      "heading": "5Confidence Estimation",
+      "text": "To analyze this phenomenon beyond surface-level scores, we analyze the two models exhibiting the highest gains on FOR2107 : Qwen2.5-VL-3B and Ministral-3B . Since the two class labels diverge at the first generated token ( Major vs. Control ), we extract the softmax probability at this single-token branching point to obtain a normalized confidence score P ^ \u200b ( MDD ) \\hat{P}(\\text{MDD}) for each patient, following the label-token probability extraction approach Zhao et al. ( 2021 ); geng-etal-2024-survey (formal definition in Appendix I ). We define the per-patient confidence shift \u03b4 \\delta between conditions as the difference in P ^ \u200b ( MDD ) \\hat{P}(\\text{MDD}) , enabling a contrastive analysis that disentangles prompt framing from actual MRI content contribution.\n\nTable 3 reports the mean \u03b4 \\delta across both models. For both Qwen2.5-VL-3B and Ministral-3-3B , introducing the MRI prompt header alone already produces a substantial positive shift ( + 0.458 +0.458 and + 0.215 +0.215 respectively), indicating that the model\u2019s confidence in the MDD label increases before any imaging data is provided. Adding the full imaging content further increases this shift ( + 0.636 +0.636 and + 0.295 +0.295 ), though the marginal gain attributable to the MRI data itself remains modest ( + 0.178 +0.178 and + 0.080 +0.080 ). Qwen2.5-VL-3B exhibits a consistently larger response across all conditions, suggesting greater sensitivity to both prompt framing and imaging content. In both models, the prompt framing effect accounts for the majority of the total shift, approximately 70%, raising the question of whether the observed confidence gains reflect primarily a response to contextual priming.\n\nFigure 3 confirms this pattern. For Qwen2.5-VL-3B , mean baseline confidence is near zero and both subsequent conditions produce a sharp monotonic increase, with a narrow standard-deviation band indicating consistency across patients rather than outlier-driven shift. Ministral-3B-Instruct shows the same directional trend with wider spread, consistent with its smaller \u03b4 \\delta values."
+    },
+    {
+      "heading": "6Expert Case Study of Reasoning Traces",
+      "text": "To assess whether the large F1 gains from multimodal context reflect genuine clinical understanding or priming-induced confabulation, we conducted a human expert case study of reasoning traces generated by Qwen2.5-VL-3B , the model exhibiting the most dramatic performance shift."
+    },
+    {
+      "heading": "7Scaffold Effect",
+      "text": "While modality collapse is well documented sim-etal-2025-vlms , we did not find work in literature exploring the specific trigger mechanism we observed. Section 5 shows that prompt framing accounts for the majority of the observed performance shift. We now ask what class of inputs is sufficient to trigger this effect, and whether it is specific to the exact preamble wording used in our pipeline. We first characterize the effect on Qwen2.5-VL-3B from FOR2107 , then validate the findings on Ministral-3-3B and OASIS-3 via an ablation. For formal details we refer to Appendix J ."
+    },
+    {
+      "heading": "8Preference Learning",
+      "text": "The model frequently grounded predictions in MRI-derived or brain-parcellation features even when those features were absent or uninformative, a failure mode confirmed by domain experts. To suppress this behavior, we apply alignment via Direct Preference Optimization (DPO) Rafailov et al. ( 2023 ) in its multimodal extension, Mixed Preference Optimization (MPO) Wang et al. ( 2024 ) ."
+    },
+    {
+      "heading": "9Conclusion",
+      "text": "We have shown that clinical neuroimaging classification via VLMs exhibits\na domain-specific instance of modality collapse: they achieve genuine, calibrated\nperformance gains upon introduction of multimodal context. The improvement is attributable to a scaffold effect : a learned surface trigger specific to neuroimaging language activates a shifted inference pathway. This happens regardless of whether imaging data is present, confirmed through a phrase-level probe and false-modality ablation across model families and clinical domains. Expert evaluation reveals fabrication of neuroimaging-grounded justifications across all conditions. Preference alignment via MPO, while eliminating MRI-referencing behavior, collapses both conditions toward chance level rather than selectively removing modality dependence, a symmetry-without-recovery effect suggesting the scaffold is entangled with the model\u2019s inferential capacity. These findings call for evaluation protocols that explicitly probe the causal relationship between input content and model outputs before VLMs are deployed in high-stakes clinical settings."
+    },
+    {
+      "heading": "Limitations",
+      "text": "Due to data governance constraints, our experiments are limited to open-weight models with a maximum of 72 billion parameters, and we benchmark only 12 models across two binary classification datasets. This may limit generalizability to closed systems, larger scales, and multi-class settings. While the two cohorts span distinct clinical domains, affective disorders and cognitive decline, both involve binary classification over structured tabular records paired with structural MRI, and it remains an open question whether the scaffold effect generalizes to other imaging modalities, such as fMRI or PET, or to tasks with richer label spaces where the decision boundary is less discrete.\n\nOur contrastive confidence analysis is conducted on the two models exhibiting the highest gains on FOR2107 , and the 70-80% estimate of prompt framing contribution should be interpreted in this context, as it may not hold uniformly across the full model set. Furthermore, F1 differences between conditions are not accompanied by significance tests, and future work should establish whether the observed margins are statistically reliable across repeated sampling and dataset splits.\n\nOur expert case study relies on a single clinical psychologist. Recruiting qualified annotators for this task is non-trivial: evaluating VLM reasoning traces against patient-level clinical records requires both domain expertise and familiarity with the specific instruments used in FOR2107 , a combination that severely constrains the available annotator pool. We therefore treat Section 6 as a qualitative expert case study rather than a definitive quantitative evaluation. While the directional patterns across conditions are consistent and interpretable, the absolute scores should be regarded as indicative rather than definitive, and future work with multiple independent raters would be needed to establish reliable effect sizes for reasoning trace quality.\n\nOur preference alignment via MPO successfully suppresses MRI-referencing behavior but does not produce factually correct reasoning traces. Constructing a preference dataset that rewards genuinely evidence-grounded inference would require annotated traces from clinical psychologists, which is costly and not yet available at the scale needed for robust fine-tuning. More fundamentally, the results suggest that the effect is deeply entangled with the model\u2019s broader inferential capacity, and that lightweight post-hoc alignment cannot disentangle the two. Whether alternative strategies, such as supervised invariance training, modality dropout during pretraining, or causal intervention objectives, could decouple the scaffold trigger from genuine multimodal reasoning remains an open question.\n\nFinally, while we take care to exclude trivially discriminative features in consultation with domain experts, the serialization of tabular clinical records into natural language may itself introduce subtle presentation biases that influence model behavior. The interaction between tabular serialization format and prompt framing effects is not systematically explored here and warrants dedicated investigation."
+    },
+    {
+      "heading": "Ethics Statement",
+      "text": "This study uses two clinical datasets governed by strict data-use agreements. FOR2107 data access was granted under the consortium\u2019s institutional review protocol, which requires formal application and prohibits redistribution to third parties. OASIS-3 is available through a controlled-access application process administered by the Washington University Knight ADRC, subject to a data-use agreement that similarly prohibits redistribution. No individually identifiable patient information is presented in this work. All reported results are aggregate statistics computed over the full cohort.\n\nThe study on reasoning traces was conducted by a qualified clinical psychologist who reviewed only model-generated outputs. No patient-facing clinical decisions were made on the basis of model predictions, and no real patient data was exposed beyond what is already accessible under the relevant data-use agreements.\n\nWe emphasize that the VLM outputs analyzed in this study are not suitable for clinical deployment. Models achieve genuine performance gains that nonetheless carry no diagnostic grounding, fabricate neuroimaging-grounded justifications with persistent regularity, and cannot be straightforwardly corrected through preference alignment without collapsing overall predictive capacity. The gap between surface classification performance and evidence-grounded inference is precisely the vulnerability this work seeks to expose. Any future application of VLMs in clinical psychiatry or neurology must incorporate rigorous prospective validation by domain experts, with evaluation protocols that explicitly probe the causal relationship between input evidence and model outputs, before any patient-facing use is considered."
+    },
+    {
+      "heading": "Acknowledgments",
+      "text": "This work is funded by LOEWE Center DYNAMIC as part of the Hessian program for the promotion of cutting-edge research LOEWE under the grant number of LOEWE1/16/519/03/09.001(0009)/98.\nWe thank our colleagues at UKPLab, TU Darmstadt for the technical discussion at AI4Psych, SIG Clinical/Psych, SIG Multimodal, SIG Foundation Models, SIG LLM Understanding and Interpretability meetings, and colleagues from the University of Marburg and colleagues from the University of Frankfurt for the clinical discussion."
+    },
+    {
+      "heading": "G.1FOR2107- Per-Condition Results",
+      "text": "Table 9 reports the complete evaluation results on the FOR2107 dataset across all five input conditions and all twelve models. Metrics are F1, Precision (P), Recall (R), and Accuracy (ACC)."
+    },
+    {
+      "heading": "G.2OASIS-3- Per-Condition Results",
+      "text": "Table 10 reports the complete evaluation results on the OASIS-3 dataset across all five input conditions. OASIS-3 presents a markedly different challenge from FOR2107 : the class distribution is more balanced, the clinical domain differs (Alzheimer\u2019s disease vs. depression), and several models exhibit notably different behavioral patterns, including near-total recall collapse or extreme precision inflation."
+    },
+    {
+      "heading": "J.1Scaffold Direction",
+      "text": "Let \u2133 \\mathcal{M} be a decoder-only vision-language model with L L layers and hidden dimension d d . Let \ud835\udc21 c ( l ) \u200b ( x ) \u2208 \u211d d \\mathbf{h}^{(l)}_{c}(x)\\in\\mathbb{R}^{d} denote the residual-stream hidden state at layer l l , extracted at the label token decoding step for patient record x x under input condition c c . We denote the target positive class as \u2113 + \\ell^{+} (the condition of interest in the binary classification task). For brevity we write c 0 = text(arcf) c_{0}=\\textsc{text(arcf)} and c 1 = text(arcf)+prompt(mri) c_{1}=\\textsc{text(arcf)+prompt(mri)} .\n\nGiven a set of N N patient records { x i } i = 1 N \\{x_{i}\\}_{i=1}^{N} , we define the scaffold direction at layer l \u2217 l^{*} as: \ud835\udc1d = 1 N \u200b \u2211 i = 1 N \ud835\udc21 c 0 ( l \u2217 ) \u200b ( x i ) \u2212 1 N \u200b \u2211 i = 1 N \ud835\udc21 c 1 ( l \u2217 ) \u200b ( x i ) , \\mathbf{d}\\;=\\;\\frac{1}{N}\\sum_{i=1}^{N}\\mathbf{h}^{(l^{*})}_{c_{0}}(x_{i})\\;-\\;\\frac{1}{N}\\sum_{i=1}^{N}\\mathbf{h}^{(l^{*})}_{c_{1}}(x_{i}), (4) with unit-normalized form \ud835\udc2e = \ud835\udc1d / \u2016 \ud835\udc1d \u2016 2 \\mathbf{u}=\\mathbf{d}/\\|\\mathbf{d}\\|_{2} . Intuitively, \ud835\udc2e \\mathbf{u} captures the direction in residual-stream space that the MRI preamble injects to shift the model\u2019s final-layer classification routing toward \u2113 + \\ell^{+} . The target layer l \u2217 l^{*} . The target layer l \u2217 l^{*} is selected per model as the layer immediately preceding the earliest layer at which P ^ c 1 \u200b ( \u2113 + \u2223 x ) \\hat{P}_{c_{1}}(\\ell^{+}\\mid x) departs substantially from the c 0 c_{0} baseline, as identified via a logit lens sweep over the label token."
+    },
+    {
+      "heading": "J.2Phrase Probe Procedure",
+      "text": "For a candidate preamble phrase p p , we define its induced\nhidden-state shift as: \u0394 \u200b \ud835\udc21 p ( l \u2217 ) \u200b ( x i ) = \ud835\udc21 p ( l \u2217 ) \u200b ( x i ) \u2212 \ud835\udc21 c 0 ( l \u2217 ) \u200b ( x i ) , \\Delta\\mathbf{h}^{(l^{*})}_{p}(x_{i})\\;=\\;\\mathbf{h}^{(l^{*})}_{p}(x_{i})\\;-\\;\\mathbf{h}^{(l^{*})}_{c_{0}}(x_{i}), (5) where \ud835\udc21 p ( l \u2217 ) \u200b ( x i ) \\mathbf{h}^{(l^{*})}_{p}(x_{i}) is obtained by replacing the task preamble with p p while keeping all other inputs fixed. We quantify each candidate phrase along two axes:"
+    },
+    {
+      "heading": "J.3Scaffold Response Curve",
+      "text": "The two quantities defined in Equations\u00a0( 6 ) and\u00a0( 7 ) are not independent. Since the residual stream architecture of transformer-based models propagates information written at any layer additively to all subsequent layers geva-etal-2022-transformer , the hidden-state shift induced at l \u2217 l^{*} reaches the final layer approximately as: \ud835\udc21 p ( L ) \u200b ( x ) \u2248 \ud835\udc21 c 0 ( L ) \u200b ( x ) + \u03b1 \u22c5 cos \u200b - \u200b sim \u200b ( p ) \u22c5 \ud835\udc2f , \\mathbf{h}^{(L)}_{p}(x)\\;\\approx\\;\\mathbf{h}^{(L)}_{c_{0}}(x)\\;+\\;\\alpha\\cdot\\mathrm{cos\\text{-}sim}(p)\\cdot\\mathbf{v}, (8) for some propagated direction \ud835\udc2f \u2208 \u211d d \\mathbf{v}\\in\\mathbb{R}^{d} and scalar \u03b1 \u2208 \u211d \\alpha\\in\\mathbb{R} , where cos-sim \u200b ( p ) \\text{cos-sim}(p) is as defined in Equation\u00a0( 6 ). The binary confidence from Equation\u00a0( 2 ) then reduces to P ^ c \u200b ( \u2113 + \u2223 x ) = \u03c3 \u200b ( \u0394 \u200b \ud835\udc30 \u22a4 \u200b \ud835\udc21 c ( L ) \u200b ( x ) ) \\hat{P}_{c}(\\ell^{+}\\mid x)=\\sigma(\\Delta\\mathbf{w}^{\\top}\\mathbf{h}^{(L)}_{c}(x)) , where \u0394 \u200b \ud835\udc30 = \ud835\udc30 \u2113 + \u2212 \ud835\udc30 \u2113 \u2212 \\Delta\\mathbf{w}=\\mathbf{w}_{\\ell^{+}}-\\mathbf{w}_{\\ell^{-}} is the LM head contrast vector. Substituting Equation\u00a0( 8 ) and setting a = \u03b1 \u22c5 \u0394 \u200b \ud835\udc30 \u22a4 \u200b \ud835\udc2f \u2208 \u211d a=\\alpha\\cdot\\Delta\\mathbf{w}^{\\top}\\mathbf{v}\\in\\mathbb{R} and b = \u0394 \u200b \ud835\udc30 \u22a4 \u200b \ud835\udc21 c 0 ( L ) \u200b ( x ) b=\\Delta\\mathbf{w}^{\\top}\\mathbf{h}^{(L)}_{c_{0}}(x) gives: P ^ p \u200b ( \u2113 + \u2223 x ) = \u03c3 \u200b ( b + a \u22c5 cos \u200b - \u200b sim \u200b ( p ) ) . \\hat{P}_{p}(\\ell^{+}\\mid x)\\;=\\;\\sigma\\!\\bigl(b+a\\cdot\\mathrm{cos\\text{-}sim}(p)\\bigr). (9) Subtracting the baseline P ^ c 0 \u200b ( \u2113 + \u2223 x ) = \u03c3 \u200b ( b ) \\hat{P}_{c_{0}}(\\ell^{+}\\mid x)=\\sigma(b) and following Equation\u00a0( 7 ) gives the scaffold response curve: \u03b4 \u2190 c 0 c 0 + p = \u03c3 \u200b ( a \u22c5 cos \u200b - \u200b sim \u200b ( p ) + b ) \u2212 \u03c3 \u200b ( b ) . \\delta^{c_{0}+p}_{\\leftarrow\\,c_{0}}\\;=\\;\\sigma\\!\\bigl(a\\cdot\\mathrm{cos\\text{-}sim}(p)+b\\bigr)-\\sigma(b). (10)\n\nEquation\u00a0( 10 ) carries a direct mechanistic interpretation: the scaffold effect operates as a linear offset in\nrepresentation space passed through the model\u2019s fixed output nonlinearity . The sensitivity parameter a a quantifies per-model susceptibility to the scaffold trigger. We would expect a a to be larger for Qwen2.5-VL-3B than for Ministral-3-3B , consistent with its systematically larger \u03b4 \u2190 c 0 c 0 + p \\delta^{c_{0}+p}_{\\leftarrow\\,c_{0}} values in Table 3 . The false-modality ablation further follows as a direct prediction: \u201cfMRI data is included.\u201d achieves high cos-sim \u200b ( p ) \\text{cos-sim}(p) , so Equation\u00a0( 10 ) predicts a large \u03b4 ^ \\hat{\\delta} , which Table 5 confirms. In practice, a a and b b are estimated per model by minimizing mean squared\nerror over \ud835\udcab \\mathcal{P} : ( a \u2217 , b \u2217 ) = arg \u200b min a , b \u2061 1 | \ud835\udcab | \u200b \u2211 p \u2208 \ud835\udcab ( \u03b4 \u2190 c 0 c 0 + p \u2212 \u03b4 ^ \u200b ( p ) ) 2 . (a^{*},b^{*})\\;=\\;\\operatorname*{arg\\,min}_{a,\\,b}\\frac{1}{|\\mathcal{P}|}\\sum_{p\\in\\mathcal{P}}\\Bigl(\\delta^{c_{0}+p}_{\\leftarrow\\,c_{0}}-\\hat{\\delta}(p)\\Bigr)^{2}. (11)"
+    },
+    {
+      "heading": "J.4Phrase Probe Inventory",
+      "text": "Table 8 lists the full inventory of phrase probes with their scores. For this work, we applied the logit lens 5 5 5 https://www.lesswrong.com/posts/AcKRB8wDpdaN6v6ru/interpreting-gpt-the-logit-lens to all layers and found that the divergence signal between MDD and control emerges at layer 33. We then sampled 71 participants from FOR2107 for the probe experiment."
+    }
+  ],
+  "figures": [
+    {
+      "caption": "Figure 1: Overview of the proposed VLM pipeline. On FOR2107 and OASIS-3 we only change the label from MDD to Cognitive Decline and Control to Cognitive Normal.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28387/assets/x1.png"
+    },
+    {
+      "caption": "Figure 2: F1 Score on 2 datasets OASIS-3 and FOR2107 over 5 different modes.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28387/assets/x2.png"
+    },
+    {
+      "caption": "(a) Qwen2.5-VL-3B",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28387/assets/x3.png"
+    },
+    {
+      "caption": "(a) Qwen2.5-VL-3B",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28387/assets/x3.png"
+    },
+    {
+      "caption": "(b) Ministral-3-3B",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28387/assets/x4.png"
+    },
+    {
+      "caption": "Figure 4: Cosine similarity to the scaffold direction vs. \u03b4 \u2190 text(arcf) text(arcf) + prompt \\delta^{\\textsc{text(arcf)}+\\textsc{prompt}}_{\\leftarrow\\,\\textsc{text(arcf)}} for candidate phrases across semantic categories, evaluated on Qwen2.5-VL-3B over the FOR2107 cohort. Phrases in the\ntop-right quadrant activate the same residual-stream direction as text(arcf) + + prompt(mri) without providing any imaging\ndata.",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28387/assets/x5.png"
+    },
+    {
+      "caption": "Figure 5: text(arcf) prompt for FOR2107",
+      "image_path": ""
+    },
+    {
+      "caption": "Figure 6: text(arcf) + + prompt(mri) prompt for FOR2107 . Bold text denotes the component that cause performance boost.",
+      "image_path": ""
+    },
+    {
+      "caption": "Figure 7: text(arcf) prompt for OASIS-3",
+      "image_path": ""
+    },
+    {
+      "caption": "Figure 8: text(arcf) + + prompt(mri) prompt for OASIS-3 . Bold text denotes the component that cause performance boost.",
+      "image_path": ""
+    },
+    {
+      "caption": "(a) Major Depressive Disorder Patient",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28387/assets/x6.png"
+    },
+    {
+      "caption": "(a) Major Depressive Disorder Patient",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28387/assets/x6.png"
+    },
+    {
+      "caption": "(b) Control Patient",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28387/assets/x7.png"
+    },
+    {
+      "caption": "(a) Cognitive Decline Patient",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28387/assets/x8.png"
+    },
+    {
+      "caption": "(a) Cognitive Decline Patient",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28387/assets/x8.png"
+    },
+    {
+      "caption": "(b) Cognitive Normal Patient",
+      "image_path": "https://ar5iv.labs.arxiv.org/html/2603.28387/assets/x9.png"
+    }
+  ],
+  "ar5iv_success": true
+}

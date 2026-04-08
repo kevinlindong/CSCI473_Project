@@ -1,0 +1,18 @@
+{
+  "paper_id": "2603.27530",
+  "title": "A gentle tutorial and a structured reformulation of Bock's algorithm for minimum directed spanning trees",
+  "abstract": "This paper presents a gentle tutorial and a structured reformulation of Bock's 1971 Algol procedure for constructing minimum directed spanning trees. Our aim is to make the original algorithm readable and reproducible for modern readers, while highlighting its relevance as an exact decoder for nonprojective graph based dependency parsing. We restate the minimum arborescence objective in Bock's notation and provide a complete line by line execution trace of the original ten node example, extending the partial trace given in the source paper from initialization to termination. We then introduce a structured reformulation that makes explicit the procedure's phase structure, maintained state, and control flow, while preserving the logic of the original method. As a further illustration, we include a worked example adapted from {jurafsky-martin-2026-book} for dependency parsing, showing how a maximum weight arborescence problem is reduced to Bock's minimum cost formulation by a standard affine transformation and traced under the same state variables.",
+  "authors": [
+    "Yuxi Wang",
+    "Jungyeul Park"
+  ],
+  "date": "2026-03-29T05:44:07+00:00",
+  "url": "http://arxiv.org/abs/2603.27530v1",
+  "categories": [
+    "cs.CL"
+  ],
+  "primary_category": "cs.CL",
+  "sections": [],
+  "figures": [],
+  "ar5iv_success": true
+}
