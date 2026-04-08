@@ -36,3 +36,11 @@ MAX_CONTEXT_LENGTH = 2048
 # --- Arxiv Fetch ---
 ARXIV_CATEGORIES = ["cs.CL", "cs.LG"]
 MAX_PAPERS = 500
+
+# --- ar5iv Scraping ---
+AR5IV_BASE_URL = "https://ar5iv.labs.arxiv.org/html"
+FETCH_DELAY_SECONDS = 3.0
+# ar5iv coverage ends 2026-03-31; fetch the last 7 days of that window
+AR5IV_END_DATE = "2026-03-31"
+ARXIV_FETCH_DAYS = 7
+FIGURE_DIR = os.path.join(RAW_DIR, "figures")

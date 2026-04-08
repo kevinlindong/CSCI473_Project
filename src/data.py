@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 import json
 import os
 
-import pandas as pd
+from bs4 import BeautifulSoup
 
 
 @dataclass
@@ -40,21 +40,125 @@ class Paper:
     figures: list[Figure] = field(default_factory=list)
 
 
+def parse_ar5iv_html(html: str, paper_id: str) -> tuple[list[Section], list[Figure]]:
+    """Extract sections and figures from an ar5iv HTML page.
+
+    Args:
+        html: Raw HTML string from ar5iv.
+        paper_id: The arXiv paper ID (used to resolve relative image URLs).
+
+    Returns:
+        A tuple of (sections, figures) parsed from the HTML.
+    """
+    soup = BeautifulSoup(html, "html.parser")
+
+    # --- Section extraction ---
+    sections = []
+    for section_el in soup.find_all(
+        "section", class_=["ltx_section", "ltx_subsection"]
+    ):
+        heading_el = section_el.find(
+            ["h2", "h3", "h4", "h5", "h6"], class_="ltx_title"
+        )
+        heading = heading_el.get_text(strip=True) if heading_el else "Untitled"
+
+        # Only direct-child paragraphs to avoid duplication with nested subsections
+        paras = section_el.find_all("div", class_="ltx_para", recursive=False)
+        text_parts = []
+        for p in paras:
+            text = p.get_text(separator=" ", strip=True)
+            if text:
+                text_parts.append(text)
+
+        body = "\n\n".join(text_parts)
+        if body:
+            sections.append(Section(heading=heading, text=body))
+
+    # --- Figure extraction ---
+    figures = []
+    for fig_el in soup.find_all("figure", class_="ltx_figure"):
+        caption_el = fig_el.find("figcaption", class_="ltx_caption")
+        caption = caption_el.get_text(separator=" ", strip=True) if caption_el else ""
+
+        img_el = fig_el.find("img")
+        image_url = ""
+        if img_el:
+            src = img_el.get("src", "")
+            if src:
+                if src.startswith("http"):
+                    image_url = src
+                elif src.startswith("/"):
+                    image_url = f"https://ar5iv.labs.arxiv.org{src}"
+                else:
+                    image_url = (
+                        f"https://ar5iv.labs.arxiv.org/html/{paper_id}/{src}"
+                    )
+
+        if caption or image_url:
+            figures.append(Figure(caption=caption, image_path=image_url))
+
+    return sections, figures
+
+
 def load_raw_papers(raw_dir: str) -> list[dict]:
     """Load raw JSON files from the data/raw/ directory."""
-    raise NotImplementedError
+    papers = []
+    for filename in sorted(os.listdir(raw_dir)):
+        if filename.endswith(".json"):
+            filepath = os.path.join(raw_dir, filename)
+            with open(filepath, "r") as f:
+                papers.append(json.load(f))
+    return papers
 
 
 def parse_paper(raw: dict) -> Paper:
     """Convert a raw Arxiv API response dict into a structured Paper."""
-    raise NotImplementedError
+    return Paper(
+        paper_id=raw["paper_id"],
+        title=raw["title"],
+        abstract=raw["abstract"],
+        authors=raw.get("authors", []),
+        date=raw.get("date", ""),
+        url=raw.get("url", ""),
+        sections=[
+            Section(heading=s["heading"], text=s["text"])
+            for s in raw.get("sections", [])
+        ],
+        figures=[
+            Figure(caption=f["caption"], image_path=f.get("image_path", ""))
+            for f in raw.get("figures", [])
+        ],
+    )
 
 
 def load_corpus(processed_path: str) -> list[Paper]:
     """Load the processed paper corpus from disk."""
-    raise NotImplementedError
+    with open(processed_path, "r") as f:
+        corpus = json.load(f)
+    return [parse_paper(raw) for raw in corpus]
 
 
 def save_corpus(papers: list[Paper], processed_path: str) -> None:
     """Save the processed paper corpus to disk."""
-    raise NotImplementedError
+    os.makedirs(os.path.dirname(processed_path), exist_ok=True)
+    corpus = []
+    for p in papers:
+        corpus.append(
+            {
+                "paper_id": p.paper_id,
+                "title": p.title,
+                "abstract": p.abstract,
+                "authors": p.authors,
+                "date": p.date,
+                "url": p.url,
+                "sections": [
+                    {"heading": s.heading, "text": s.text} for s in p.sections
+                ],
+                "figures": [
+                    {"caption": f.caption, "image_path": f.image_path}
+                    for f in p.figures
+                ],
+            }
+        )
+    with open(processed_path, "w") as f:
+        json.dump(corpus, f, indent=2)
