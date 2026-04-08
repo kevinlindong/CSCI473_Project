@@ -9,7 +9,7 @@ import os
 
 # --- Paths ---
 DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
-RAW_DIR = os.path.join(DATA_DIR, "raw")
+RAW_DIR = os.path.join(DATA_DIR, "raw", "enriched")
 PROCESSED_DIR = os.path.join(DATA_DIR, "processed")
 EMBEDDINGS_DIR = os.path.join(DATA_DIR, "embeddings")
 

@@ -171,11 +171,14 @@ def fetch_papers():
         time.sleep(config.FETCH_DELAY_SECONDS)
         paper = enrich_paper(paper)
 
+        if not paper["ar5iv_success"]:
+            logger.info("Skipping %s (not enriched)", paper["paper_id"])
+            continue
+
         with open(save_path, "w") as f:
             json.dump(paper, f, indent=2)
 
-        if paper["ar5iv_success"]:
-            enriched_count += 1
+        enriched_count += 1
 
     total_new = len(papers) - skipped_count
     logger.info(
