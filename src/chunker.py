@@ -1,15 +1,18 @@
 """
-chunker.py — Hierarchical, context-enriched chunking of Paper objects.
+chunker.py — Hierarchical chunking of Paper objects for late-chunking encoding.
 
 Splits each Paper into Chunk records at two levels:
   - Level 1: top-level sections (heading depth 1).
-  - Level 2: subsections (heading depth >= 2), prefixed with paper title
-             and parent heading for context enrichment.
+  - Level 2: subsections (heading depth >= 2).
 
-Long sections are split on natural paragraph boundaries (\\n\\n delimiters,
-which come from LaTeX ltx_para structure preserved by the ar5iv parser)
-rather than arbitrary character counts. A 1-paragraph overlap is used
-between adjacent split chunks to preserve cross-paragraph context.
+Each Chunk stores raw paragraph-group text (no context prefix). The context
+prefix ("Title | Heading") is injected once per section at encode time in
+build_embeddings.py, so every chunk in a section attends to title and heading
+via the transformer's full-sequence attention — this is the core of late chunking.
+
+Each Chunk also stores the full section body (section_text) and a 0-based
+section index (section_idx) so build_embeddings.py can group chunks back to
+their parent section for late_chunk_encode.
 
 Three section-numbering conventions appear in this corpus:
   - Arabic:  '1Introduction' (depth 1), '1.1Background' (depth 2)
@@ -78,8 +81,11 @@ def group_paragraphs(text: str, max_chars: int = 2000) -> list[str]:
     paragraph boundaries preserved by the ar5iv HTML parser. This avoids
     arbitrary character-count splitting that could break mid-argument.
 
-    A 1-paragraph overlap is applied between adjacent chunks so that
-    context is not lost at split boundaries.
+    No overlap is applied between chunks. Context is instead provided at
+    encode time by prepending a single "Title | Heading" prefix to the full
+    section text and using late chunking (token-level mean pooling), so
+    every chunk's embedding already reflects full-section context without
+    duplicating paragraph text.
 
     Args:
         text: Section body text with \\n\\n-separated paragraphs.
@@ -103,9 +109,8 @@ def group_paragraphs(text: str, max_chars: int = 2000) -> list[str]:
     for para in paras:
         if current_len + len(para) > max_chars and current:
             chunks.append("\n\n".join(current))
-            # 1-paragraph overlap: carry the last paragraph into the next chunk
-            current = [current[-1], para]
-            current_len = len(current[0]) + len(para)
+            current = [para]
+            current_len = len(para)
         else:
             current.append(para)
             current_len += len(para)
@@ -118,26 +123,31 @@ def group_paragraphs(text: str, max_chars: int = 2000) -> list[str]:
 
 def chunk_paper(paper: Paper) -> list[Chunk]:
     """
-    Convert a Paper into a flat list of context-enriched Chunks.
+    Convert a Paper into a flat list of Chunks, one per paragraph group.
 
-    Iterates sections in document order, tracking the most recent
-    top-level (depth-1) section as the parent context for subsections.
+    Iterates sections in document order, tracking the most recent top-level
+    (depth-1) section as the parent context for subsections.
 
-    Context prefixes are prepended to each chunk text before embedding:
-      Level 1: "{title} | {heading}\\n\\n{text}"
-      Level 2: "{title} | {parent_heading} | {heading}\\n\\n{text}"
+    Each chunk stores:
+      - text:         raw paragraph-group text (no prefix — prefix is injected
+                      once per section at encode time for late chunking)
+      - section_text: full section body, so build_embeddings.py can reconstruct
+                      the prefixed full_text for late_chunk_encode
+      - section_idx:  0-based index across non-empty sections within this paper,
+                      used to group chunks back to their section
 
-    Sections with no text are skipped. Sections exceeding max_chars are
-    split via group_paragraphs(), with each piece assigned a chunk_index.
+    Sections with no text are skipped. Sections exceeding max_chars are split
+    via group_paragraphs(), with each piece assigned a chunk_index.
 
     Args:
         paper: A structured Paper object (from src/data.py).
 
     Returns:
-        Ordered list of Chunk objects, one per section (or split piece).
+        Ordered list of Chunk objects, one per paragraph group.
     """
     chunks: list[Chunk] = []
     current_parent: str = ""
+    section_idx: int = 0
 
     for section in paper.sections:
         if not section.text.strip():
@@ -147,13 +157,6 @@ def chunk_paper(paper: Paper) -> list[Chunk]:
 
         if depth == 1:
             current_parent = section.heading
-            prefix = f"{paper.title} | {section.heading}"
-        else:
-            if current_parent:
-                prefix = f"{paper.title} | {current_parent} | {section.heading}"
-            else:
-                # Subsection appears before any top-level section (edge case)
-                prefix = f"{paper.title} | {section.heading}"
 
         parts = group_paragraphs(section.text)
 
@@ -165,9 +168,13 @@ def chunk_paper(paper: Paper) -> list[Chunk]:
                     level=min(depth, 2),
                     heading=section.heading,
                     parent_heading=current_parent if depth > 1 else "",
-                    text=f"{prefix}\n\n{part}",
+                    text=part,
+                    section_text=section.text,
+                    section_idx=section_idx,
                     chunk_index=i,
                 )
             )
+
+        section_idx += 1
 
     return chunks

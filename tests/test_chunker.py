@@ -63,21 +63,21 @@ class TestGroupParagraphs:
         parts = group_paragraphs(text)
         assert len(parts) == 2
 
-    def test_one_paragraph_overlap(self):
-        # With 3 paragraphs that each exceed half the limit,
-        # the last paragraph of chunk N should appear as the first of chunk N+1
-        para = "y" * 1100
-        text = f"{para}\n\n{para}\n\n{para}"
+    def test_no_overlap_between_adjacent_chunks(self):
+        # With overlap removed, no paragraph should appear in two consecutive chunks.
+        # Use distinct paragraphs so set membership is meaningful.
+        paras = [f"para_{i} " + ("word " * 200) for i in range(3)]  # ~1100 chars each
+        text = "\n\n".join(paras)
         parts = group_paragraphs(text)
-        # The overlap means the second chunk starts with the last para of the first
-        first_chunk_last_para  = parts[0].split("\n\n")[-1]
-        second_chunk_first_para = parts[1].split("\n\n")[0]
-        assert first_chunk_last_para == second_chunk_first_para
+        assert len(parts) > 1, "Expected multiple chunks for input exceeding max_chars"
+        for i in range(len(parts) - 1):
+            paras_a = set(parts[i].split("\n\n"))
+            paras_b = set(parts[i + 1].split("\n\n"))
+            assert paras_a.isdisjoint(paras_b)
 
     def test_empty_paragraphs_stripped(self):
         text = "Hello\n\n\n\n\n\nWorld"
         parts = group_paragraphs(text)
-        # Both non-empty paragraphs should appear somewhere in the output
         combined = "\n\n".join(parts)
         assert "Hello" in combined
         assert "World" in combined
@@ -113,43 +113,73 @@ class TestChunkPaper:
         assert len(chunks) == 1
         assert chunks[0].heading == "2Method"
 
-    def test_level1_context_prefix(self):
+    def test_chunk_text_is_raw_content(self):
+        # text should be the bare section content, not prefixed with title/heading
         paper = _make_paper(sections=[
             Section(heading="1Introduction", text="Hello world."),
         ])
         chunks = chunk_paper(paper)
         assert len(chunks) == 1
-        assert chunks[0].text.startswith("Test Paper | 1Introduction\n\n")
+        assert chunks[0].text == "Hello world."
+        assert "Test Paper" not in chunks[0].text
+        assert "1Introduction" not in chunks[0].text
 
-    def test_level2_context_prefix_includes_parent(self):
+    def test_level2_chunk_text_has_no_prefix(self):
+        # Subsection text should also be raw, not prefixed with parent
         paper = _make_paper(sections=[
             Section(heading="1Introduction", text="Top level."),
             Section(heading="1.1Background", text="Subsection content."),
         ])
         chunks = chunk_paper(paper)
-        assert len(chunks) == 2
-        assert chunks[1].text.startswith("Test Paper | 1Introduction | 1.1Background\n\n")
+        assert chunks[1].text == "Subsection content."
+        assert "1Introduction" not in chunks[1].text
 
-    def test_level2_without_prior_parent(self):
-        # Subsection appears before any top-level section (edge case)
+    def test_section_text_matches_original(self):
+        # section_text should equal the original Section.text exactly
+        section_body = "First para.\n\nSecond para."
         paper = _make_paper(sections=[
-            Section(heading="1.1Orphan", text="Orphan subsection."),
+            Section(heading="1Method", text=section_body),
         ])
         chunks = chunk_paper(paper)
-        assert len(chunks) == 1
-        assert chunks[0].text.startswith("Test Paper | 1.1Orphan\n\n")
+        for c in chunks:
+            assert c.section_text == section_body
+
+    def test_section_idx_increments_across_sections(self):
+        paper = _make_paper(sections=[
+            Section(heading="1A", text="First."),
+            Section(heading="2B", text="Second."),
+            Section(heading="3C", text="Third."),
+        ])
+        chunks = chunk_paper(paper)
+        assert chunks[0].section_idx == 0
+        assert chunks[1].section_idx == 1
+        assert chunks[2].section_idx == 2
+
+    def test_section_idx_same_for_split_chunks(self):
+        # All paragraph groups from one section share the same section_idx
+        para = "word " * 400
+        text = f"{para}\n\n{para}\n\n{para}"
+        paper = _make_paper(sections=[
+            Section(heading="1Method", text=text),
+        ])
+        chunks = chunk_paper(paper)
+        assert len(chunks) > 1
+        assert all(c.section_idx == 0 for c in chunks)
 
     def test_chunk_fields_populated(self):
         paper = _make_paper(sections=[
             Section(heading="1Intro", text="Some text."),
         ])
         c = chunk_paper(paper)[0]
-        assert c.paper_id    == "p001"
-        assert c.paper_title == "Test Paper"
-        assert c.level       == 1
-        assert c.heading     == "1Intro"
+        assert c.paper_id       == "p001"
+        assert c.paper_title    == "Test Paper"
+        assert c.level          == 1
+        assert c.heading        == "1Intro"
         assert c.parent_heading == ""
-        assert c.chunk_index == 0
+        assert c.chunk_index    == 0
+        assert c.section_idx    == 0
+        assert c.section_text   == "Some text."
+        assert c.text           == "Some text."
 
     def test_long_section_produces_multiple_chunks(self):
         para  = "word " * 400          # ~2000 chars per para
@@ -172,6 +202,15 @@ class TestChunkPaper:
         chunks = chunk_paper(paper)
         assert chunks[1].parent_heading == "1Intro"
         assert chunks[3].parent_heading == "2Method"
+
+    def test_orphan_subsection_has_no_parent(self):
+        # Subsection before any top-level section — parent_heading stays empty
+        paper = _make_paper(sections=[
+            Section(heading="1.1Orphan", text="Orphan subsection."),
+        ])
+        chunks = chunk_paper(paper)
+        assert len(chunks) == 1
+        assert chunks[0].parent_heading == ""
 
     def test_chunk_order_matches_section_order(self):
         paper = _make_paper(sections=[

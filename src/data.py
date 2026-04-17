@@ -40,6 +40,20 @@ class Paper:
     figures: list[Figure] = field(default_factory=list)
 
 
+@dataclass
+class Chunk:
+    """A text chunk produced by hierarchical section chunking."""
+    paper_id: str
+    paper_title: str
+    level: int           # 1 = top-level section, 2 = subsection
+    heading: str
+    parent_heading: str  # empty string for level-1 chunks
+    text: str            # raw paragraph-group text (no context prefix)
+    section_text: str    # full section body; used by late_chunk_encode
+    section_idx: int     # 0-based index of this section within the paper
+    chunk_index: int = 0 # position within split chunks (0 if not split)
+
+
 def parse_ar5iv_html(html: str, paper_id: str) -> tuple[list[Section], list[Figure]]:
     """Extract sections and figures from an ar5iv HTML page.
 

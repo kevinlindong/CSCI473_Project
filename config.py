@@ -14,8 +14,8 @@ PROCESSED_DIR = os.path.join(DATA_DIR, "processed")
 EMBEDDINGS_DIR = os.path.join(DATA_DIR, "embeddings")
 
 # --- Encoder ---
-ENCODER_MODEL_NAME = "all-MiniLM-L6-v2"
-EMBEDDING_DIM = 384
+ENCODER_MODEL_NAME = "all-mpnet-base-v2"
+EMBEDDING_DIM = 768
 
 # --- Retrieval ---
 N_RETRIEVAL_RESULTS = 20
