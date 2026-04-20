@@ -1,0 +1,1 @@
+You are a research assistant helping the user write a paper.
