@@ -201,7 +201,7 @@ export default function Profile() {
               profile · scholar
             </span>
             <span className="h-px flex-1 bg-forest/15" />
-            <span className="font-[family-name:var(--font-editorial)] italic text-[15px] text-forest/55">
+            <span className="font-[family-name:var(--font-body)] text-[15px] text-forest/55">
               who's writing today?
             </span>
           </div>
@@ -232,7 +232,7 @@ export default function Profile() {
                       >
                         <div>
                           <div className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.3em] uppercase text-forest/50 mb-1">amend</div>
-                          <h2 className="font-[family-name:var(--font-editorial)] italic text-[30px] text-forest leading-none">edit folio</h2>
+                          <h2 className="font-[family-name:var(--font-display)] text-[30px] text-forest leading-none">edit folio</h2>
                         </div>
 
                         <Field label="Full name">
@@ -290,7 +290,7 @@ export default function Profile() {
                         {saveError && (
                           <div className="flex items-center gap-2 bg-bau-red/8 border border-bau-red/30 rounded-xl px-3.5 py-2.5">
                             <span className="w-1.5 h-1.5 rounded-full bg-bau-red/70 shrink-0" />
-                            <p className="font-[family-name:var(--font-editorial)] italic text-[12.5px] text-bau-red/90">{saveError}</p>
+                            <p className="font-[family-name:var(--font-body)] text-[12.5px] text-bau-red/90">{saveError}</p>
                           </div>
                         )}
 
@@ -323,13 +323,13 @@ export default function Profile() {
                                 className="w-24 h-24 object-cover rounded-full ring-1 ring-forest/15"
                               />
                             ) : (
-                              <div className="w-24 h-24 bg-forest flex items-center justify-center text-[28px] font-[family-name:var(--font-editorial)] italic text-parchment rounded-full">
+                              <div className="w-24 h-24 bg-forest flex items-center justify-center text-[28px] font-[family-name:var(--font-display)] text-parchment rounded-full">
                                 {getInitials(profile.full_name ?? profile.display_name)}
                               </div>
                             )}
                           </div>
 
-                          <h1 className="font-[family-name:var(--font-editorial)] italic text-[30px] text-forest mt-5 leading-none">
+                          <h1 className="font-[family-name:var(--font-display)] text-[30px] text-forest mt-5 leading-none">
                             {profile.full_name ?? profile.display_name}
                           </h1>
                           <span className="font-[family-name:var(--font-mono)] text-[11px] text-forest/55 mt-2">@{profile.display_name}</span>
@@ -347,7 +347,7 @@ export default function Profile() {
                           ].filter(Boolean).map(m => (
                             <div key={m!.label} className="flex items-center justify-between">
                               <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.28em] uppercase text-forest/50">{m!.label}</span>
-                              <span className="font-[family-name:var(--font-editorial)] italic text-[13px] text-forest/80 capitalize">{m!.value}</span>
+                              <span className="font-[family-name:var(--font-body)] text-[13px] text-forest/80 capitalize">{m!.value}</span>
                             </div>
                           ))}
                         </div>
@@ -365,7 +365,7 @@ export default function Profile() {
                           <div className="mb-6 pt-4 border-t border-forest/15">
                             <div className="flex items-center justify-between mb-2">
                               <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.28em] uppercase text-forest/50">Badges</span>
-                              <span className="font-[family-name:var(--font-editorial)] italic text-[13px] text-sage-deep">earned ✦</span>
+                              <span className="font-[family-name:var(--font-body)] text-[13px] text-sage-deep">earned ✦</span>
                             </div>
                             <div className="flex flex-wrap gap-1.5">
                               {profile.badges.map(badge => (
@@ -432,7 +432,7 @@ export default function Profile() {
                                 }}
                               />
                             )) : (
-                              <span className="font-[family-name:var(--font-editorial)] italic text-[14px] text-forest/40">no tags yet — add one above</span>
+                              <span className="font-[family-name:var(--font-body)] text-[14px] text-forest/40">no tags yet — add one above</span>
                             )}
                           </div>
                         </div>
@@ -499,10 +499,10 @@ export default function Profile() {
                 <section>
                   <SectionHeader kicker="pinned" title="top folios" accent="#E0B13A" />
                   <div className="bg-milk border border-forest/15 border-dashed rounded-2xl p-10 text-center">
-                    <span className="font-[family-name:var(--font-editorial)] italic text-[26px] text-forest/50 leading-none">
+                    <span className="font-[family-name:var(--font-display)] text-[26px] text-forest/50 leading-none">
                       nothing pinned yet —
                     </span>
-                    <p className="font-[family-name:var(--font-editorial)] italic text-[13.5px] text-forest/50 mt-3">
+                    <p className="font-[family-name:var(--font-body)] text-[13.5px] text-forest/50 mt-3">
                       your most-starred folios will surface here.
                     </p>
                   </div>
@@ -518,10 +518,10 @@ export default function Profile() {
                     </div>
                   ) : activity.length === 0 ? (
                     <div className="bg-milk border border-forest/15 border-dashed rounded-2xl py-12 text-center">
-                      <span className="font-[family-name:var(--font-editorial)] italic text-[26px] text-forest/50 leading-none">
+                      <span className="font-[family-name:var(--font-display)] text-[26px] text-forest/50 leading-none">
                         a quiet day —
                       </span>
-                      <p className="font-[family-name:var(--font-editorial)] italic text-[13.5px] text-forest/50 mt-3">
+                      <p className="font-[family-name:var(--font-body)] text-[13.5px] text-forest/50 mt-3">
                         start writing your first folio.
                       </p>
                     </div>
@@ -542,8 +542,8 @@ export default function Profile() {
                                 <ActionBadge action={isNew ? 'created' : 'updated'} />
                                 <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.18em] uppercase text-forest/55">{item.repo_title}</span>
                               </div>
-                              <p className="font-[family-name:var(--font-editorial)] text-[15px] text-forest group-hover:text-forest-ink transition-colors truncate">
-                                {item.title || <span className="italic text-forest/45">untitled folio</span>}
+                              <p className="font-[family-name:var(--font-body)] text-[15px] text-forest group-hover:text-forest-ink transition-colors truncate">
+                                {item.title || <span className="text-forest/45">untitled folio</span>}
                               </p>
                             </div>
                             <span className="col-span-12 sm:col-span-3 sm:text-right font-[family-name:var(--font-mono)] text-[10px] tracking-[0.22em] uppercase text-forest/45">
@@ -573,7 +573,7 @@ function SectionHeader({ kicker, title, accent }: { kicker: string; title: strin
     <div className="flex items-baseline gap-4 mb-5">
       <span className="w-2 h-2 rounded-full shrink-0" style={{ background: accent }} />
       <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/55">{kicker}</span>
-      <h2 className="font-[family-name:var(--font-editorial)] italic text-[26px] text-forest leading-none">{title}</h2>
+      <h2 className="font-[family-name:var(--font-display)] text-[26px] text-forest leading-none">{title}</h2>
       <span className="h-px flex-1 bg-forest/15 translate-y-[-4px]" />
     </div>
   )
@@ -603,7 +603,7 @@ function BauInput({ value, onChange, placeholder }: { value: string; onChange: (
 function StatCell({ label, value, color, glyph }: { label: string; value: string; color: string; glyph?: string }) {
   return (
     <div className="relative rounded-2xl bg-parchment/50 p-4 text-center border border-forest/10">
-      <span className="block font-[family-name:var(--font-editorial)] italic text-[26px] text-forest leading-none">
+      <span className="block font-[family-name:var(--font-display)] text-[26px] text-forest leading-none">
         {glyph && <span className="mr-0.5" style={{ color }}>{glyph}</span>}{value}
       </span>
       <span className="block font-[family-name:var(--font-mono)] text-[9px] tracking-[0.28em] uppercase text-forest/50 mt-2">

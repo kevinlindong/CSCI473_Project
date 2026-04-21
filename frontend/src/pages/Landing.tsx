@@ -27,7 +27,7 @@ function TopBar() {
       <div className="max-w-6xl mx-auto px-8 pt-8 pb-6 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-3 group">
           <LogoLeaf />
-          <span className="font-[family-name:var(--font-editorial)] text-[30px] text-forest leading-none italic tracking-tight">
+          <span className="font-[family-name:var(--font-display)] text-[30px] text-forest leading-none tracking-tight">
             Folio
           </span>
         </Link>
@@ -87,15 +87,15 @@ function Hero() {
             </span>
           </div>
 
-          <h1 className="font-[family-name:var(--font-editorial)] text-[76px] md:text-[92px] leading-[0.98] tracking-[-0.02em] text-forest font-light">
+          <h1 className="font-[family-name:var(--font-display)] text-[76px] md:text-[92px] leading-[0.98] tracking-[-0.02em] text-forest font-light">
             Where papers
             <br />
-            <span className="italic">grow into</span>
+            <span>grow into</span>
             <br />
             <span className="font-normal">folios.</span>
           </h1>
 
-          <p className="mt-10 font-[family-name:var(--font-editorial)] text-[18px] leading-[1.75] text-forest/70 max-w-[46ch]">
+          <p className="mt-10 font-[family-name:var(--font-body)] text-[18px] leading-[1.75] text-forest/70 max-w-[46ch]">
             Folio is a calm place to write mathematics and read the corpus — a
             LaTeX editor, a library, and a quiet reading room. No compile step,
             no clutter. Just ink and light.
@@ -136,11 +136,11 @@ function FolioPreview() {
     <div className="relative">
       <div className="latex-frame paper-grain bg-milk px-8 py-10 offset-shadow">
         <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.28em] uppercase text-forest/40 mb-2">§ 2 · folio recto</div>
-        <h3 className="font-[family-name:var(--font-editorial)] text-[26px] font-normal text-forest mb-4 leading-tight">
+        <h3 className="font-[family-name:var(--font-display)] text-[26px] font-normal text-forest mb-4 leading-tight">
           On kernelised attention
         </h3>
-        <p className="font-[family-name:var(--font-editorial)] text-[14px] leading-[1.8] text-forest/80">
-          For any feature map <em>φ : ℝ<sup>d</sup> → ℝ<sup>r</sup></em>, define the
+        <p className="font-[family-name:var(--font-body)] text-[14px] leading-[1.8] text-forest/80">
+          For any feature map <span className="font-[family-name:var(--font-display)]">φ : ℝ<sup>d</sup> → ℝ<sup>r</sup></span>, define the
           linearised attention operator
         </p>
         <div className="my-5 flex justify-center text-forest">
@@ -148,7 +148,7 @@ function FolioPreview() {
         </div>
         <div className="mt-4 rounded-xl bg-sage/15 px-4 py-3 border-l-[3px] border-sage">
           <div className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.24em] uppercase text-forest/55 mb-0.5">Theorem 2.1</div>
-          <div className="font-[family-name:var(--font-editorial)] italic text-[13px] text-forest/80 leading-snug">
+          <div className="font-[family-name:var(--font-display)] text-[13px] text-forest/80 leading-snug">
             Positive random features give an unbiased estimate of softmax attention in <KaTeX math="\mathcal{O}(n)" /> time.
           </div>
         </div>
@@ -176,7 +176,7 @@ function Rooms() {
       <div className="max-w-6xl mx-auto px-8">
         <div className="mb-16 text-center">
           <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/50 mb-3">two rooms</div>
-          <h2 className="font-[family-name:var(--font-editorial)] text-[52px] leading-[1.02] text-forest italic font-light">
+          <h2 className="font-[family-name:var(--font-display)] text-[52px] leading-[1.02] text-forest font-light">
             a desk, and a library.
           </h2>
         </div>
@@ -216,7 +216,7 @@ function Room({
         <div className="bau-card p-10 h-full transition-all hover:-translate-y-1 hover:shadow-[0_20px_40px_-20px_rgba(38,70,53,0.25)]">
           <div className="flex items-baseline justify-between mb-10">
             <span
-              className="font-[family-name:var(--font-editorial)] text-[54px] leading-none italic"
+              className="font-[family-name:var(--font-display)] text-[54px] leading-none"
               style={{ color: accent, opacity: 0.75 }}
             >
               {n}
@@ -226,10 +226,10 @@ function Room({
             </span>
           </div>
 
-          <h3 className="font-[family-name:var(--font-editorial)] text-[44px] leading-[1] text-forest italic mb-5">
+          <h3 className="font-[family-name:var(--font-display)] text-[44px] leading-[1] text-forest mb-5">
             {title}
           </h3>
-          <p className="font-[family-name:var(--font-editorial)] text-[15.5px] leading-[1.75] text-forest/70 mb-10 max-w-[38ch]">
+          <p className="font-[family-name:var(--font-body)] text-[15.5px] leading-[1.75] text-forest/70 mb-10 max-w-[38ch]">
             {body}
           </p>
 
@@ -256,10 +256,10 @@ function Specimen() {
       <div className="max-w-6xl mx-auto px-8 relative">
         <div className="mb-14 text-center">
           <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-parchment/50 mb-3">a specimen</div>
-          <h3 className="font-[family-name:var(--font-editorial)] text-[48px] leading-[1.04] italic text-parchment font-light">
+          <h3 className="font-[family-name:var(--font-display)] text-[48px] leading-[1.04] text-parchment font-light">
             plain LaTeX. nothing weird.
           </h3>
-          <p className="mt-4 font-[family-name:var(--font-editorial)] text-[15.5px] leading-[1.7] text-parchment/65 max-w-[48ch] mx-auto">
+          <p className="mt-4 font-[family-name:var(--font-body)] text-[15.5px] leading-[1.7] text-parchment/65 max-w-[48ch] mx-auto">
             The source on one side, the typeset folio on the other —
             indistinguishable from what a journal would print.
           </p>
@@ -297,11 +297,11 @@ define{'\n'}
           <div className="col-span-12 md:col-span-6">
             <div className="bg-milk text-forest rounded-2xl px-8 py-10 paper-grain">
               <div className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.28em] uppercase text-forest/40 mb-2">§ 2</div>
-              <h4 className="font-[family-name:var(--font-editorial)] text-[28px] font-normal text-forest mb-4">
+              <h4 className="font-[family-name:var(--font-display)] text-[28px] font-normal text-forest mb-4">
                 On kernelised attention
               </h4>
-              <p className="font-[family-name:var(--font-editorial)] text-[14.5px] leading-[1.8] text-forest/80">
-                For any feature map <em>φ : ℝ<sup>d</sup> → ℝ<sup>r</sup></em>, define
+              <p className="font-[family-name:var(--font-body)] text-[14.5px] leading-[1.8] text-forest/80">
+                For any feature map <span className="font-[family-name:var(--font-display)]">φ : ℝ<sup>d</sup> → ℝ<sup>r</sup></span>, define
               </p>
               <div className="my-5 flex justify-center">
                 <KaTeX display math="A_{ij} = \frac{\phi(q_i)^{\top}\phi(k_j)}{\sum_{\ell}\phi(q_i)^{\top}\phi(k_\ell)}\,." />
@@ -347,7 +347,7 @@ function Pipeline() {
       <div className="max-w-6xl mx-auto px-8">
         <div className="mb-16 text-center">
           <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/50 mb-3">how the garden grows</div>
-          <h3 className="font-[family-name:var(--font-editorial)] text-[48px] leading-[1.04] italic text-forest font-light">
+          <h3 className="font-[family-name:var(--font-display)] text-[48px] leading-[1.04] text-forest font-light">
             three quiet moves.
           </h3>
         </div>
@@ -356,8 +356,8 @@ function Pipeline() {
           {steps.map((s, i) => (
             <div key={i} className="col-span-12 md:col-span-4 bau-card p-8 hover:-translate-y-1 transition-all">
               <div className="font-[family-name:var(--font-display)] text-[28px] text-sage-deep mb-4">{s.n}.</div>
-              <h4 className="font-[family-name:var(--font-editorial)] text-[26px] italic text-forest mb-4">{s.title}</h4>
-              <p className="font-[family-name:var(--font-editorial)] text-[14.5px] leading-[1.75] text-forest/70">{s.body}</p>
+              <h4 className="font-[family-name:var(--font-display)] text-[26px] text-forest mb-4">{s.title}</h4>
+              <p className="font-[family-name:var(--font-body)] text-[14.5px] leading-[1.75] text-forest/70">{s.body}</p>
             </div>
           ))}
         </div>
@@ -376,9 +376,9 @@ function Colophon() {
           <div className="max-w-[30ch]">
             <div className="flex items-center gap-3 mb-4">
               <LogoLeaf />
-              <span className="font-[family-name:var(--font-editorial)] italic text-[26px] text-parchment leading-none">Folio</span>
+              <span className="font-[family-name:var(--font-display)] text-[26px] text-parchment leading-none">Folio</span>
             </div>
-            <p className="font-[family-name:var(--font-editorial)] text-[14px] leading-[1.75] text-parchment/60">
+            <p className="font-[family-name:var(--font-body)] text-[14px] leading-[1.75] text-parchment/60">
               A calm place to write mathematics. Built by scholars for scholars.
             </p>
           </div>
@@ -397,7 +397,7 @@ function Colophon() {
 
         <div className="mt-16 pt-6 border-t border-parchment/15 flex flex-wrap items-center justify-between gap-4 text-[11px] font-[family-name:var(--font-mono)] tracking-[0.22em] text-parchment/45">
           <span>© 2026 FOLIO · A SCHOLAR'S NOTEBOOK</span>
-          <span>SET IN FRAUNCES, ARCHIVO &amp; GAMJA FLOWER</span>
+          <span>SET IN GAMJA FLOWER, VENUS &amp; JETBRAINS MONO</span>
         </div>
       </div>
     </footer>
@@ -411,7 +411,7 @@ function ColLinks({ title, links }: { title: string; links: { to: string; label:
       <ul className="space-y-2.5">
         {links.map(l => (
           <li key={l.to}>
-            <Link to={l.to} className="font-[family-name:var(--font-editorial)] italic text-[15px] text-parchment/75 hover:text-parchment transition-colors">
+            <Link to={l.to} className="font-[family-name:var(--font-body)] text-[15px] text-parchment/75 hover:text-parchment transition-colors">
               {l.label}
             </Link>
           </li>

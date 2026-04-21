@@ -67,7 +67,7 @@ export function BlockPreview({ block }: { block: Block }) {
   }
   if (block.type === 'quote') {
     return (
-      <blockquote className="pl-4 border-l-2 border-sage/50 my-5 italic text-forest/60 font-[family-name:var(--font-body)] text-base">
+      <blockquote className="pl-4 border-l-2 border-sage/50 my-5 text-forest/60 font-[family-name:var(--font-body)] text-base">
         {block.content}
       </blockquote>
     )
@@ -395,7 +395,7 @@ function TextBlock({
     block.type === 'h1'      ? 'font-[family-name:var(--font-display)] text-5xl text-forest leading-tight mt-6 mb-0.5'
     : block.type === 'h2'    ? 'font-[family-name:var(--font-body)] text-2xl font-semibold text-forest mt-5'
     : block.type === 'h3'    ? 'font-[family-name:var(--font-body)] text-lg font-medium text-forest/80 mt-3'
-    : block.type === 'quote' ? 'font-[family-name:var(--font-body)] text-base italic text-forest/60 border-l-2 border-sage/40 pl-4 my-1'
+    : block.type === 'quote' ? 'font-[family-name:var(--font-body)] text-base text-forest/60 border-l-2 border-sage/40 pl-4 my-1'
     : 'font-[family-name:var(--font-body)] text-base text-forest/85 leading-relaxed'
 
   return (

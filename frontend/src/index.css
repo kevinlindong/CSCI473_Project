@@ -3,8 +3,8 @@
 /* ====================================================================
    Folio — Bauhaus × Zen × Heytea
    Palette : GMK Botanical  — #264635 · #A3B18A · #E9E4D4
-   Fonts   : Gamja Flower (handwritten) · Archivo (Venus-like geometric
-             Bauhaus sans) · JetBrains Mono (code)
+   Fonts   : Gamja Flower (highlight / notebook) · Venus (body) ·
+             JetBrains Mono (code)
    ==================================================================== */
 
 @theme {
@@ -31,12 +31,22 @@
   --color-moss: #4A6741;
   --color-lichen: #5C7A6B;
 
-  /* === Fonts ======================================================== */
+  /* === Fonts ========================================================
+     Three-font system:
+       - display : Gamja Flower — handwritten highlight, used for
+                   headings, hero titles, marginalia. Carries the
+                   "productivity notebook" feel.
+       - body    : Venus        — primary text typeface.
+       - mono    : JetBrains Mono — code, labels, tabular numerals.
+     The legacy --font-editorial and --font-serif aliases are kept so
+     existing class names continue to resolve, but they now point at
+     the body face — they are no longer Fraunces / serif.
+  ================================================================= */
   --font-display:   "Gamja Flower", "Comic Sans MS", cursive;
-  --font-body:      "Archivo", "Venus", "Futura", ui-sans-serif, sans-serif;
+  --font-body:      "Venus", "Futura", ui-sans-serif, sans-serif;
   --font-mono:      "JetBrains Mono", ui-monospace, monospace;
-  --font-serif:     "Fraunces", "EB Garamond", "Times New Roman", serif;
-  --font-editorial: "Fraunces", "EB Garamond", serif;
+  --font-serif:     "Venus", "Futura", ui-sans-serif, sans-serif;
+  --font-editorial: "Venus", "Futura", ui-sans-serif, sans-serif;
 }
 
 /* ====================================================================
@@ -269,7 +279,7 @@ html.compact-mode .mb-8  { margin-bottom: 1rem; }
 .tok-str   { color: #A3B18A; }
 .tok-num   { color: #C85544; }
 .tok-fn    { color: #E9E4D4; }
-.tok-com   { color: #E9E4D455; font-style: italic; }
+.tok-com   { color: #E9E4D455; }
 .tok-sym   { color: #E9E4D4aa; }
 .tok-tex   { color: #E0B13A; }
 .tok-env   { color: #A3B18A; }
@@ -280,7 +290,7 @@ html.compact-mode .mb-8  { margin-bottom: 1rem; }
 .tex-hl .tex-env     { color: #4A6741; font-weight: 500; }
 .tex-hl .tex-math    { color: #8B4513; }
 .tex-hl .tex-brace   { color: #264635; opacity: 0.35; }
-.tex-hl .tex-comment { color: #264635; opacity: 0.28; font-style: italic; }
+.tex-hl .tex-comment { color: #264635; opacity: 0.28; }
 .tex-hl .tex-arg     { color: #264635; opacity: 0.75; }
 
 .latex-frame {

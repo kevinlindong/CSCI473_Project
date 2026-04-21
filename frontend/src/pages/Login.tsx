@@ -79,20 +79,20 @@ export default function Login() {
         <div className="relative max-w-[440px] px-12 text-parchment">
           <Link to="/" className="inline-flex items-center gap-3 mb-14 group">
             <LogoLeafDark />
-            <span className="font-[family-name:var(--font-editorial)] italic text-[32px] text-parchment leading-none">
+            <span className="font-[family-name:var(--font-display)] text-[32px] text-parchment leading-none">
               Folio
             </span>
           </Link>
 
-          <h1 className="font-[family-name:var(--font-editorial)] text-[60px] leading-[1.02] tracking-[-0.015em] font-light italic text-parchment">
+          <h1 className="font-[family-name:var(--font-display)] text-[60px] leading-[1.02] tracking-[-0.015em] font-light text-parchment">
             a quiet
             <br />
             place to
             <br />
-            <span className="font-normal not-italic">write mathematics.</span>
+            <span className="font-normal">write mathematics.</span>
           </h1>
 
-          <p className="mt-10 font-[family-name:var(--font-editorial)] italic text-[17px] leading-[1.75] text-parchment/70 max-w-[38ch]">
+          <p className="mt-10 font-[family-name:var(--font-body)] text-[17px] leading-[1.75] text-parchment/70 max-w-[38ch]">
             No compile step. No clutter. Just the paper you mean to write,
             rising beside you as you type.
           </p>
@@ -112,10 +112,10 @@ export default function Login() {
             <span>←</span> back home
           </Link>
 
-          <h2 className="font-[family-name:var(--font-editorial)] text-[44px] leading-[1.02] italic text-forest font-light mb-3">
+          <h2 className="font-[family-name:var(--font-display)] text-[44px] leading-[1.02] text-forest font-light mb-3">
             {mode === 'signin' ? 'welcome back.' : 'begin a folio.'}
           </h2>
-          <p className="font-[family-name:var(--font-editorial)] text-[15px] leading-[1.7] text-forest/60 mb-10">
+          <p className="font-[family-name:var(--font-body)] text-[15px] leading-[1.7] text-forest/60 mb-10">
             {mode === 'signin'
               ? 'Sign in and the library will remember what you were reading.'
               : 'Create an account. The study is quiet and ready.'}
@@ -140,7 +140,7 @@ export default function Login() {
             <LabelledInput label="password" type="password" value={password} onChange={setPassword} placeholder="••••••••" />
 
             {authError && (
-              <div className="rounded-xl bg-bau-red/10 border border-bau-red/30 px-4 py-3 font-[family-name:var(--font-editorial)] text-[13px] text-bau-red">
+              <div className="rounded-xl bg-bau-red/10 border border-bau-red/30 px-4 py-3 font-[family-name:var(--font-body)] text-[13px] text-bau-red">
                 {authError}
               </div>
             )}
@@ -157,7 +157,7 @@ export default function Login() {
           <div className="mt-8 text-center">
             <button
               onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setAuthError(null) }}
-              className="font-[family-name:var(--font-editorial)] italic text-[14px] text-forest/65 hover:text-forest transition-colors"
+              className="font-[family-name:var(--font-body)] text-[14px] text-forest/65 hover:text-forest transition-colors"
             >
               {mode === 'signin' ? 'new here? ' : 'have an account? '}
               <span className="underline decoration-forest/30 underline-offset-4">

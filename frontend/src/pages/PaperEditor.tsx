@@ -225,7 +225,7 @@ export default function PaperEditor() {
               <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.32em] uppercase text-forest/50">
                 manuscript
               </span>
-              <span className="font-[family-name:var(--font-editorial)] italic text-[18px] text-forest leading-none mt-1">
+              <span className="font-[family-name:var(--font-display)] text-[18px] text-forest leading-none mt-1">
                 draft folio
               </span>
             </div>
@@ -236,10 +236,10 @@ export default function PaperEditor() {
             <div className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.3em] uppercase text-forest/45 mb-1">
               working title
             </div>
-            <div className="font-[family-name:var(--font-editorial)] text-[19px] text-forest truncate">
+            <div className="font-[family-name:var(--font-display)] text-[19px] text-forest truncate">
               {meta.title
                 ? meta.title.replace(/\\\\/g, ' ')
-                : <span className="italic text-forest/45">untitled — give your folio a name</span>}
+                : <span className="text-forest/45">untitled — give your folio a name</span>}
             </div>
           </div>
 
@@ -253,7 +253,7 @@ export default function PaperEditor() {
               <button
                 key={m}
                 onClick={() => setFocusMode(m)}
-                className="relative z-10 w-[78px] flex items-center justify-center font-[family-name:var(--font-editorial)] italic text-[13px] transition-colors cursor-pointer"
+                className="relative z-10 w-[78px] flex items-center justify-center font-[family-name:var(--font-body)] text-[13px] transition-colors cursor-pointer"
                 style={{ color: focusMode === m ? '#E9E4D4' : 'rgba(38,70,53,0.55)' }}
               >
                 {m}
@@ -315,7 +315,7 @@ export default function PaperEditor() {
             title="Snippet palette (⌘/)"
           >
             <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.16em] bg-forest text-parchment px-1.5 py-0.5 rounded-full">⌘/</span>
-            <span className="font-[family-name:var(--font-editorial)] italic text-[12px] text-forest/75">palette</span>
+            <span className="font-[family-name:var(--font-body)] text-[12px] text-forest/75">palette</span>
           </button>
         </div>
 
@@ -333,7 +333,7 @@ export default function PaperEditor() {
             <span className="font-[family-name:var(--font-mono)] text-[11px] text-forest/55 group-hover:text-forest tabular-nums">
               {sn.glyph}
             </span>
-            <span className="font-[family-name:var(--font-editorial)] italic text-[12px] text-forest/65 group-hover:text-forest">
+            <span className="font-[family-name:var(--font-body)] text-[12px] text-forest/65 group-hover:text-forest">
               {sn.label}
             </span>
           </button>
@@ -359,9 +359,9 @@ export default function PaperEditor() {
             <div className="px-5 pt-6 pb-4 border-b border-forest/10">
               <div className="flex items-baseline justify-between mb-1.5">
                 <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.32em] uppercase text-forest/50">structure</span>
-                <span className="font-[family-name:var(--font-editorial)] italic text-[14px] text-sage-deep">{outline.length}</span>
+                <span className="font-[family-name:var(--font-display)] text-[14px] text-sage-deep">{outline.length}</span>
               </div>
-              <div className="font-[family-name:var(--font-editorial)] italic text-[20px] text-forest leading-none">
+              <div className="font-[family-name:var(--font-display)] text-[20px] text-forest leading-none">
                 table of contents
               </div>
             </div>
@@ -369,7 +369,7 @@ export default function PaperEditor() {
             <div className="p-4">
               {outline.length === 0 ? (
                 <div className="border border-dashed border-forest/20 rounded-2xl px-4 py-5 text-center bg-milk/40">
-                  <div className="font-[family-name:var(--font-editorial)] italic text-[14px] text-forest/55 mb-1.5">no sections yet</div>
+                  <div className="font-[family-name:var(--font-body)] text-[14px] text-forest/55 mb-1.5">no sections yet</div>
                   <div className="font-[family-name:var(--font-mono)] text-[10px] text-forest/40">
                     try <span className="text-sage-deep">\section{'{...}'}</span>
                   </div>
@@ -388,7 +388,7 @@ export default function PaperEditor() {
                           {it.level === 1 ? '§' : it.level === 2 ? '§§' : '§§§'}
                         </span>
                         <span className="flex-1 min-w-0">
-                          <span className="block font-[family-name:var(--font-editorial)] text-[13px] text-forest/80 group-hover:text-forest leading-snug truncate">
+                          <span className="block font-[family-name:var(--font-body)] text-[13px] text-forest/80 group-hover:text-forest leading-snug truncate">
                             {it.text}
                           </span>
                           <span className="block font-[family-name:var(--font-mono)] text-[9px] text-forest/30">
@@ -408,11 +408,11 @@ export default function PaperEditor() {
                 <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.32em] uppercase text-forest/50">front matter</span>
                 <span className="w-1.5 h-1.5 rounded-full bg-sage" />
               </div>
-              <dl className="space-y-3 font-[family-name:var(--font-editorial)] text-[12.5px]">
+              <dl className="space-y-3 font-[family-name:var(--font-body)] text-[12.5px]">
                 {meta.authors && meta.authors.length > 0 && (
                   <div>
                     <dt className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.22em] uppercase text-forest/40 mb-0.5">authors</dt>
-                    <dd className="text-forest/80 italic leading-snug">{meta.authors.join(', ')}</dd>
+                    <dd className="text-forest/80 leading-snug">{meta.authors.join(', ')}</dd>
                   </div>
                 )}
                 {meta.keywords && meta.keywords.length > 0 && (
@@ -430,7 +430,7 @@ export default function PaperEditor() {
                 {meta.date && (
                   <div>
                     <dt className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.22em] uppercase text-forest/40 mb-0.5">date</dt>
-                    <dd className="text-forest/70 italic">{meta.date}</dd>
+                    <dd className="text-forest/70">{meta.date}</dd>
                   </div>
                 )}
               </dl>
@@ -446,8 +446,8 @@ export default function PaperEditor() {
                   <span className="w-1.5 h-1.5 rounded-full bg-sage-deep" />
                   <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.3em] uppercase text-forest/55">corpus</span>
                 </div>
-                <div className="font-[family-name:var(--font-editorial)] italic text-[17px] text-forest leading-none mb-1.5">browse related</div>
-                <div className="font-[family-name:var(--font-editorial)] italic text-[12px] text-forest/55 leading-snug">
+                <div className="font-[family-name:var(--font-display)] text-[17px] text-forest leading-none mb-1.5">browse related</div>
+                <div className="font-[family-name:var(--font-body)] text-[12px] text-forest/55 leading-snug">
                   find work that informs your draft.
                 </div>
               </Link>
@@ -512,7 +512,7 @@ export default function PaperEditor() {
 
               {/* tiny live tag */}
               <div className="absolute bottom-3 right-4 pointer-events-none">
-                <span className="font-[family-name:var(--font-editorial)] italic text-[12px] text-sage/70">editing live ↓</span>
+                <span className="font-[family-name:var(--font-body)] text-[12px] text-sage/70">editing live ↓</span>
               </div>
             </div>
           )}
@@ -541,7 +541,7 @@ export default function PaperEditor() {
                   typeset · folio recto
                 </span>
                 <div className="flex-1" />
-                <span className="font-[family-name:var(--font-editorial)] italic text-[12px] text-forest/50">live preview</span>
+                <span className="font-[family-name:var(--font-body)] text-[12px] text-forest/50">live preview</span>
               </div>
 
               {/* Folio page */}
@@ -553,7 +553,7 @@ export default function PaperEditor() {
                       <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.3em] uppercase text-forest/50">
                         folio · I
                       </span>
-                      <span className="font-[family-name:var(--font-editorial)] italic text-[15px] text-forest/70 leading-none">
+                      <span className="font-[family-name:var(--font-display)] text-[15px] text-forest/70 leading-none">
                         a scholar's draft
                       </span>
                       <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.3em] uppercase text-forest/50">
@@ -586,7 +586,7 @@ export default function PaperEditor() {
               <div className="flex justify-center pb-12 pt-2">
                 <div className="flex items-center gap-3">
                   <span className="w-1 h-1 rounded-full bg-forest/30" />
-                  <span className="font-[family-name:var(--font-editorial)] italic text-[12px] text-forest/45">
+                  <span className="font-[family-name:var(--font-body)] text-[12px] text-forest/45">
                     folio · v1 · live render
                   </span>
                   <span className="w-1 h-1 rounded-full bg-forest/30" />
@@ -608,12 +608,12 @@ export default function PaperEditor() {
             className="w-full max-w-xl mx-4 bg-milk border border-forest/15 rounded-3xl shadow-[0_30px_80px_-30px_rgba(38,70,53,0.45)] overflow-hidden"
           >
             <div className="px-6 py-4 border-b border-forest/10 flex items-center gap-3 bg-parchment/40">
-              <div className="w-9 h-9 rounded-full bg-forest flex items-center justify-center text-parchment font-[family-name:var(--font-editorial)] italic text-[14px]">
+              <div className="w-9 h-9 rounded-full bg-forest flex items-center justify-center text-parchment font-[family-name:var(--font-display)] text-[14px]">
                 ⌘
               </div>
               <div className="flex-1">
                 <div className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.3em] uppercase text-forest/50 mb-0.5">insert</div>
-                <div className="font-[family-name:var(--font-editorial)] italic text-[22px] text-forest leading-none">snippet palette</div>
+                <div className="font-[family-name:var(--font-display)] text-[22px] text-forest leading-none">snippet palette</div>
               </div>
               <kbd className="font-[family-name:var(--font-mono)] text-[10px] text-forest/70 border border-forest/20 rounded-full px-2.5 py-1">esc</kbd>
             </div>
@@ -633,10 +633,10 @@ export default function PaperEditor() {
                       {sn.glyph}
                     </span>
                     <span className="flex flex-col flex-1 min-w-0">
-                      <span className="font-[family-name:var(--font-editorial)] text-[14px] text-forest group-hover:text-forest-ink transition-colors">
+                      <span className="font-[family-name:var(--font-body)] text-[14px] text-forest group-hover:text-forest-ink transition-colors">
                         {sn.label}
                       </span>
-                      <span className="font-[family-name:var(--font-editorial)] italic text-[12px] text-forest/55 truncate">
+                      <span className="font-[family-name:var(--font-body)] text-[12px] text-forest/55 truncate">
                         {sn.hint}
                       </span>
                     </span>
@@ -650,7 +650,7 @@ export default function PaperEditor() {
 
             {/* footer */}
             <div className="px-6 py-3 border-t border-forest/10 bg-parchment/40 flex items-center justify-between">
-              <span className="font-[family-name:var(--font-editorial)] italic text-[13px] text-forest/55">
+              <span className="font-[family-name:var(--font-body)] text-[13px] text-forest/55">
                 pick a block, drop it in.
               </span>
               <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.28em] uppercase text-forest/40">

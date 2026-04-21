@@ -686,7 +686,7 @@ export function SpotlightSearch({
               className={`max-w-[85%] px-3 py-2 text-xs leading-relaxed rounded-xl font-[family-name:var(--font-body)] ${msgAiBg}`}
               style={{ animation: 'fade-up 0.2s ease-out' }}
             >
-              <div className="prose-sm max-w-none [&_p]:mb-1.5 [&_p:last-child]:mb-0 [&_ul]:pl-3 [&_ol]:pl-4 [&_li]:mb-0.5 [&_code]:text-[10px] [&_code]:bg-forest/8 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_pre]:text-[10px] [&_pre]:bg-forest/8 [&_pre]:p-2 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_blockquote]:border-l-2 [&_blockquote]:border-sage [&_blockquote]:pl-2 [&_blockquote]:italic [&_blockquote]:opacity-80">
+              <div className="prose-sm max-w-none [&_p]:mb-1.5 [&_p:last-child]:mb-0 [&_ul]:pl-3 [&_ol]:pl-4 [&_li]:mb-0.5 [&_code]:text-[10px] [&_code]:bg-forest/8 [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_pre]:text-[10px] [&_pre]:bg-forest/8 [&_pre]:p-2 [&_pre]:rounded-lg [&_pre]:overflow-x-auto [&_blockquote]:border-l-2 [&_blockquote]:border-sage [&_blockquote]:pl-2 [&_blockquote]:opacity-80">
                 <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
                   {msg.content}
                 </ReactMarkdown>

@@ -48,15 +48,15 @@ export default function Home() {
         <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.28em] uppercase text-forest/50 mb-3">
           {dateLine}
         </div>
-        <div className="font-[family-name:var(--font-editorial)] italic text-[22px] text-forest/55 mb-5">
+        <div className="font-[family-name:var(--font-display)] text-[22px] text-forest/55 mb-5">
           {greeting},
         </div>
-        <h1 className="font-[family-name:var(--font-editorial)] text-[88px] md:text-[108px] leading-[0.92] text-forest font-light tracking-[-0.02em]">
-          <span className="italic">{displayName}</span>
+        <h1 className="font-[family-name:var(--font-display)] text-[88px] md:text-[108px] leading-[0.92] text-forest font-light tracking-[-0.02em]">
+          <span>{displayName}</span>
           <span className="text-sage-deep">.</span>
         </h1>
 
-        <p className="mt-10 font-[family-name:var(--font-editorial)] italic text-[18px] leading-[1.75] text-forest/65 max-w-[46ch]">
+        <p className="mt-10 font-[family-name:var(--font-body)] text-[18px] leading-[1.75] text-forest/65 max-w-[46ch]">
           The library is quiet today. Begin a new manuscript, or return to the corpus.
         </p>
       </section>
@@ -103,7 +103,7 @@ export default function Home() {
       <footer className="max-w-5xl mx-auto px-8 pb-14 pt-10">
         <div className="flex items-center justify-between flex-wrap gap-4 text-[11px] font-[family-name:var(--font-mono)] tracking-[0.22em] uppercase text-forest/40">
           <span>Folio · the study</span>
-          <span>set in Fraunces, Archivo &amp; Gamja Flower</span>
+          <span>set in Gamja Flower, Venus &amp; JetBrains Mono</span>
         </div>
       </footer>
     </div>
@@ -136,7 +136,7 @@ function Doorway({
         <div className="bau-card p-8 h-full transition-all hover:-translate-y-1 hover:shadow-[0_20px_40px_-20px_rgba(38,70,53,0.22)]">
           <div className="flex items-baseline justify-between mb-8">
             <span
-              className="font-[family-name:var(--font-editorial)] text-[44px] leading-none italic"
+              className="font-[family-name:var(--font-display)] text-[44px] leading-none"
               style={{ color: accent, opacity: 0.75 }}
             >
               {roman}.
@@ -146,10 +146,10 @@ function Doorway({
             </span>
           </div>
 
-          <h3 className="font-[family-name:var(--font-editorial)] text-[36px] leading-[1] text-forest italic mb-4">
+          <h3 className="font-[family-name:var(--font-display)] text-[36px] leading-[1] text-forest mb-4">
             {title}
           </h3>
-          <p className="font-[family-name:var(--font-editorial)] text-[15px] leading-[1.75] text-forest/65 mb-7 max-w-[36ch]">
+          <p className="font-[family-name:var(--font-body)] text-[15px] leading-[1.75] text-forest/65 mb-7 max-w-[36ch]">
             {lede}
           </p>
 
@@ -173,7 +173,7 @@ function DeskPreview() {
       <div className="text-center mb-2">
         <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.28em] uppercase text-forest/40">folio · i</span>
       </div>
-      <div className="text-center font-[family-name:var(--font-editorial)] italic text-[19px] text-forest mb-3">
+      <div className="text-center font-[family-name:var(--font-display)] text-[19px] text-forest mb-3">
         On Kernelized Attention
       </div>
       <div className="flex justify-center text-forest/85">
@@ -235,7 +235,7 @@ function CorpusPreview() {
           </circle>
         </g>
       </svg>
-      <div className="mt-2 flex items-center justify-center gap-2 font-[family-name:var(--font-editorial)] italic text-[15px] text-forest/70">
+      <div className="mt-2 flex items-center justify-center gap-2 font-[family-name:var(--font-display)] text-[15px] text-forest/70">
         <span className="w-1.5 h-1.5 rounded-full" style={{ background: colorFor[active] }} />
         <span key={active} className="animate-[ink-bloom_500ms_ease-out]">
           {clusters[active]}
@@ -262,11 +262,11 @@ function Ledger() {
           key={i}
           className="grid grid-cols-12 gap-4 items-center px-7 py-5 hover:bg-parchment/40 transition-colors"
         >
-          <span className="col-span-12 sm:col-span-3 font-[family-name:var(--font-editorial)] italic text-[15px] text-forest/55">
+          <span className="col-span-12 sm:col-span-3 font-[family-name:var(--font-display)] text-[15px] text-forest/55">
             {a.when}
           </span>
-          <span className="col-span-12 sm:col-span-6 font-[family-name:var(--font-editorial)] text-[15px]">
-            <span className="italic text-forest/60">{a.verb}</span>{' '}
+          <span className="col-span-12 sm:col-span-6 font-[family-name:var(--font-body)] text-[15px]">
+            <span className="font-[family-name:var(--font-display)] text-forest/60">{a.verb}</span>{' '}
             <span className="text-forest">{a.what}</span>
           </span>
           <span className="col-span-12 sm:col-span-3 sm:text-right font-[family-name:var(--font-mono)] text-[10px] tracking-[0.24em] uppercase text-forest/45">

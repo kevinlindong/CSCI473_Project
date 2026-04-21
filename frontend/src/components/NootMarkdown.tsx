@@ -50,7 +50,7 @@ export function NootMarkdown({ children, compact = false }: Props) {
           return <strong className="font-semibold">{children}</strong>
         },
         em({ children }) {
-          return <em className="italic opacity-80">{children}</em>
+          return <em className="opacity-80">{children}</em>
         },
         h1({ children }) {
           return <h1 className="font-[family-name:var(--font-display)] text-lg font-medium mb-1 mt-2 first:mt-0">{children}</h1>
@@ -62,7 +62,7 @@ export function NootMarkdown({ children, compact = false }: Props) {
           return <h3 className="font-[family-name:var(--font-display)] text-sm font-medium mb-1 mt-1 first:mt-0">{children}</h3>
         },
         blockquote({ children }) {
-          return <blockquote className="border-l-2 border-sage/40 pl-3 italic opacity-70 my-2">{children}</blockquote>
+          return <blockquote className="border-l-2 border-sage/40 pl-3 opacity-70 my-2">{children}</blockquote>
         },
         a({ href, children }) {
           return (

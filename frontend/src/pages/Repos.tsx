@@ -409,7 +409,7 @@ export default function Repos() {
                         }`}
                       >{tag}</span>
                     )) : (
-                      <span className="font-mono text-[10px] text-forest/20 italic">no tags</span>
+                      <span className="font-mono text-[10px] text-forest/20">no tags</span>
                     )}
                   </div>
 

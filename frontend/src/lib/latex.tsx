@@ -213,8 +213,8 @@ function parseInline(src: string, refs: Refs, keyBase: string): ReactNode[] {
       const afterCmd = i + m[0].length
 
       // Special zero-arg commands
-      if (cmd === 'LaTeX') { pushText(); out.push(<span key={`${keyBase}-${ctr++}`} className="font-[family-name:var(--font-serif)]">L<span className="text-[0.75em] align-[0.25em] -mx-[0.12em]">A</span>T<span className="align-[-0.2em] -mx-[0.06em]">E</span>X</span>); i = afterCmd; continue }
-      if (cmd === 'TeX')   { pushText(); out.push(<span key={`${keyBase}-${ctr++}`} className="font-[family-name:var(--font-serif)]">T<span className="align-[-0.2em] -mx-[0.06em]">E</span>X</span>); i = afterCmd; continue }
+      if (cmd === 'LaTeX') { pushText(); out.push(<span key={`${keyBase}-${ctr++}`} className="font-[family-name:var(--font-body)]">L<span className="text-[0.75em] align-[0.25em] -mx-[0.12em]">A</span>T<span className="align-[-0.2em] -mx-[0.06em]">E</span>X</span>); i = afterCmd; continue }
+      if (cmd === 'TeX')   { pushText(); out.push(<span key={`${keyBase}-${ctr++}`} className="font-[family-name:var(--font-body)]">T<span className="align-[-0.2em] -mx-[0.06em]">E</span>X</span>); i = afterCmd; continue }
       if (cmd === 'today') { pushText(); textBuf += new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }); i = afterCmd; continue }
       if (cmd === 'maketitle' || cmd === 'tableofcontents' || cmd === 'bigskip' || cmd === 'medskip' || cmd === 'smallskip' || cmd === 'newpage' || cmd === 'clearpage' || cmd === 'par') {
         pushText(); i = afterCmd; continue
@@ -269,7 +269,7 @@ function parseInline(src: string, refs: Refs, keyBase: string): ReactNode[] {
           // swallow labels — they're for refs, not display
           break
         case 'footnote':
-          out.push(<sup key={`${keyBase}-${ctr++}`} className="text-forest/50 font-[family-name:var(--font-serif)] text-[0.72em] mx-[1px]">*</sup>); break
+          out.push(<sup key={`${keyBase}-${ctr++}`} className="text-forest/50 font-[family-name:var(--font-body)] text-[0.72em] mx-[1px]">*</sup>); break
         case 'url':
         case 'href':
           out.push(<a key={`${keyBase}-${ctr++}`} href={arg} className="text-moss underline decoration-moss/40 underline-offset-2 hover:text-forest" target="_blank" rel="noreferrer">{optArg ? optArg : arg}</a>); break
@@ -475,7 +475,7 @@ function renderEnv(env: Env, refs: Refs, figNum: { n: number }, key: string): Re
   }
   if (n === 'quote' || n === 'quotation') {
     return (
-      <blockquote key={key} className="my-5 pl-6 border-l-2 border-sage/40 text-forest/75 italic font-[family-name:var(--font-serif)] leading-[1.7]">
+      <blockquote key={key} className="my-5 pl-6 border-l-2 border-sage/40 text-forest/75 font-[family-name:var(--font-body)] leading-[1.7]">
         {parseInline(env.body.trim(), refs, `${key}-qt`)}
       </blockquote>
     )
@@ -492,7 +492,7 @@ function renderEnv(env: Env, refs: Refs, figNum: { n: number }, key: string): Re
     const rows = lines.map(l => l.split(/(?<!\\)&/).map(c => c.trim()))
     return (
       <div key={key} className="my-6 mx-auto max-w-full overflow-x-auto">
-        <table className="mx-auto border-collapse font-[family-name:var(--font-serif)] text-[0.95em]">
+        <table className="mx-auto border-collapse font-[family-name:var(--font-body)] text-[0.95em]">
           <thead>
             <tr className="border-t-2 border-b border-forest/70">
               {rows[0]?.map((c, j) => (
@@ -523,7 +523,7 @@ function renderEnv(env: Env, refs: Refs, figNum: { n: number }, key: string): Re
     return (
       <div key={key} className="mt-12 pt-6 border-t border-forest/15">
         <h3 className="smcp text-sienna text-[0.85em] mb-4">References</h3>
-        <ol className="text-[0.9em] text-forest/75 space-y-2 font-[family-name:var(--font-serif)]">
+        <ol className="text-[0.9em] text-forest/75 space-y-2 font-[family-name:var(--font-body)]">
           {items.map((it, idx) => (
             <li key={idx} className="flex gap-3">
               <span className="text-forest/40 shrink-0 w-5 text-right">{idx + 1}.</span>
@@ -536,7 +536,7 @@ function renderEnv(env: Env, refs: Refs, figNum: { n: number }, key: string): Re
   }
   // Fallback: render body as paragraph
   return (
-    <div key={key} className="my-3 text-forest/80 leading-[1.75] italic opacity-75">
+    <div key={key} className="my-3 text-forest/80 leading-[1.75] opacity-75">
       <span className="font-mono text-[10px] text-forest/30 mr-2">[{n}]</span>
       {parseInline(env.body.trim(), refs, `${key}-def`)}
     </div>
@@ -555,7 +555,7 @@ export function RenderPaper({ source, showLineNumbers = false }: { source: strin
   const elements: ReactNode[] = []
   blocks.forEach((b, idx) => {
     if (b.kind === 'section') {
-      const common = 'font-[family-name:var(--font-serif)] text-forest tracking-tight mt-10 mb-4'
+      const common = 'font-[family-name:var(--font-body)] text-forest tracking-tight mt-10 mb-4'
       if (b.level === 1) {
         elements.push(
           <h2 key={`b${idx}`} className={`${common} text-[1.6em] font-semibold flex items-baseline gap-3 ink-bloom`}>
@@ -565,8 +565,8 @@ export function RenderPaper({ source, showLineNumbers = false }: { source: strin
         )
       } else if (b.level === 2) {
         elements.push(
-          <h3 key={`b${idx}`} className={`${common} text-[1.25em] font-medium italic flex items-baseline gap-3`}>
-            <span className="not-italic smcp text-sienna/80 text-[0.62em] tabular-nums">{b.number}</span>
+          <h3 key={`b${idx}`} className={`${common} text-[1.25em] font-medium flex items-baseline gap-3`}>
+            <span className="smcp text-sienna/80 text-[0.62em] tabular-nums">{b.number}</span>
             <span>{b.text}</span>
           </h3>
         )
@@ -587,7 +587,7 @@ export function RenderPaper({ source, showLineNumbers = false }: { source: strin
       elements.push(
         <p
           key={`b${idx}`}
-          className={`text-forest/88 leading-[1.8] text-justify hyphens-auto mb-3 font-[family-name:var(--font-serif)] text-[1.02em] ${isFirstAfterSection ? 'drop-cap' : ''}`}
+          className={`text-forest/88 leading-[1.8] text-justify hyphens-auto mb-3 font-[family-name:var(--font-body)] text-[1.02em] ${isFirstAfterSection ? 'drop-cap' : ''}`}
         >
           {parseInline(b.text, refs, `b${idx}`)}
         </p>
@@ -600,7 +600,7 @@ export function RenderPaper({ source, showLineNumbers = false }: { source: strin
       {/* Title block */}
       {meta.title && (
         <header className="text-center mb-10 pb-8 border-b border-forest/15">
-          <h1 className="font-[family-name:var(--font-editorial)] text-[2.4em] leading-[1.1] text-forest font-semibold tracking-tight">
+          <h1 className="font-[family-name:var(--font-display)] text-[2.4em] leading-[1.1] text-forest font-semibold tracking-tight">
             {parseInline(meta.title, refs, 'title')}
           </h1>
           {meta.authors && meta.authors.length > 0 && (
@@ -609,7 +609,7 @@ export function RenderPaper({ source, showLineNumbers = false }: { source: strin
             </div>
           )}
           {meta.affiliations && meta.affiliations.length > 0 && (
-            <div className="mt-2 italic text-forest/55 text-[0.85em] font-[family-name:var(--font-serif)]">
+            <div className="mt-2 text-forest/55 text-[0.85em] font-[family-name:var(--font-body)]">
               {meta.affiliations.join(' ; ')}
             </div>
           )}
@@ -630,7 +630,7 @@ export function RenderPaper({ source, showLineNumbers = false }: { source: strin
       {meta.abstract && !blocks.some(b => b.kind === 'env' && b.env.name === 'abstract') && (
         <div className="my-8 mx-auto max-w-[560px]">
           <div className="text-center smcp text-forest/55 text-[0.78em] mb-3">Abstract</div>
-          <div className="text-forest/80 leading-[1.75] text-justify font-[family-name:var(--font-serif)] text-[0.98em]">
+          <div className="text-forest/80 leading-[1.75] text-justify font-[family-name:var(--font-body)] text-[0.98em]">
             {parseInline(meta.abstract, refs, 'abs')}
           </div>
         </div>
@@ -653,11 +653,11 @@ export function RenderPaper({ source, showLineNumbers = false }: { source: strin
       {refs.citationList.length > 0 && !blocks.some(b => b.kind === 'env' && b.env.name === 'thebibliography') && (
         <div className="mt-12 pt-6 border-t border-forest/15">
           <h3 className="smcp text-sienna text-[0.85em] mb-4">References</h3>
-          <ol className="text-[0.9em] text-forest/75 space-y-2 font-[family-name:var(--font-serif)]">
+          <ol className="text-[0.9em] text-forest/75 space-y-2 font-[family-name:var(--font-body)]">
             {refs.citationList.map((k, idx) => (
               <li key={k} className="flex gap-3">
                 <span className="text-forest/40 shrink-0 w-5 text-right">{idx + 1}.</span>
-                <span className="leading-snug italic">{k} <span className="not-italic text-forest/40">— reference pending</span></span>
+                <span className="leading-snug">{k} <span className="text-forest/40">— reference pending</span></span>
               </li>
             ))}
           </ol>

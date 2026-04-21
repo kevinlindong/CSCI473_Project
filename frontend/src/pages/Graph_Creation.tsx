@@ -39,7 +39,7 @@ const botanicalTheme: Record<string, React.CSSProperties> = {
     background: 'transparent',
     lineHeight: '1.6',
   },
-  'comment': { color: '#A3B18A', fontStyle: 'italic' },
+  'comment': { color: '#A3B18A' },
   'keyword': { color: '#264635', fontWeight: '600' },
   'string': { color: '#5C4A32' },
   'number': { color: '#3D6B4F' },
@@ -196,7 +196,7 @@ export const MessageBubble = ({ msg }: { msg: Message }) => {
                     )
                   },
                   blockquote({ children }) { return (
-                    <blockquote className="border-l-4 border-sage pl-4 italic text-sienna my-3 bg-forest/4 py-2">{children}</blockquote>
+                    <blockquote className="border-l-4 border-sage pl-4 text-sienna my-3 bg-forest/4 py-2">{children}</blockquote>
                   )},
                 }}
               >

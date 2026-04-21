@@ -5,7 +5,7 @@ import { useAuth } from '../hooks/useAuth'
 /* ==========================================================================
    Navbar — minimal zen botanical header.
    • Soft cream chrome, single hairline border, organic leaf mark.
-   • Fraunces italic wordmark, lowercase nav links with restrained sage dot
+   • Gamja Flower wordmark, lowercase nav links with restrained sage dot
      on active.
    ========================================================================== */
 
@@ -52,14 +52,14 @@ export function Navbar({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
   return (
     <header className={`sticky top-0 z-50 ${chrome}`}>
       <div className="max-w-7xl mx-auto flex items-center justify-between px-8 h-[64px]">
-        {/* ── Logo: organic leaf + Fraunces italic wordmark ────────── */}
+        {/* ── Logo: organic leaf + Gamja Flower wordmark ──────────── */}
         <Link
           to="/home"
           onClick={e => { if (location.pathname === '/home') e.preventDefault() }}
           className="flex items-center gap-3 self-center hover:opacity-90 transition-opacity"
         >
           <LogoLeaf dark={isDark} />
-          <span className={`font-[family-name:var(--font-editorial)] italic text-[24px] leading-none translate-y-[1px] ${inkStrong}`}>
+          <span className={`font-[family-name:var(--font-display)] text-[24px] leading-none translate-y-[1px] ${inkStrong}`}>
             Folio
           </span>
           <span className={`hidden sm:inline-block font-[family-name:var(--font-mono)] text-[9px] tracking-[0.3em] uppercase translate-y-[1px] ml-1 ${isDark ? 'text-parchment/40' : 'text-forest/40'}`}>
@@ -77,7 +77,7 @@ export function Navbar({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`group relative flex items-center gap-2 px-4 h-9 rounded-full font-[family-name:var(--font-editorial)] italic text-[14.5px] transition-all ${
+                className={`group relative flex items-center gap-2 px-4 h-9 rounded-full font-[family-name:var(--font-body)] text-[14px] transition-all ${
                   active
                     ? `${inkStrong} ${isDark ? 'bg-parchment/8' : 'bg-sage/18'}`
                     : `${inkSoft} ${isDark ? 'hover:text-parchment hover:bg-parchment/5' : 'hover:text-forest hover:bg-sage/12'}`
@@ -118,11 +118,11 @@ export function Navbar({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
                   className="w-full h-full object-cover"
                 />
               ) : profile?.display_name ? (
-                <span className="font-[family-name:var(--font-editorial)] italic text-[14px] leading-none">
+                <span className="font-[family-name:var(--font-display)] text-[14px] leading-none">
                   {getInitials(profile.display_name)}
                 </span>
               ) : (
-                <span className="font-[family-name:var(--font-editorial)] italic text-[16px] leading-none">·</span>
+                <span className="font-[family-name:var(--font-display)] text-[16px] leading-none">·</span>
               )}
             </button>
 
@@ -138,7 +138,7 @@ export function Navbar({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
                 <span className={`block font-[family-name:var(--font-mono)] text-[9.5px] tracking-[0.28em] uppercase truncate ${isDark ? 'text-parchment/45' : 'text-forest/50'}`}>
                   {profile?.display_name || user?.email || 'guest scholar'}
                 </span>
-                <span className={`block font-[family-name:var(--font-editorial)] italic text-[18px] mt-1.5 leading-none ${inkStrong}`}>
+                <span className={`block font-[family-name:var(--font-display)] text-[18px] mt-1.5 leading-none ${inkStrong}`}>
                   hello there —
                 </span>
               </div>
@@ -148,7 +148,7 @@ export function Navbar({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
                   key={link.path}
                   to={link.path}
                   onClick={() => setDropdownOpen(false)}
-                  className={`block px-5 py-2.5 font-[family-name:var(--font-editorial)] italic text-[14px] transition-colors ${
+                  className={`block px-5 py-2.5 font-[family-name:var(--font-body)] text-[14px] transition-colors ${
                     isDark
                       ? 'text-parchment/70 hover:text-parchment hover:bg-parchment/[0.06]'
                       : 'text-forest/70 hover:text-forest hover:bg-sage/15'
@@ -165,7 +165,7 @@ export function Navbar({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
                     await signOut()
                     navigate('/')
                   }}
-                  className={`w-full text-left px-5 py-2.5 font-[family-name:var(--font-editorial)] italic text-[14px] transition-colors cursor-pointer border-t ${
+                  className={`w-full text-left px-5 py-2.5 font-[family-name:var(--font-body)] text-[14px] transition-colors cursor-pointer border-t ${
                     isDark
                       ? 'border-parchment/8 text-parchment/55 hover:text-parchment hover:bg-parchment/[0.04]'
                       : 'border-forest/10 text-forest/55 hover:text-forest hover:bg-sage/12'
@@ -179,7 +179,7 @@ export function Navbar({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
                 <Link
                   to="/login"
                   onClick={() => setDropdownOpen(false)}
-                  className={`block px-5 py-2.5 font-[family-name:var(--font-editorial)] italic text-[14px] transition-colors border-t ${
+                  className={`block px-5 py-2.5 font-[family-name:var(--font-body)] text-[14px] transition-colors border-t ${
                     isDark
                       ? 'border-parchment/8 text-parchment/55 hover:text-parchment hover:bg-parchment/[0.04]'
                       : 'border-forest/10 text-forest/60 hover:text-forest hover:bg-sage/12'

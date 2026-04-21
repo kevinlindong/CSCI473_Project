@@ -176,7 +176,7 @@ export default function PaperBrowse() {
             ask the library
           </span>
           <span className="h-px flex-1 bg-forest/15" />
-          <span className="font-[family-name:var(--font-editorial)] italic text-[15px] text-forest/55">
+          <span className="font-[family-name:var(--font-body)] text-[15px] text-forest/55">
             what are we looking for today?
           </span>
         </div>
@@ -220,12 +220,12 @@ export default function PaperBrowse() {
         {/* sample queries */}
         {!query.trim() && (
           <div className="mt-5 flex items-center gap-2 flex-wrap">
-            <span className="font-[family-name:var(--font-editorial)] italic text-[14px] text-forest/55 mr-1">try asking —</span>
+            <span className="font-[family-name:var(--font-body)] text-[14px] text-forest/55 mr-1">try asking —</span>
             {SAMPLE_QUERIES.map(q => (
               <button
                 key={q}
                 onClick={() => setQuery(q)}
-                className="px-3.5 py-1.5 rounded-full border border-forest/15 bg-milk hover:bg-sage/15 hover:border-forest/30 transition-colors font-[family-name:var(--font-editorial)] italic text-[13px] text-forest/70 hover:text-forest"
+                className="px-3.5 py-1.5 rounded-full border border-forest/15 bg-milk hover:bg-sage/15 hover:border-forest/30 transition-colors font-[family-name:var(--font-body)] text-[13px] text-forest/70 hover:text-forest"
               >
                 {q}
               </button>
@@ -240,7 +240,7 @@ export default function PaperBrowse() {
           </span>
           <button
             onClick={() => setActiveCluster('all')}
-            className={`h-9 px-4 rounded-full font-[family-name:var(--font-editorial)] italic text-[13px] transition-all border ${
+            className={`h-9 px-4 rounded-full font-[family-name:var(--font-body)] text-[13px] transition-all border ${
               activeCluster === 'all'
                 ? 'bg-forest text-parchment border-forest'
                 : 'border-forest/15 text-forest/60 hover:border-forest/35 hover:text-forest bg-milk'
@@ -255,7 +255,7 @@ export default function PaperBrowse() {
               <button
                 key={c.id}
                 onClick={() => setActiveCluster(active ? 'all' : c.id)}
-                className={`h-9 pl-3 pr-3.5 rounded-full flex items-center gap-2 font-[family-name:var(--font-editorial)] italic text-[13px] transition-all border ${
+                className={`h-9 pl-3 pr-3.5 rounded-full flex items-center gap-2 font-[family-name:var(--font-body)] text-[13px] transition-all border ${
                   active
                     ? 'bg-milk border-forest/35 text-forest'
                     : 'text-forest/65 hover:text-forest bg-milk border-forest/15 hover:border-forest/35'
@@ -279,7 +279,7 @@ export default function PaperBrowse() {
           <div className="relative bg-milk border border-forest/15 rounded-3xl p-8 shadow-[0_18px_36px_-22px_rgba(38,70,53,0.18)] overflow-hidden">
             <div className="h-[2px] bg-gradient-to-r from-sage-deep via-sage to-transparent opacity-70 absolute top-0 left-0 right-0" />
             <div className="flex items-start gap-7">
-              <div className="shrink-0 w-12 h-12 rounded-full bg-sage/25 ring-1 ring-sage-deep/35 flex items-center justify-center font-[family-name:var(--font-editorial)] italic text-[22px] text-forest">
+              <div className="shrink-0 w-12 h-12 rounded-full bg-sage/25 ring-1 ring-sage-deep/35 flex items-center justify-center font-[family-name:var(--font-display)] text-[22px] text-forest">
                 A
               </div>
               <div className="flex-1">
@@ -287,7 +287,7 @@ export default function PaperBrowse() {
                   <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/50">
                     synthesised response
                   </span>
-                  <span className="font-[family-name:var(--font-editorial)] italic text-[14px] text-forest/55">
+                  <span className="font-[family-name:var(--font-body)] text-[14px] text-forest/55">
                     — assembled from top {topResults.slice(0, 4).length} passages
                   </span>
                 </div>
@@ -299,7 +299,7 @@ export default function PaperBrowse() {
                   </div>
                 ) : answer && (
                   <>
-                    <p className="font-[family-name:var(--font-editorial)] text-[16px] leading-[1.85] text-forest/90 mt-2">
+                    <p className="font-[family-name:var(--font-body)] text-[16px] leading-[1.85] text-forest/90 mt-2">
                       {renderAnswerWithCitations(answer.text)}
                     </p>
                     <div className="mt-5 pt-4 border-t border-forest/15 flex flex-wrap gap-2">
@@ -307,9 +307,9 @@ export default function PaperBrowse() {
                         <button
                           key={s.paper.id}
                           onClick={() => setSelectedPaper(s.paper)}
-                          className="inline-flex items-center gap-2 bg-parchment/40 border border-forest/15 rounded-full px-3.5 py-1.5 font-[family-name:var(--font-editorial)] italic text-[12.5px] text-forest hover:bg-sage/15 hover:border-forest/30 transition-colors"
+                          className="inline-flex items-center gap-2 bg-parchment/40 border border-forest/15 rounded-full px-3.5 py-1.5 font-[family-name:var(--font-body)] text-[12.5px] text-forest hover:bg-sage/15 hover:border-forest/30 transition-colors"
                         >
-                          <span className="font-[family-name:var(--font-mono)] not-italic text-[10px] text-forest/70 bg-milk border border-forest/20 rounded-full px-1.5 py-[1px]">{i + 1}</span>
+                          <span className="font-[family-name:var(--font-mono)] text-[10px] text-forest/70 bg-milk border border-forest/20 rounded-full px-1.5 py-[1px]">{i + 1}</span>
                           <span>{s.paper.authors[0]?.replace(/\..*$/, '')} et al.</span>
                           <span className="opacity-55">{s.paper.year}</span>
                         </button>
@@ -333,13 +333,13 @@ export default function PaperBrowse() {
                 <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/50 mb-1">
                   figure I · topography
                 </div>
-                <h3 className="font-[family-name:var(--font-editorial)] italic text-[32px] text-forest leading-none">
+                <h3 className="font-[family-name:var(--font-display)] text-[32px] text-forest leading-none">
                   the field, mapped.
                 </h3>
               </div>
               <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.28em] uppercase text-forest/50">PCA · 2-D</span>
             </div>
-            <p className="font-[family-name:var(--font-editorial)] text-[14px] text-forest/65 leading-[1.7] mb-5 max-w-[44ch]">
+            <p className="font-[family-name:var(--font-body)] text-[14px] text-forest/65 leading-[1.7] mb-5 max-w-[44ch]">
               Each marker is a paper — colour identifies its constellation. Your query
               settles softly onto a sage halo as you type.
             </p>
@@ -363,10 +363,10 @@ export default function PaperBrowse() {
                   <button
                     key={c.id}
                     onClick={() => setActiveCluster(activeCluster === c.id ? 'all' : c.id)}
-                    className="flex items-center gap-2.5 font-[family-name:var(--font-editorial)] text-[13px] text-forest/70 hover:text-forest transition-colors text-left"
+                    className="flex items-center gap-2.5 font-[family-name:var(--font-body)] text-[13px] text-forest/70 hover:text-forest transition-colors text-left"
                   >
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.color }} />
-                    <span className="italic">{c.name}</span>
+                    <span>{c.name}</span>
                   </button>
                 ))}
               </div>
@@ -381,7 +381,7 @@ export default function PaperBrowse() {
               <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/50 mb-1">
                 plate II · catalogue
               </div>
-              <h3 className="font-[family-name:var(--font-editorial)] italic text-[32px] text-forest leading-none">
+              <h3 className="font-[family-name:var(--font-display)] text-[32px] text-forest leading-none">
                 {debouncedQuery.trim() ? 'nearest neighbours.' : 'the catalogue.'}
               </h3>
             </div>
@@ -389,7 +389,7 @@ export default function PaperBrowse() {
               <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.24em] uppercase text-forest/50 tabular-nums">
                 {filtered.length} / {PAPERS.length}
               </div>
-              <div className="font-[family-name:var(--font-editorial)] italic text-[14px] text-forest/55 mt-1">
+              <div className="font-[family-name:var(--font-body)] text-[14px] text-forest/55 mt-1">
                 click any to open ↓
               </div>
             </div>
@@ -397,10 +397,10 @@ export default function PaperBrowse() {
 
           {filtered.length === 0 ? (
             <div className="bg-milk border border-forest/15 border-dashed rounded-2xl py-16 px-8 text-center">
-              <div className="font-[family-name:var(--font-editorial)] italic text-[26px] text-forest/55 mb-2">
+              <div className="font-[family-name:var(--font-display)] text-[26px] text-forest/55 mb-2">
                 nothing in the stacks matched that.
               </div>
-              <div className="font-[family-name:var(--font-editorial)] italic text-[13.5px] text-forest/50">
+              <div className="font-[family-name:var(--font-body)] text-[13.5px] text-forest/50">
                 try a broader query, or clear the active topic filter.
               </div>
             </div>
@@ -454,18 +454,18 @@ function Masthead() {
             volume I · no. 04
           </span>
           <div className="flex-1 h-px bg-forest/15" />
-          <span className="font-[family-name:var(--font-editorial)] italic text-[16px] text-forest/55">anno MMXXVI</span>
+          <span className="font-[family-name:var(--font-display)] text-[16px] text-forest/55">anno MMXXVI</span>
         </div>
 
-        <h1 className="font-[family-name:var(--font-editorial)] text-forest leading-[0.94] font-light">
-          <span className="block text-[72px] md:text-[112px] italic">the corpus<span className="text-sage-deep">.</span></span>
-          <span className="block text-[20px] md:text-[26px] italic text-forest/60 mt-3 max-w-[60ch]">
+        <h1 className="font-[family-name:var(--font-display)] text-forest leading-[0.94] font-light">
+          <span className="block text-[72px] md:text-[112px]">the corpus<span className="text-sage-deep">.</span></span>
+          <span className="block text-[20px] md:text-[26px] text-forest/60 mt-3 max-w-[60ch]">
             — a topographical index of current literature, settled into a quiet shelf.
           </span>
         </h1>
 
         <div className="mt-9 flex items-baseline gap-6 flex-wrap">
-          <p className="font-[family-name:var(--font-editorial)] text-[15px] leading-[1.8] text-forest/75 max-w-[58ch]">
+          <p className="font-[family-name:var(--font-body)] text-[15px] leading-[1.8] text-forest/75 max-w-[58ch]">
             Pose a question in natural language. We search{' '}
             <span className="text-forest font-medium">{PAPERS.length.toLocaleString()}</span> curated arXiv preprints
             across <span className="text-forest font-medium">{CLUSTERS.length}</span> topic constellations and return
@@ -474,7 +474,7 @@ function Masthead() {
           <div className="ml-auto shrink-0">
             <Link
               to="/editor/scratch"
-              className="inline-flex items-center gap-2 h-11 px-5 rounded-full bg-forest text-parchment hover:bg-forest-ink transition-colors font-[family-name:var(--font-editorial)] italic text-[14px]"
+              className="inline-flex items-center gap-2 h-11 px-5 rounded-full bg-forest text-parchment hover:bg-forest-ink transition-colors font-[family-name:var(--font-body)] text-[14px]"
             >
               begin a manuscript
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
@@ -583,13 +583,13 @@ function ScatterMap({
           />
         ))}
 
-        {/* Cluster labels at centers — Fraunces italic, lowercase */}
+        {/* Cluster labels at centers — Gamja Flower, lowercase */}
         {centers.map(c => {
           const cl = CLUSTERS[c.id]
           const dim = activeCluster !== 'all' && activeCluster !== c.id
           return (
             <g key={`c-${c.id}`} opacity={dim ? 0.2 : 0.85} style={{ transition: 'opacity 200ms' }}>
-              <text x={px(c.x)} y={py(c.y) - 14} textAnchor="middle" fontFamily="Fraunces" fontStyle="italic" fontSize="11.5" fill={cl.color}>
+              <text x={px(c.x)} y={py(c.y) - 14} textAnchor="middle" fontFamily="Gamja Flower" fontSize="11.5" fill={cl.color}>
                 {cl.name.toLowerCase()}
               </text>
             </g>
@@ -629,7 +629,7 @@ function ScatterMap({
               <animate attributeName="opacity" values="0.28;0.08;0.28" dur="2.6s" repeatCount="indefinite" />
             </circle>
             <circle cx={px(queryPoint.x)} cy={py(queryPoint.y)} r="5" fill="#7F9267" />
-            <text x={px(queryPoint.x)} y={py(queryPoint.y) - 12} textAnchor="middle" fontFamily="Fraunces" fontStyle="italic" fontSize="13" fill="#264635">your query</text>
+            <text x={px(queryPoint.x)} y={py(queryPoint.y) - 12} textAnchor="middle" fontFamily="Gamja Flower" fontSize="13" fill="#264635">your query</text>
           </g>
         )}
 
@@ -643,7 +643,7 @@ function ScatterMap({
           return (
             <g pointerEvents="none">
               <rect x={right ? cx + 8 : cx - 220} y={cy - 28} width={212} height={42} rx="10" ry="10" fill="#264635" opacity="0.94" />
-              <text x={tx} y={cy - 12} fontFamily="Fraunces" fontStyle="italic" fontSize="12" fill="#E9E4D4" textAnchor={anchor}>
+              <text x={tx} y={cy - 12} fontFamily="Gamja Flower" fontSize="12" fill="#E9E4D4" textAnchor={anchor}>
                 {hoveredPaper.title.slice(0, 32)}{hoveredPaper.title.length > 32 ? '…' : ''}
               </text>
               <text x={tx} y={cy + 4} fontFamily="JetBrains Mono" fontSize="9" fill="#A3B18A" textAnchor={anchor}>
@@ -691,7 +691,7 @@ function CatalogueCard({
       />
 
       {/* corner rank — soft round badge */}
-      <div className="absolute -left-3 -top-3 w-7 h-7 rounded-full bg-cream border border-forest/15 flex items-center justify-center font-[family-name:var(--font-editorial)] italic text-[12px] text-forest/70 tabular-nums">
+      <div className="absolute -left-3 -top-3 w-7 h-7 rounded-full bg-cream border border-forest/15 flex items-center justify-center font-[family-name:var(--font-body)] text-[12px] text-forest/70 tabular-nums">
         {rank}
       </div>
 
@@ -700,7 +700,7 @@ function CatalogueCard({
         <span className="text-forest/20">·</span>
         <span className="font-[family-name:var(--font-mono)] text-[10px] text-forest/50 uppercase tracking-wider">{paper.venue} {paper.year}</span>
         <span className="text-forest/20">·</span>
-        <span className="flex items-center gap-1.5 font-[family-name:var(--font-editorial)] italic text-[12.5px]" style={{ color: cluster.color }}>
+        <span className="flex items-center gap-1.5 font-[family-name:var(--font-body)] text-[12.5px]" style={{ color: cluster.color }}>
           <span className="w-1.5 h-1.5 rounded-full" style={{ background: cluster.color }} />
           {cluster.name}
         </span>
@@ -713,7 +713,7 @@ function CatalogueCard({
         )}
       </div>
 
-      <h4 className="font-[family-name:var(--font-editorial)] text-[22px] text-forest leading-[1.22] mb-1.5 tracking-[-0.005em]">
+      <h4 className="font-[family-name:var(--font-display)] text-[22px] text-forest leading-[1.22] mb-1.5 tracking-[-0.005em]">
         {hasQuery ? highlightQuery(paper.title, query) : paper.title}
       </h4>
 
@@ -721,7 +721,7 @@ function CatalogueCard({
         {paper.authors.join(' · ')}
       </div>
 
-      <p className="font-[family-name:var(--font-editorial)] text-[14px] text-forest/75 leading-[1.75] line-clamp-3">
+      <p className="font-[family-name:var(--font-body)] text-[14px] text-forest/75 leading-[1.75] line-clamp-3">
         {hasQuery ? highlightQuery(paper.abstract, query) : paper.abstract}
       </p>
 
@@ -737,7 +737,7 @@ function CatalogueCard({
           <span className="w-1.5 h-1.5 rounded-full bg-sage" />
           <span>3 chunks · 2 captions</span>
         </span>
-        <span className="ml-auto font-[family-name:var(--font-editorial)] italic text-[14px] text-forest/65 group-hover:text-forest transition-colors">
+        <span className="ml-auto font-[family-name:var(--font-body)] text-[14px] text-forest/65 group-hover:text-forest transition-colors">
           open it ↗
         </span>
       </div>
@@ -808,7 +808,7 @@ function DetailDrawer({ paper, cluster, onClose }: { paper: Paper; cluster: Clus
             <span className="h-px flex-1 bg-forest/12" />
           </div>
 
-          <h2 className="font-[family-name:var(--font-editorial)] text-[34px] leading-[1.1] text-forest font-light mb-4 tracking-[-0.01em]">
+          <h2 className="font-[family-name:var(--font-display)] text-[34px] leading-[1.1] text-forest font-light mb-4 tracking-[-0.01em]">
             {paper.title}
           </h2>
           <div className="font-[family-name:var(--font-mono)] text-[12px] text-forest/65 mb-2">
@@ -816,7 +816,7 @@ function DetailDrawer({ paper, cluster, onClose }: { paper: Paper; cluster: Clus
           </div>
           <div className="flex items-center gap-2.5 mb-7 flex-wrap">
             <span
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border font-[family-name:var(--font-editorial)] italic text-[12.5px]"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border font-[family-name:var(--font-body)] text-[12.5px]"
               style={{ color: cluster.color, borderColor: `${cluster.color}55` }}
             >
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: cluster.color }} />
@@ -831,7 +831,7 @@ function DetailDrawer({ paper, cluster, onClose }: { paper: Paper; cluster: Clus
           <div className="mb-8 bg-parchment/40 border border-forest/10 rounded-2xl pl-5 pr-5 pt-4 pb-5 relative">
             <span className="absolute left-0 top-4 bottom-4 w-[3px] rounded-r-full bg-sage-deep/55" />
             <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/50 mb-2">abstract</div>
-            <p className="font-[family-name:var(--font-editorial)] text-[14.5px] text-forest/85 leading-[1.85]">
+            <p className="font-[family-name:var(--font-body)] text-[14.5px] text-forest/85 leading-[1.85]">
               {paper.abstract}
             </p>
           </div>
@@ -852,7 +852,7 @@ function DetailDrawer({ paper, cluster, onClose }: { paper: Paper; cluster: Clus
                   <span className="font-[family-name:var(--font-mono)] text-[10px] text-sage-deep tracking-[0.2em] uppercase">§ {c.section}</span>
                   <span className="font-[family-name:var(--font-mono)] text-[10px] text-forest/55 tabular-nums">{c.sim.toFixed(3)}</span>
                 </div>
-                <p className="font-[family-name:var(--font-editorial)] italic text-[13.5px] text-forest/80 leading-snug">"{c.snippet}"</p>
+                <p className="font-[family-name:var(--font-display)] text-[13.5px] text-forest/80 leading-snug">"{c.snippet}"</p>
               </div>
             ))}
           </div>
@@ -881,8 +881,8 @@ function DetailDrawer({ paper, cluster, onClose }: { paper: Paper; cluster: Clus
                   <text x="285" y="20"  fontFamily="JetBrains Mono" fontSize="8" fill="#264635" opacity="0.5" textAnchor="end">throughput</text>
                 </svg>
               </div>
-              <figcaption className="px-5 py-3 border-t border-forest/12 font-[family-name:var(--font-editorial)] italic text-[12.5px] text-forest/70 leading-snug">
-                <span className="not-italic font-[family-name:var(--font-mono)] text-[9.5px] tracking-[0.22em] uppercase mr-2 text-sage-deep">figure 2.</span>
+              <figcaption className="px-5 py-3 border-t border-forest/12 font-[family-name:var(--font-body)] text-[12.5px] text-forest/70 leading-snug">
+                <span className="font-[family-name:var(--font-mono)] text-[9.5px] tracking-[0.22em] uppercase mr-2 text-sage-deep">figure 2.</span>
                 Throughput vs. sequence length, comparing dense attention against the proposed hybrid across 5 scales.
               </figcaption>
             </figure>
@@ -905,14 +905,14 @@ function DetailDrawer({ paper, cluster, onClose }: { paper: Paper; cluster: Clus
           <div className="flex gap-2 flex-wrap">
             <Link
               to="/editor/scratch"
-              className="flex-1 min-w-[180px] inline-flex items-center justify-center gap-2 h-11 rounded-full bg-forest text-parchment hover:bg-forest-ink transition-colors font-[family-name:var(--font-editorial)] italic text-[14px]"
+              className="flex-1 min-w-[180px] inline-flex items-center justify-center gap-2 h-11 rounded-full bg-forest text-parchment hover:bg-forest-ink transition-colors font-[family-name:var(--font-body)] text-[14px]"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
               cite in manuscript
             </Link>
-            <button className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-full bg-milk border border-forest/20 hover:bg-sage/15 hover:border-forest/40 transition-colors font-[family-name:var(--font-editorial)] italic text-[14px] text-forest/75 hover:text-forest">
+            <button className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-full bg-milk border border-forest/20 hover:bg-sage/15 hover:border-forest/40 transition-colors font-[family-name:var(--font-body)] text-[14px] text-forest/75 hover:text-forest">
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
               </svg>

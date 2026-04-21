@@ -765,14 +765,14 @@ export default function Design1() {
           <h4 className="font-mono text-[9px] tracking-[0.3em] uppercase text-forest/30 mb-5">Contents</h4>
           <nav className="flex flex-col gap-1">
             {headings.length === 0 ? (
-              <span className="font-mono text-[10px] text-forest/20 italic">No headings yet</span>
+              <span className="font-mono text-[10px] text-forest/20">No headings yet</span>
             ) : headings.map(h => (
               <button
                 key={h.id}
                 onClick={() => scrollToHeading(h.id)}
                 className={`text-left font-[family-name:var(--font-body)] text-xs transition-all squircle-sm px-2.5 py-1.5 ${h.type !== 'h1' ? 'pl-6' : ''} ${activeHeadingId === h.id ? 'text-forest font-medium bg-forest/[0.04]' : 'text-forest/35 hover:text-forest/60 hover:bg-forest/[0.02]'}`}
               >
-                {h.content || <span className="opacity-40 italic">Untitled</span>}
+                {h.content || <span className="opacity-40">Untitled</span>}
               </button>
             ))}
           </nav>
@@ -787,7 +787,7 @@ export default function Design1() {
                 </div>
               ))}
               {blockStats.every(bt => bt.count === 0) && (
-                <span className="font-mono text-[10px] text-forest/20 italic">No special blocks yet</span>
+                <span className="font-mono text-[10px] text-forest/20">No special blocks yet</span>
               )}
             </div>
           </div>
@@ -859,7 +859,7 @@ export default function Design1() {
                   )}
                 </span>
               )) : (
-                <span className="font-mono text-[10px] text-forest/20 italic">No tags</span>
+                <span className="font-mono text-[10px] text-forest/20">No tags</span>
               )}
             </div>
           </div>
