@@ -4,26 +4,25 @@ import { Navbar } from '../components/Navbar'
 import { KaTeX } from '../components/KaTeX'
 
 /* ==========================================================================
-   Paper Browse — Corpus explorer with topic scatter map, RAG-style answer
-   synthesis, and library-catalog-card results. Seeded with fake ML papers
-   so the UI is fully interactive without a backend.
+   Paper Browse — "the reading room" — minimal zen botanical corpus.
+   A calm cream chrome holds a question bar, a soft topography of the
+   literature (round markers, soft halos), and a quiet catalogue beside it.
    ========================================================================== */
 
 type Cluster = {
   id: number
   name: string
   color: string
-  glyph: string
 }
 
 const CLUSTERS: Cluster[] = [
-  { id: 0, name: 'Efficient Attention',    color: '#8B6E4E', glyph: '∑' },
-  { id: 1, name: 'Retrieval-Augmented LMs', color: '#4A6741', glyph: '⇌' },
-  { id: 2, name: 'Representation Learning', color: '#5C7A6B', glyph: '○' },
-  { id: 3, name: 'Reinforcement Learning',  color: '#D4A843', glyph: '△' },
-  { id: 4, name: 'Diffusion & Generative',  color: '#8B4513', glyph: '≋' },
-  { id: 5, name: 'Interpretability',        color: '#8a9b75', glyph: '◇' },
-  { id: 6, name: 'Graph Neural Networks',   color: '#1a2f26', glyph: '⎔' },
+  { id: 0, name: 'Efficient Attention',    color: '#7F9267' },
+  { id: 1, name: 'Retrieval · RAG',        color: '#2C4B70' },
+  { id: 2, name: 'Representation',         color: '#4A6741' },
+  { id: 3, name: 'Reinforcement',          color: '#E0B13A' },
+  { id: 4, name: 'Diffusion',              color: '#8B6E4E' },
+  { id: 5, name: 'Interpretability',       color: '#A3B18A' },
+  { id: 6, name: 'Graph Neural Nets',      color: '#264635' },
 ]
 
 type Paper = {
@@ -34,8 +33,8 @@ type Paper = {
   venue: string
   cluster: number
   abstract: string
-  x: number  // PCA coord, [-1, 1]
-  y: number  // PCA coord, [-1, 1]
+  x: number
+  y: number
   citations: number
 }
 
@@ -97,13 +96,11 @@ export default function PaperBrowse() {
   const [answer, setAnswer] = useState<{ text: string; citations: number[] } | null>(null)
   const [answering, setAnswering] = useState(false)
 
-  // debounce for nicer vibe
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(query), 240)
     return () => clearTimeout(t)
   }, [query])
 
-  // ── scoring: simple keyword match, stand-in for cosine similarity ────
   const scoredPapers = useMemo(() => {
     const q = debouncedQuery.toLowerCase().trim()
     const toks = q.split(/\s+/).filter(w => w.length > 2)
@@ -115,7 +112,6 @@ export default function PaperBrowse() {
         const n = (haystack.match(new RegExp(t, 'g')) || []).length
         score += Math.min(n, 5) * (haystack.includes(t) ? 1 : 0)
       }
-      // modest cluster boost to simulate embedding space
       const clusterMatch = CLUSTERS[p.cluster].name.toLowerCase().split(' ').some(w => toks.some(t => w.includes(t)))
       if (clusterMatch) score += 3
       return { paper: p, score }
@@ -134,10 +130,8 @@ export default function PaperBrowse() {
   const topResults = filtered.slice(0, 8)
   const maxScore = topResults[0]?.score || 1
 
-  // Query pseudo-position in PCA space (projects the query toward relevant cluster)
   const queryPoint = useMemo(() => {
     if (!debouncedQuery.trim() || topResults.length === 0) return null
-    // average coords of top 3 results → approximate query embedding location
     const top = topResults.slice(0, 3).map(s => s.paper)
     if (top.length === 0) return null
     const x = top.reduce((a, p) => a + p.x, 0) / top.length
@@ -145,7 +139,6 @@ export default function PaperBrowse() {
     return { x, y }
   }, [debouncedQuery, topResults])
 
-  // ── "synthesise answer" — fake RAG pipeline for demo ───────────────
   const handleSynthesize = () => {
     if (!debouncedQuery.trim() || topResults.length === 0) return
     setAnswering(true)
@@ -156,14 +149,12 @@ export default function PaperBrowse() {
       return sentence + ` [${i + 1}]`
     })
     const text = snippets.join('. ') + '.'
-    // simulate streaming
     setTimeout(() => {
       setAnswer({ text, citations: cited })
       setAnswering(false)
     }, 820)
   }
 
-  // ── sample queries to seed discovery ────────────────────────────────
   const SAMPLE_QUERIES = [
     'efficient attention long context',
     'retrieval augmented language models',
@@ -176,91 +167,65 @@ export default function PaperBrowse() {
       <Navbar variant="light" />
 
       {/* ── Masthead ─────────────────────────────────────────────── */}
-      <header className="relative border-b border-forest/10 overflow-hidden">
-        <div className="absolute inset-0 paper-texture opacity-70" />
-        {/* Classical frame */}
-        <svg className="absolute inset-0 w-full h-full pointer-events-none opacity-30" preserveAspectRatio="none">
-          <pattern id="ms-rule" width="10" height="1" patternUnits="userSpaceOnUse">
-            <rect width="10" height="1" fill="#8B6E4E" opacity="0.2" />
-          </pattern>
-        </svg>
-        <div className="relative max-w-6xl mx-auto px-8 pt-14 pb-10">
-          <div className="flex items-baseline gap-4 mb-3">
-            <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.4em] uppercase text-sienna">Volume&nbsp;I · No.&nbsp;4</span>
-            <div className="flex-1 h-px bg-sienna/30" />
-            <span className="font-[family-name:var(--font-serif)] italic text-[12px] text-forest/60">anno 2026</span>
-          </div>
-          <h1 className="font-[family-name:var(--font-editorial)] text-[64px] leading-[0.95] text-forest font-semibold tracking-tight">
-            The <em className="text-sienna/90 font-[family-name:var(--font-editorial)] italic">Corpus</em>
-            <span className="block text-[36px] font-normal italic text-forest/60 mt-1">— a topographical index of current literature</span>
-          </h1>
-          <div className="flex items-baseline gap-6 mt-6">
-            <span className="font-[family-name:var(--font-serif)] italic text-[15px] text-forest/65 max-w-xl leading-snug">
-              Pose a question in natural language. We search {PAPERS.length.toLocaleString()} curated arXiv preprints
-              across {CLUSTERS.length} topic constellations and return synthesised answers with citations, passages,
-              and the figures that ground them.
-            </span>
-            <div className="ml-auto flex items-center gap-3 shrink-0">
-              <Link
-                to="/editor/scratch"
-                className="group flex items-center gap-2 px-4 py-2 border border-forest/20 hover:border-forest/50 squircle-sm font-[family-name:var(--font-body)] text-[11px] tracking-[0.22em] uppercase text-forest/60 hover:text-forest transition-colors"
-              >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 013.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                Begin manuscript
-              </Link>
-            </div>
-          </div>
+      <Masthead />
+
+      {/* ── Search ────────────────────────────────────────────────── */}
+      <section className="max-w-6xl mx-auto px-8 pt-10">
+        <div className="flex items-baseline gap-3 mb-4">
+          <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/50">
+            ask the library
+          </span>
+          <span className="h-px flex-1 bg-forest/15" />
+          <span className="font-[family-name:var(--font-editorial)] italic text-[15px] text-forest/55">
+            what are we looking for today?
+          </span>
         </div>
 
-        {/* decorative rule */}
-        <div className="max-w-6xl mx-auto px-8 pb-4">
-          <svg className="w-full h-3" preserveAspectRatio="none" viewBox="0 0 800 12">
-            <path d="M0 6 Q 200 -4, 400 6 T 800 6" stroke="#8B6E4E" strokeWidth="0.8" opacity="0.4" fill="none" />
-            <circle cx="400" cy="6" r="2.4" fill="#8B6E4E" opacity="0.6" />
-          </svg>
-        </div>
-      </header>
-
-      {/* ── Search bar + cluster filter ───────────────────────────── */}
-      <section className="max-w-6xl mx-auto px-8 py-8">
-        <div className="flex items-stretch gap-3">
-          <div className="flex-1 relative">
-            <div className="absolute left-5 top-1/2 -translate-y-1/2 font-[family-name:var(--font-editorial)] italic text-sienna text-[20px] select-none pointer-events-none">Q.</div>
-            <input
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSynthesize()}
-              placeholder="What methods have been proposed for efficient attention in long-context transformers?"
-              className="w-full h-14 pl-12 pr-5 bg-cream border border-forest/20 squircle-sm font-[family-name:var(--font-serif)] text-[17px] text-forest placeholder-forest/35 italic focus:outline-none focus:border-sienna/60 focus:bg-[#FBF7EA] transition-colors"
-            />
+        <div className="flex items-stretch gap-0 bg-milk border border-forest/15 rounded-3xl shadow-[0_18px_36px_-22px_rgba(38,70,53,0.22)] overflow-hidden">
+          <div className="flex items-center justify-center w-14 shrink-0 text-forest/55">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+              <circle cx="11" cy="11" r="7" />
+              <path strokeLinecap="round" d="M21 21l-4.5-4.5" />
+            </svg>
           </div>
+          <input
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleSynthesize()}
+            placeholder="What methods have been proposed for efficient attention in long-context transformers?"
+            className="flex-1 h-14 px-2 bg-transparent font-[family-name:var(--font-body)] text-[15px] text-forest placeholder-forest/35 focus:outline-none"
+          />
           <button
             onClick={handleSynthesize}
             disabled={!debouncedQuery.trim() || answering}
-            className={`h-14 px-8 squircle-sm font-[family-name:var(--font-body)] text-[12px] tracking-[0.3em] uppercase transition-all flex items-center gap-2 shrink-0 ${
+            className={`h-14 px-6 my-1 mr-1 rounded-full font-[family-name:var(--font-body)] text-[12px] tracking-[0.16em] transition-all flex items-center gap-2 shrink-0 ${
               debouncedQuery.trim() && !answering
-                ? 'bg-forest text-parchment hover:bg-forest-deep'
-                : 'bg-forest/15 text-forest/40 cursor-not-allowed'
+                ? 'bg-forest text-parchment hover:bg-forest-ink'
+                : 'bg-forest/10 text-forest/35 cursor-not-allowed'
             }`}
           >
             {answering ? (
-              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 3v3m0 12v3m9-9h-3M6 12H3m15.364-6.364l-2.121 2.121M8.757 15.243l-2.121 2.121m0-12.728l2.121 2.121M15.243 15.243l2.121 2.121" /></svg>
+              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v3m0 12v3m9-9h-3M6 12H3" />
+              </svg>
             ) : (
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
             )}
-            <span>Synthesize</span>
+            <span>synthesise</span>
           </button>
         </div>
 
         {/* sample queries */}
         {!query.trim() && (
-          <div className="mt-4 flex items-baseline gap-3 flex-wrap">
-            <span className="font-[family-name:var(--font-serif)] italic text-[12px] text-forest/45">try —</span>
+          <div className="mt-5 flex items-center gap-2 flex-wrap">
+            <span className="font-[family-name:var(--font-editorial)] italic text-[14px] text-forest/55 mr-1">try asking —</span>
             {SAMPLE_QUERIES.map(q => (
               <button
                 key={q}
                 onClick={() => setQuery(q)}
-                className="font-[family-name:var(--font-serif)] italic text-[13px] text-sienna/80 hover:text-sienna border-b border-dotted border-sienna/40 hover:border-sienna"
+                className="px-3.5 py-1.5 rounded-full border border-forest/15 bg-milk hover:bg-sage/15 hover:border-forest/30 transition-colors font-[family-name:var(--font-editorial)] italic text-[13px] text-forest/70 hover:text-forest"
               >
                 {q}
               </button>
@@ -269,14 +234,19 @@ export default function PaperBrowse() {
         )}
 
         {/* Cluster filter chips */}
-        <div className="mt-6 flex flex-wrap gap-2 items-center">
+        <div className="mt-8 flex flex-wrap gap-2 items-center">
+          <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/50 mr-2">
+            topics
+          </span>
           <button
             onClick={() => setActiveCluster('all')}
-            className={`h-8 px-3 squircle-sm font-[family-name:var(--font-mono)] text-[10px] tracking-[0.2em] uppercase transition-colors ${
-              activeCluster === 'all' ? 'bg-forest text-parchment' : 'border border-forest/15 text-forest/50 hover:text-forest hover:border-forest/35'
+            className={`h-9 px-4 rounded-full font-[family-name:var(--font-editorial)] italic text-[13px] transition-all border ${
+              activeCluster === 'all'
+                ? 'bg-forest text-parchment border-forest'
+                : 'border-forest/15 text-forest/60 hover:border-forest/35 hover:text-forest bg-milk'
             }`}
           >
-            All · {PAPERS.length}
+            all · <span className="tabular-nums">{PAPERS.length}</span>
           </button>
           {CLUSTERS.map(c => {
             const n = PAPERS.filter(p => p.cluster === c.id).length
@@ -285,81 +255,97 @@ export default function PaperBrowse() {
               <button
                 key={c.id}
                 onClick={() => setActiveCluster(active ? 'all' : c.id)}
-                className={`h-8 pl-2 pr-3 flex items-center gap-2 squircle-sm font-[family-name:var(--font-body)] text-[11px] transition-all border ${
-                  active ? 'border-transparent shadow-sm' : 'border-forest/10 hover:border-forest/25'
+                className={`h-9 pl-3 pr-3.5 rounded-full flex items-center gap-2 font-[family-name:var(--font-editorial)] italic text-[13px] transition-all border ${
+                  active
+                    ? 'bg-milk border-forest/35 text-forest'
+                    : 'text-forest/65 hover:text-forest bg-milk border-forest/15 hover:border-forest/35'
                 }`}
-                style={{
-                  backgroundColor: active ? c.color + '22' : 'transparent',
-                  color: active ? c.color : 'rgba(26,47,38,0.6)',
-                }}
               >
-                <span className="w-5 h-5 flex items-center justify-center rounded-full text-[11px]" style={{ backgroundColor: c.color + '30', color: c.color }}>{c.glyph}</span>
+                <span
+                  className="w-2 h-2 rounded-full shrink-0"
+                  style={{ background: c.color, opacity: active ? 1 : 0.7 }}
+                />
                 <span>{c.name}</span>
-                <span className="font-[family-name:var(--font-mono)] text-[9px] text-forest/35">{n}</span>
+                <span className="font-[family-name:var(--font-mono)] text-[9px] opacity-55 tabular-nums">· {n}</span>
               </button>
             )
           })}
         </div>
       </section>
 
-      {/* ── Synthesised answer panel (appears after Synthesize) ──── */}
+      {/* ── Synthesised answer ──────────────────────────────────── */}
       {(answer || answering) && (
-        <section className="max-w-6xl mx-auto px-8 pb-6 animate-fade-up">
-          <div className="relative bg-[#FBF7EA] border border-forest/15 squircle-xl p-8 paper-grain overflow-hidden">
-            {/* Ornament */}
-            <div className="absolute top-5 right-6 flex items-center gap-2 font-[family-name:var(--font-mono)] text-[9px] tracking-[0.3em] uppercase text-forest/40">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1 L8.4 5.3 L13 5.7 L9.5 8.6 L10.7 13 L7 10.7 L3.3 13 L4.5 8.6 L1 5.7 L5.6 5.3 Z" fill="#8B6E4E" opacity="0.7" /></svg>
-              Synthesised response
-            </div>
-            <div className="flex items-baseline gap-3 mb-4">
-              <span className="font-[family-name:var(--font-editorial)] italic text-[32px] text-sienna leading-none">A.</span>
-              <span className="font-[family-name:var(--font-serif)] italic text-[13px] text-forest/50">assembled from top {topResults.slice(0, 4).length} passages</span>
-            </div>
-            {answering ? (
-              <div className="space-y-2 animate-pulse">
-                <div className="h-4 bg-forest/10 rounded w-11/12" />
-                <div className="h-4 bg-forest/10 rounded w-10/12" />
-                <div className="h-4 bg-forest/10 rounded w-9/12" />
+        <section className="max-w-6xl mx-auto px-8 pt-8 animate-fade-up">
+          <div className="relative bg-milk border border-forest/15 rounded-3xl p-8 shadow-[0_18px_36px_-22px_rgba(38,70,53,0.18)] overflow-hidden">
+            <div className="h-[2px] bg-gradient-to-r from-sage-deep via-sage to-transparent opacity-70 absolute top-0 left-0 right-0" />
+            <div className="flex items-start gap-7">
+              <div className="shrink-0 w-12 h-12 rounded-full bg-sage/25 ring-1 ring-sage-deep/35 flex items-center justify-center font-[family-name:var(--font-editorial)] italic text-[22px] text-forest">
+                A
               </div>
-            ) : answer && (
-              <>
-                <p className="font-[family-name:var(--font-serif)] text-[16px] leading-[1.8] text-forest/85">
-                  {renderAnswerWithCitations(answer.text)}
-                </p>
-                <div className="mt-6 pt-4 border-t border-forest/10 flex flex-wrap gap-3">
-                  {topResults.slice(0, 4).map((s, i) => (
-                    <button
-                      key={s.paper.id}
-                      onClick={() => setSelectedPaper(s.paper)}
-                      className="inline-flex items-baseline gap-2 font-[family-name:var(--font-serif)] text-[12px] text-forest/70 hover:text-forest border-b border-dotted border-forest/30 hover:border-forest"
-                    >
-                      <span className="font-[family-name:var(--font-mono)] text-[10px] text-sienna">[{i + 1}]</span>
-                      <span className="italic">{s.paper.authors[0]?.replace(/\..*$/, '')} et al., {s.paper.year}</span>
-                    </button>
-                  ))}
+              <div className="flex-1">
+                <div className="flex items-baseline gap-3 mb-1.5 flex-wrap">
+                  <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/50">
+                    synthesised response
+                  </span>
+                  <span className="font-[family-name:var(--font-editorial)] italic text-[14px] text-forest/55">
+                    — assembled from top {topResults.slice(0, 4).length} passages
+                  </span>
                 </div>
-              </>
-            )}
+                {answering ? (
+                  <div className="space-y-2 animate-pulse mt-5">
+                    <div className="h-3 rounded-full bg-forest/10 w-11/12" />
+                    <div className="h-3 rounded-full bg-forest/10 w-10/12" />
+                    <div className="h-3 rounded-full bg-forest/10 w-9/12" />
+                  </div>
+                ) : answer && (
+                  <>
+                    <p className="font-[family-name:var(--font-editorial)] text-[16px] leading-[1.85] text-forest/90 mt-2">
+                      {renderAnswerWithCitations(answer.text)}
+                    </p>
+                    <div className="mt-5 pt-4 border-t border-forest/15 flex flex-wrap gap-2">
+                      {topResults.slice(0, 4).map((s, i) => (
+                        <button
+                          key={s.paper.id}
+                          onClick={() => setSelectedPaper(s.paper)}
+                          className="inline-flex items-center gap-2 bg-parchment/40 border border-forest/15 rounded-full px-3.5 py-1.5 font-[family-name:var(--font-editorial)] italic text-[12.5px] text-forest hover:bg-sage/15 hover:border-forest/30 transition-colors"
+                        >
+                          <span className="font-[family-name:var(--font-mono)] not-italic text-[10px] text-forest/70 bg-milk border border-forest/20 rounded-full px-1.5 py-[1px]">{i + 1}</span>
+                          <span>{s.paper.authors[0]?.replace(/\..*$/, '')} et al.</span>
+                          <span className="opacity-55">{s.paper.year}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         </section>
       )}
 
-      {/* ── Two-column: scatter map + results ────────────────────── */}
-      <section className="max-w-6xl mx-auto px-8 pb-16 grid grid-cols-12 gap-6">
-        {/* ── SCATTER MAP ─────────────────────────────────────── */}
-        <div className="col-span-12 lg:col-span-5">
-          <div className="sticky top-20">
-            <div className="flex items-baseline justify-between mb-3">
-              <h3 className="font-[family-name:var(--font-editorial)] italic text-[20px] text-forest">Topography</h3>
-              <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.25em] uppercase text-forest/40">PCA · 2-D</span>
+      {/* ── Two-column: topography + catalogue ────────────────── */}
+      <section className="max-w-6xl mx-auto px-8 py-14 grid grid-cols-12 gap-8">
+        {/* Topography */}
+        <aside className="col-span-12 lg:col-span-5">
+          <div className="sticky top-24">
+            <div className="flex items-baseline justify-between mb-4">
+              <div>
+                <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/50 mb-1">
+                  figure I · topography
+                </div>
+                <h3 className="font-[family-name:var(--font-editorial)] italic text-[32px] text-forest leading-none">
+                  the field, mapped.
+                </h3>
+              </div>
+              <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.28em] uppercase text-forest/50">PCA · 2-D</span>
             </div>
-            <div className="font-[family-name:var(--font-serif)] italic text-[12px] text-forest/55 mb-3">
-              Each point: one paper. Hue: k-means cluster. Your query projects onto the shaded circle.
-            </div>
+            <p className="font-[family-name:var(--font-editorial)] text-[14px] text-forest/65 leading-[1.7] mb-5 max-w-[44ch]">
+              Each marker is a paper — colour identifies its constellation. Your query
+              settles softly onto a sage halo as you type.
+            </p>
 
             <ScatterMap
               papers={PAPERS}
-              clusters={CLUSTERS}
               activeCluster={activeCluster}
               queryPoint={queryPoint}
               hoveredPaper={hoveredPaper}
@@ -369,37 +355,54 @@ export default function PaperBrowse() {
               topResultIds={new Set(topResults.map(r => r.paper.id))}
             />
 
-            {/* legend strip */}
-            <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5">
-              {CLUSTERS.map(c => (
-                <button
-                  key={c.id}
-                  onClick={() => setActiveCluster(activeCluster === c.id ? 'all' : c.id)}
-                  className="flex items-center gap-1.5 font-[family-name:var(--font-mono)] text-[9px] text-forest/50 hover:text-forest transition-colors"
-                >
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: c.color }} />
-                  <span>{c.name}</span>
-                </button>
-              ))}
+            {/* legend */}
+            <div className="mt-5 border border-forest/15 rounded-2xl p-5 bg-milk">
+              <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/50 mb-3">legend</div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2.5">
+                {CLUSTERS.map(c => (
+                  <button
+                    key={c.id}
+                    onClick={() => setActiveCluster(activeCluster === c.id ? 'all' : c.id)}
+                    className="flex items-center gap-2.5 font-[family-name:var(--font-editorial)] text-[13px] text-forest/70 hover:text-forest transition-colors text-left"
+                  >
+                    <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.color }} />
+                    <span className="italic">{c.name}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        </div>
+        </aside>
 
-        {/* ── RESULTS ────────────────────────────────────────── */}
+        {/* Catalogue */}
         <div className="col-span-12 lg:col-span-7">
-          <div className="flex items-baseline justify-between mb-4">
-            <h3 className="font-[family-name:var(--font-editorial)] italic text-[20px] text-forest">
-              {debouncedQuery.trim() ? 'Nearest neighbours' : 'Catalogue'}
-            </h3>
-            <span className="font-[family-name:var(--font-mono)] text-[10px] text-forest/45 tabular-nums">
-              {filtered.length} of {PAPERS.length}
-            </span>
+          <div className="flex items-baseline justify-between mb-5">
+            <div>
+              <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/50 mb-1">
+                plate II · catalogue
+              </div>
+              <h3 className="font-[family-name:var(--font-editorial)] italic text-[32px] text-forest leading-none">
+                {debouncedQuery.trim() ? 'nearest neighbours.' : 'the catalogue.'}
+              </h3>
+            </div>
+            <div className="text-right">
+              <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.24em] uppercase text-forest/50 tabular-nums">
+                {filtered.length} / {PAPERS.length}
+              </div>
+              <div className="font-[family-name:var(--font-editorial)] italic text-[14px] text-forest/55 mt-1">
+                click any to open ↓
+              </div>
+            </div>
           </div>
 
           {filtered.length === 0 ? (
-            <div className="bg-parchment/60 border border-dashed border-forest/20 squircle-xl py-16 px-8 text-center">
-              <div className="font-[family-name:var(--font-editorial)] italic text-[20px] text-forest/55 mb-2">No matches in the corpus.</div>
-              <div className="font-[family-name:var(--font-serif)] text-[13px] text-forest/40">Try a broader query, or remove the active topic filter.</div>
+            <div className="bg-milk border border-forest/15 border-dashed rounded-2xl py-16 px-8 text-center">
+              <div className="font-[family-name:var(--font-editorial)] italic text-[26px] text-forest/55 mb-2">
+                nothing in the stacks matched that.
+              </div>
+              <div className="font-[family-name:var(--font-editorial)] italic text-[13.5px] text-forest/50">
+                try a broader query, or clear the active topic filter.
+              </div>
             </div>
           ) : (
             <ol className="space-y-4">
@@ -422,7 +425,6 @@ export default function PaperBrowse() {
         </div>
       </section>
 
-      {/* ── Detail drawer for selected paper ──────────────────────── */}
       {selectedPaper && (
         <DetailDrawer
           paper={selectedPaper}
@@ -434,6 +436,58 @@ export default function PaperBrowse() {
   )
 }
 
+// ─── Masthead ───────────────────────────────────────────────────────────────
+
+function Masthead() {
+  return (
+    <header className="relative border-b border-forest/12 overflow-hidden bg-cream">
+      {/* soft botanical halos instead of sharp geometric shapes */}
+      <div className="absolute inset-0 pointer-events-none -z-0">
+        <div className="absolute -top-20 right-[8%] w-[420px] h-[420px] rounded-full bg-sage/20 blur-3xl" />
+        <div className="absolute top-12 right-[42%] w-[260px] h-[260px] rounded-full bg-bau-yellow/10 blur-3xl" />
+        <div className="absolute -bottom-10 left-[8%] w-[300px] h-[300px] rounded-full bg-sage-deep/12 blur-3xl" />
+      </div>
+
+      <div className="relative max-w-6xl mx-auto px-8 pt-16 pb-12">
+        <div className="flex items-baseline gap-4 mb-4">
+          <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/55">
+            volume I · no. 04
+          </span>
+          <div className="flex-1 h-px bg-forest/15" />
+          <span className="font-[family-name:var(--font-editorial)] italic text-[16px] text-forest/55">anno MMXXVI</span>
+        </div>
+
+        <h1 className="font-[family-name:var(--font-editorial)] text-forest leading-[0.94] font-light">
+          <span className="block text-[72px] md:text-[112px] italic">the corpus<span className="text-sage-deep">.</span></span>
+          <span className="block text-[20px] md:text-[26px] italic text-forest/60 mt-3 max-w-[60ch]">
+            — a topographical index of current literature, settled into a quiet shelf.
+          </span>
+        </h1>
+
+        <div className="mt-9 flex items-baseline gap-6 flex-wrap">
+          <p className="font-[family-name:var(--font-editorial)] text-[15px] leading-[1.8] text-forest/75 max-w-[58ch]">
+            Pose a question in natural language. We search{' '}
+            <span className="text-forest font-medium">{PAPERS.length.toLocaleString()}</span> curated arXiv preprints
+            across <span className="text-forest font-medium">{CLUSTERS.length}</span> topic constellations and return
+            synthesised answers — every claim pinned to the passage that taught it.
+          </p>
+          <div className="ml-auto shrink-0">
+            <Link
+              to="/editor/scratch"
+              className="inline-flex items-center gap-2 h-11 px-5 rounded-full bg-forest text-parchment hover:bg-forest-ink transition-colors font-[family-name:var(--font-editorial)] italic text-[14px]"
+            >
+              begin a manuscript
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14m0 0l-6-6m6 6l-6 6" />
+              </svg>
+            </Link>
+          </div>
+        </div>
+      </div>
+    </header>
+  )
+}
+
 // ─── subcomponents ──────────────────────────────────────────────────────────
 
 function renderAnswerWithCitations(text: string) {
@@ -441,18 +495,22 @@ function renderAnswerWithCitations(text: string) {
   return parts.map((p, i) => {
     const m = p.match(/\[(\d+)\]/)
     if (m) return (
-      <sup key={i} className="inline-flex items-baseline font-[family-name:var(--font-mono)] text-[9px] text-rust bg-amber/15 border border-amber/30 rounded px-1 py-[1px] mx-[1px] align-super">{m[1]}</sup>
+      <sup
+        key={i}
+        className="inline-flex items-baseline font-[family-name:var(--font-mono)] text-[10px] text-forest bg-sage/30 border border-sage-deep/40 rounded-full px-1.5 py-[1px] mx-[2px] align-super"
+      >
+        {m[1]}
+      </sup>
     )
     return <span key={i}>{p}</span>
   })
 }
 
 function ScatterMap({
-  papers, clusters, activeCluster, queryPoint, hoveredPaper, selectedPaper,
+  papers, activeCluster, queryPoint, hoveredPaper, selectedPaper,
   onHover, onSelect, topResultIds,
 }: {
   papers: Paper[]
-  clusters: Cluster[]
   activeCluster: number | 'all'
   queryPoint: { x: number; y: number } | null
   hoveredPaper: Paper | null
@@ -461,16 +519,13 @@ function ScatterMap({
   onSelect: (p: Paper) => void
   topResultIds: Set<string>
 }) {
-  void clusters
   const W = 520
   const H = 420
   const pad = 30
 
-  // project -1..1 → svg
   const px = (x: number) => pad + ((x + 1) / 2) * (W - pad * 2)
   const py = (y: number) => pad + ((1 - (y + 1) / 2)) * (H - pad * 2)
 
-  // Radial gradient per cluster center (kmeans mean)
   const centers = useMemo(() => {
     const byC = new Map<number, { x: number; y: number; n: number }>()
     for (const p of papers) {
@@ -486,44 +541,36 @@ function ScatterMap({
   }, [papers])
 
   return (
-    <div className="relative bg-[#FBF7EA] border border-forest/15 squircle-xl overflow-hidden paper-grain">
+    <div className="relative bg-milk border border-forest/15 rounded-2xl overflow-hidden shadow-[0_14px_30px_-18px_rgba(38,70,53,0.2)]">
       <svg width="100%" viewBox={`0 0 ${W} ${H}`} className="block">
         <defs>
           {CLUSTERS.map(c => (
             <radialGradient key={c.id} id={`cl-${c.id}`} cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor={c.color} stopOpacity="0.32" />
+              <stop offset="0%" stopColor={c.color} stopOpacity="0.22" />
               <stop offset="70%" stopColor={c.color} stopOpacity="0.04" />
               <stop offset="100%" stopColor={c.color} stopOpacity="0" />
             </radialGradient>
           ))}
-          <pattern id="grid-dots" width="20" height="20" patternUnits="userSpaceOnUse">
-            <circle cx="1" cy="1" r="0.6" fill="#1a2f26" opacity="0.12" />
-          </pattern>
         </defs>
 
-        {/* dotted grid */}
-        <rect width={W} height={H} fill="url(#grid-dots)" />
+        {/* Axis frames */}
+        <g fill="none" stroke="#264635" strokeWidth="0.5" opacity="0.22">
+          <line x1={pad} y1={H - pad} x2={W - pad} y2={H - pad} />
+          <line x1={pad} y1={pad}     x2={pad}     y2={H - pad} />
+        </g>
 
-        {/* Axis labels — minimal, editorial */}
-        <text x={pad} y={H - 8} fontFamily="JetBrains Mono" fontSize="9" fill="#1a2f26" opacity="0.35">PC₁ →</text>
-        <text x={8} y={H / 2} fontFamily="JetBrains Mono" fontSize="9" fill="#1a2f26" opacity="0.35" transform={`rotate(-90 8 ${H / 2})`}>PC₂ →</text>
+        <text x={W - pad} y={H - 10} textAnchor="end" fontFamily="JetBrains Mono" fontSize="9" fill="#264635" opacity="0.45" letterSpacing="0.2em">PC₁ →</text>
+        <text x={10} y={pad + 4}                    fontFamily="JetBrains Mono" fontSize="9" fill="#264635" opacity="0.45" letterSpacing="0.2em">↑ PC₂</text>
 
         {/* Cluster auras */}
         {centers.map(c => {
-          const cl = CLUSTERS[c.id]
           const dim = activeCluster !== 'all' && activeCluster !== c.id
           return (
-            <circle
-              key={c.id}
-              cx={px(c.x)} cy={py(c.y)} r={100}
-              fill={`url(#cl-${c.id})`}
-              opacity={dim ? 0.15 : 1}
-              style={{ transition: 'opacity 200ms' }}
-            />
+            <circle key={c.id} cx={px(c.x)} cy={py(c.y)} r={100} fill={`url(#cl-${c.id})`} opacity={dim ? 0.15 : 1} style={{ transition: 'opacity 200ms' }} />
           )
         })}
 
-        {/* Threads from query point to top 3 results */}
+        {/* Soft threads from query to top 3 */}
         {queryPoint && papers.slice().sort((a, b) => {
           const qd = (p: Paper) => (p.x - queryPoint.x) ** 2 + (p.y - queryPoint.y) ** 2
           return qd(a) - qd(b)
@@ -532,108 +579,75 @@ function ScatterMap({
             key={`th-${p.id}`}
             x1={px(queryPoint.x)} y1={py(queryPoint.y)}
             x2={px(p.x)} y2={py(p.y)}
-            stroke="#8B6E4E"
-            strokeWidth="0.9"
-            strokeDasharray="2 3"
-            opacity={0.6 - i * 0.12}
-            className="thread-line"
+            stroke="#7F9267" strokeWidth="0.8" strokeDasharray="2 4" opacity={0.55 - i * 0.12}
           />
         ))}
 
-        {/* Cluster centers — faint anchor cross */}
+        {/* Cluster labels at centers — Fraunces italic, lowercase */}
         {centers.map(c => {
           const cl = CLUSTERS[c.id]
           const dim = activeCluster !== 'all' && activeCluster !== c.id
           return (
-            <g key={`c-${c.id}`} opacity={dim ? 0.2 : 0.75} style={{ transition: 'opacity 200ms' }}>
-              <text
-                x={px(c.x)}
-                y={py(c.y) - 16}
-                textAnchor="middle"
-                fontFamily="EB Garamond"
-                fontStyle="italic"
-                fontSize="12"
-                fill={cl.color}
-              >{cl.name}</text>
+            <g key={`c-${c.id}`} opacity={dim ? 0.2 : 0.85} style={{ transition: 'opacity 200ms' }}>
+              <text x={px(c.x)} y={py(c.y) - 14} textAnchor="middle" fontFamily="Fraunces" fontStyle="italic" fontSize="11.5" fill={cl.color}>
+                {cl.name.toLowerCase()}
+              </text>
             </g>
           )
         })}
 
-        {/* Points */}
+        {/* Points — soft round markers */}
         {papers.map(p => {
           const dim = activeCluster !== 'all' && activeCluster !== p.cluster
           const isTop = topResultIds.has(p.id)
           const isHovered = hoveredPaper?.id === p.id
           const isSelected = selectedPaper?.id === p.id
           const cl = CLUSTERS[p.cluster]
-          const r = isSelected ? 6.5 : isHovered ? 5.5 : isTop ? 4.5 : 3
+          const base = isSelected ? 5.5 : isHovered ? 5 : isTop ? 4.5 : 3.2
+          const cx = px(p.x)
+          const cy = py(p.y)
           return (
             <g
               key={p.id}
-              style={{
-                cursor: 'pointer',
-                opacity: dim ? 0.22 : 1,
-                transition: 'opacity 200ms',
-              }}
+              style={{ cursor: 'pointer', opacity: dim ? 0.22 : 1, transition: 'opacity 200ms' }}
               onMouseEnter={() => onHover(p)}
               onMouseLeave={() => onHover(null)}
               onClick={() => onSelect(p)}
             >
-              <circle cx={px(p.x)} cy={py(p.y)} r={r + 4} fill={cl.color} opacity={isHovered || isSelected ? 0.18 : 0} />
-              <circle
-                cx={px(p.x)} cy={py(p.y)} r={r}
-                fill={cl.color}
-                stroke={isSelected ? '#1a2f26' : isTop ? '#FBF7EA' : 'none'}
-                strokeWidth={isSelected ? 1.5 : 1}
-                opacity={isTop ? 1 : 0.78}
-              />
+              {(isHovered || isSelected) && <circle cx={cx} cy={cy} r={base + 5} fill={cl.color} opacity="0.18" />}
+              <circle cx={cx} cy={cy} r={base} fill={cl.color} opacity={isTop ? 0.95 : 0.78} />
+              {isSelected && <circle cx={cx} cy={cy} r={base + 1.5} fill="none" stroke="#FBF9F1" strokeWidth="1" />}
             </g>
           )
         })}
 
-        {/* Query point — pulsing amber */}
+        {/* Query point — sage halo */}
         {queryPoint && (
           <g>
-            <circle cx={px(queryPoint.x)} cy={py(queryPoint.y)} r="18" fill="#D4A843" opacity="0.16">
-              <animate attributeName="r" values="12;22;12" dur="2.4s" repeatCount="indefinite" />
-              <animate attributeName="opacity" values="0.3;0.05;0.3" dur="2.4s" repeatCount="indefinite" />
+            <circle cx={px(queryPoint.x)} cy={py(queryPoint.y)} r="18" fill="#7F9267" opacity="0.18">
+              <animate attributeName="r" values="14;22;14" dur="2.6s" repeatCount="indefinite" />
+              <animate attributeName="opacity" values="0.28;0.08;0.28" dur="2.6s" repeatCount="indefinite" />
             </circle>
-            <circle cx={px(queryPoint.x)} cy={py(queryPoint.y)} r="5" fill="#D4A843" stroke="#8B4513" strokeWidth="1.2" />
-            <text
-              x={px(queryPoint.x)}
-              y={py(queryPoint.y) - 12}
-              textAnchor="middle"
-              fontFamily="EB Garamond"
-              fontStyle="italic"
-              fontSize="11"
-              fill="#8B4513"
-            >your query</text>
+            <circle cx={px(queryPoint.x)} cy={py(queryPoint.y)} r="5" fill="#7F9267" />
+            <text x={px(queryPoint.x)} y={py(queryPoint.y) - 12} textAnchor="middle" fontFamily="Fraunces" fontStyle="italic" fontSize="13" fill="#264635">your query</text>
           </g>
         )}
 
-        {/* Hovered label */}
+        {/* hovered tag */}
         {hoveredPaper && (() => {
           const cx = px(hoveredPaper.x)
           const cy = py(hoveredPaper.y)
-          const right = cx < W - 180
-          const tx = right ? cx + 10 : cx - 10
+          const right = cx < W - 220
           const anchor = right ? 'start' : 'end'
+          const tx = right ? cx + 12 : cx - 12
           return (
             <g pointerEvents="none">
-              <rect
-                x={right ? cx + 8 : cx - 192}
-                y={cy - 24}
-                width={184}
-                height={36}
-                rx={4}
-                fill="#1a2f26"
-                opacity="0.93"
-              />
-              <text x={tx} y={cy - 10} fontFamily="EB Garamond" fontSize="12" fill="#E9E4D4" textAnchor={anchor}>
+              <rect x={right ? cx + 8 : cx - 220} y={cy - 28} width={212} height={42} rx="10" ry="10" fill="#264635" opacity="0.94" />
+              <text x={tx} y={cy - 12} fontFamily="Fraunces" fontStyle="italic" fontSize="12" fill="#E9E4D4" textAnchor={anchor}>
                 {hoveredPaper.title.slice(0, 32)}{hoveredPaper.title.length > 32 ? '…' : ''}
               </text>
-              <text x={tx} y={cy + 4} fontFamily="JetBrains Mono" fontSize="8" fill="#A3B18A" textAnchor={anchor}>
-                {hoveredPaper.id} · {hoveredPaper.year}
+              <text x={tx} y={cy + 4} fontFamily="JetBrains Mono" fontSize="9" fill="#A3B18A" textAnchor={anchor}>
+                {hoveredPaper.id} · {hoveredPaper.year} · {hoveredPaper.citations.toLocaleString()} c.
               </text>
             </g>
           )
@@ -664,69 +678,79 @@ function CatalogueCard({
       onMouseEnter={() => onHover(paper)}
       onMouseLeave={() => onHover(null)}
       onClick={() => onSelect(paper)}
-      className={`relative bg-[#FBF7EA] border squircle-xl px-6 py-5 cursor-pointer transition-all duration-200 hover:shadow-[0_10px_30px_-18px_rgba(26,47,38,0.4)] ${
-        isSelected ? 'border-sienna/50 bg-[#FBF4E0]' : 'border-forest/10 hover:border-forest/25'
+      className={`relative bg-milk border border-forest/15 rounded-2xl pl-7 pr-6 py-5 cursor-pointer transition-all duration-200 group ${
+        isSelected
+          ? 'shadow-[0_18px_36px_-18px_rgba(38,70,53,0.28)] -translate-y-0.5'
+          : 'hover:-translate-y-0.5 hover:shadow-[0_14px_30px_-18px_rgba(38,70,53,0.22)]'
       }`}
     >
-      {/* corner rank */}
-      <div className="absolute -left-3 top-5 bg-forest text-parchment w-7 h-7 rounded-full flex items-center justify-center font-[family-name:var(--font-mono)] text-[10px] font-medium tabular-nums">
+      {/* soft cluster accent stripe on the left */}
+      <span
+        className="absolute left-0 top-4 bottom-4 w-[3px] rounded-r-full"
+        style={{ background: cluster.color, opacity: 0.7 }}
+      />
+
+      {/* corner rank — soft round badge */}
+      <div className="absolute -left-3 -top-3 w-7 h-7 rounded-full bg-cream border border-forest/15 flex items-center justify-center font-[family-name:var(--font-editorial)] italic text-[12px] text-forest/70 tabular-nums">
         {rank}
       </div>
 
       <div className="flex items-baseline gap-3 mb-2 flex-wrap">
-        <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.2em] text-sienna/80">arXiv:{paper.id}</span>
-        <span className="text-forest/15">·</span>
-        <span className="font-[family-name:var(--font-mono)] text-[10px] text-forest/50">{paper.venue} {paper.year}</span>
-        <span className="text-forest/15">·</span>
-        <span className="flex items-center gap-1 font-[family-name:var(--font-mono)] text-[10px] text-forest/45">
-          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cluster.color }} />
+        <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.18em] text-forest/55">arXiv:{paper.id}</span>
+        <span className="text-forest/20">·</span>
+        <span className="font-[family-name:var(--font-mono)] text-[10px] text-forest/50 uppercase tracking-wider">{paper.venue} {paper.year}</span>
+        <span className="text-forest/20">·</span>
+        <span className="flex items-center gap-1.5 font-[family-name:var(--font-editorial)] italic text-[12.5px]" style={{ color: cluster.color }}>
+          <span className="w-1.5 h-1.5 rounded-full" style={{ background: cluster.color }} />
           {cluster.name}
         </span>
         {hasQuery && (
-          <span className="ml-auto flex items-center gap-2 font-[family-name:var(--font-mono)] text-[10px] text-forest/50">
-            <span className="smcp">cos ≈</span>
-            <span className="text-forest/70 font-medium">{similarity.toFixed(3)}</span>
-            <SimilarityBar value={similarity} />
+          <span className="ml-auto flex items-center gap-2 font-[family-name:var(--font-mono)] text-[10px] text-forest/55">
+            <span>cos ≈</span>
+            <span className="text-forest font-medium tabular-nums">{similarity.toFixed(3)}</span>
+            <SimilarityBar value={similarity} color={cluster.color} />
           </span>
         )}
       </div>
 
-      <h4 className="font-[family-name:var(--font-editorial)] text-[20px] text-forest font-semibold leading-[1.2] mb-1.5">
+      <h4 className="font-[family-name:var(--font-editorial)] text-[22px] text-forest leading-[1.22] mb-1.5 tracking-[-0.005em]">
         {hasQuery ? highlightQuery(paper.title, query) : paper.title}
       </h4>
 
-      <div className="font-[family-name:var(--font-serif)] italic text-[13px] text-forest/60 mb-3">
+      <div className="font-[family-name:var(--font-mono)] text-[11px] text-forest/55 mb-3 tracking-tight">
         {paper.authors.join(' · ')}
       </div>
 
-      <p className="font-[family-name:var(--font-serif)] text-[13.5px] text-forest/75 leading-[1.65] line-clamp-3">
+      <p className="font-[family-name:var(--font-editorial)] text-[14px] text-forest/75 leading-[1.75] line-clamp-3">
         {hasQuery ? highlightQuery(paper.abstract, query) : paper.abstract}
       </p>
 
-      <div className="mt-3 pt-3 border-t border-forest/[0.08] flex items-center gap-4 font-[family-name:var(--font-mono)] text-[10px] text-forest/40">
+      <div className="mt-4 pt-3 border-t border-forest/12 flex items-center gap-5 font-[family-name:var(--font-mono)] text-[10px] text-forest/55 tracking-wider">
         <span className="flex items-center gap-1.5">
-          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M17.657 18.657A8 8 0 016.343 7.343M12 5v6l3 2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          {paper.citations.toLocaleString()} cites
+          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path d="M17.657 18.657A8 8 0 016.343 7.343M12 5v6l3 2" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          <span className="tabular-nums">{paper.citations.toLocaleString()}</span>
+          <span className="opacity-65">cites</span>
         </span>
         <span className="flex items-center gap-1.5">
-          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path d="M9 12l2 2 4-4" strokeLinecap="round" strokeLinejoin="round" /></svg>
-          3 chunks · 2 captions
+          <span className="w-1.5 h-1.5 rounded-full bg-sage" />
+          <span>3 chunks · 2 captions</span>
         </span>
-        <span className="ml-auto italic font-[family-name:var(--font-serif)] text-forest/50 text-[11px]">open →</span>
+        <span className="ml-auto font-[family-name:var(--font-editorial)] italic text-[14px] text-forest/65 group-hover:text-forest transition-colors">
+          open it ↗
+        </span>
       </div>
     </li>
   )
 }
 
-function SimilarityBar({ value }: { value: number }) {
+function SimilarityBar({ value, color }: { value: number; color: string }) {
   return (
-    <span className="relative inline-block w-16 h-[6px] bg-forest/8 rounded-full overflow-hidden">
+    <span className="relative inline-block w-20 h-[4px] rounded-full bg-forest/10 overflow-hidden">
       <span
         className="absolute inset-y-0 left-0 rounded-full"
-        style={{
-          width: `${value * 100}%`,
-          background: `linear-gradient(90deg, #4A6741, #8B6E4E)`,
-        }}
+        style={{ width: `${value * 100}%`, background: color }}
       />
     </span>
   )
@@ -739,7 +763,7 @@ function highlightQuery(text: string, query: string) {
   const parts = text.split(re)
   return parts.map((p, i) =>
     i % 2 === 1
-      ? <mark key={i} className="bg-amber/25 text-forest px-0.5 rounded-[2px]">{p}</mark>
+      ? <mark key={i} className="bg-sage/30 text-forest px-0.5 rounded-sm">{p}</mark>
       : p
   )
 }
@@ -754,93 +778,111 @@ function DetailDrawer({ paper, cluster, onClose }: { paper: Paper; cluster: Clus
 
   return (
     <div className="fixed inset-0 z-40 flex justify-end">
-      <div className="absolute inset-0 bg-forest/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-forest/45 backdrop-blur-sm" onClick={onClose} />
       <div
         ref={drawerRef}
-        className="relative w-full max-w-xl bg-[#FBF7EA] paper-grain shadow-2xl overflow-y-auto animate-slide-in-right border-l border-forest/15"
+        className="relative w-full max-w-xl bg-milk paper-grain shadow-[0_30px_80px_-30px_rgba(38,70,53,0.5)] overflow-y-auto animate-slide-in-right border-l border-forest/15"
       >
-        {/* Catalogue card header */}
-        <div className="sticky top-0 z-10 bg-[#FBF7EA] border-b border-forest/10 px-8 py-5 flex items-center gap-3">
-          <span className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-[family-name:var(--font-editorial)]" style={{ backgroundColor: cluster.color + '25', color: cluster.color }}>
-            {cluster.glyph}
-          </span>
-          <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.22em] uppercase text-sienna/80">arxiv:{paper.id}</span>
+        {/* soft cluster accent line */}
+        <div className="h-[3px]" style={{ background: cluster.color, opacity: 0.6 }} />
+
+        {/* Header */}
+        <div className="sticky top-0 z-10 bg-milk/95 backdrop-blur border-b border-forest/12 px-7 py-4 flex items-center gap-3">
+          <span className="w-2.5 h-2.5 rounded-full" style={{ background: cluster.color }} />
+          <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.24em] uppercase text-forest/60">arxiv:{paper.id}</span>
           <div className="flex-1" />
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center squircle-sm text-forest/40 hover:text-forest hover:bg-forest/[0.06] transition-colors"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-forest/55 hover:text-forest hover:bg-sage/20 border border-forest/15 transition-colors"
             title="Close (esc)"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
 
         <div className="px-8 py-8">
-          <h2 className="font-[family-name:var(--font-editorial)] text-[30px] leading-[1.1] text-forest font-semibold mb-3">
+          <div className="flex items-baseline gap-3 mb-5">
+            <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/55">now reading</span>
+            <span className="h-px flex-1 bg-forest/12" />
+          </div>
+
+          <h2 className="font-[family-name:var(--font-editorial)] text-[34px] leading-[1.1] text-forest font-light mb-4 tracking-[-0.01em]">
             {paper.title}
           </h2>
-          <div className="font-[family-name:var(--font-serif)] italic text-[15px] text-forest/65 mb-1">
+          <div className="font-[family-name:var(--font-mono)] text-[12px] text-forest/65 mb-2">
             {paper.authors.join(' · ')}
           </div>
-          <div className="font-[family-name:var(--font-mono)] text-[10px] text-forest/50 tracking-[0.2em] uppercase mb-6">
-            {paper.venue} · {paper.year} · {paper.citations.toLocaleString()} cites
+          <div className="flex items-center gap-2.5 mb-7 flex-wrap">
+            <span
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border font-[family-name:var(--font-editorial)] italic text-[12.5px]"
+              style={{ color: cluster.color, borderColor: `${cluster.color}55` }}
+            >
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: cluster.color }} />
+              {cluster.name}
+            </span>
+            <span className="font-[family-name:var(--font-mono)] text-[10px] text-forest/50 tracking-[0.22em] uppercase">
+              {paper.venue} · {paper.year} · {paper.citations.toLocaleString()} cites
+            </span>
           </div>
 
           {/* Abstract */}
-          <div className="mb-8">
-            <div className="smcp text-forest/50 text-[11px] mb-2 tracking-[0.22em]">Abstract</div>
-            <p className="font-[family-name:var(--font-serif)] text-[15px] text-forest/80 leading-[1.8] text-justify">
+          <div className="mb-8 bg-parchment/40 border border-forest/10 rounded-2xl pl-5 pr-5 pt-4 pb-5 relative">
+            <span className="absolute left-0 top-4 bottom-4 w-[3px] rounded-r-full bg-sage-deep/55" />
+            <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/50 mb-2">abstract</div>
+            <p className="font-[family-name:var(--font-editorial)] text-[14.5px] text-forest/85 leading-[1.85]">
               {paper.abstract}
             </p>
           </div>
 
-          {/* Chunk preview */}
+          {/* Chunks */}
           <div className="mb-8">
             <div className="flex items-baseline justify-between mb-3">
-              <div className="smcp text-forest/50 text-[11px] tracking-[0.22em]">Retrieved chunks</div>
-              <span className="font-[family-name:var(--font-mono)] text-[9px] text-forest/35">chunk space · cos-sim</span>
+              <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/55">retrieved chunks</span>
+              <span className="font-[family-name:var(--font-mono)] text-[9px] text-forest/45 tracking-widest">cos · sim</span>
             </div>
             {[
-              { section: 'Background', snippet: 'Prior work has explored both sparse and linear approximations to the attention matrix, each trading exactness for asymptotic speed-up.', sim: 0.841 },
+              { section: 'Background',  snippet: 'Prior work has explored both sparse and linear approximations to the attention matrix, each trading exactness for asymptotic speed-up.', sim: 0.841 },
               { section: 'Methodology', snippet: 'We derive a closed-form factorisation in which local windows handle fine structure while a shared global memory mediates long-range dependencies.', sim: 0.812 },
-              { section: 'Results', snippet: 'On the PG-19 benchmark, our hybrid variant attains perplexity within 0.4 of the dense baseline at 3.2× the throughput.', sim: 0.774 },
+              { section: 'Results',     snippet: 'On the PG-19 benchmark, our hybrid variant attains perplexity within 0.4 of the dense baseline at 3.2× the throughput.', sim: 0.774 },
             ].map((c, i) => (
-              <div key={i} className="relative bg-cream border border-forest/10 squircle-sm px-4 py-3 mb-2.5">
+              <div key={i} className="relative bg-milk border border-forest/12 rounded-2xl px-5 py-4 mb-3">
                 <div className="flex items-baseline justify-between mb-1.5">
-                  <span className="font-[family-name:var(--font-mono)] text-[9px] text-sienna tracking-[0.2em] uppercase">§ {c.section}</span>
-                  <span className="font-[family-name:var(--font-mono)] text-[9px] text-forest/45">{c.sim.toFixed(3)}</span>
+                  <span className="font-[family-name:var(--font-mono)] text-[10px] text-sage-deep tracking-[0.2em] uppercase">§ {c.section}</span>
+                  <span className="font-[family-name:var(--font-mono)] text-[10px] text-forest/55 tabular-nums">{c.sim.toFixed(3)}</span>
                 </div>
-                <p className="font-[family-name:var(--font-serif)] italic text-[13px] text-forest/75 leading-snug">"{c.snippet}"</p>
+                <p className="font-[family-name:var(--font-editorial)] italic text-[13.5px] text-forest/80 leading-snug">"{c.snippet}"</p>
               </div>
             ))}
           </div>
 
-          {/* Captioned figure (fake) */}
+          {/* Figure */}
           <div className="mb-8">
-            <div className="smcp text-forest/50 text-[11px] mb-3 tracking-[0.22em]">Figures cross-referenced</div>
-            <figure className="bg-cream border border-forest/10 squircle-sm overflow-hidden">
+            <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/55 mb-3">figure · X-ref</div>
+            <figure className="border border-forest/15 rounded-2xl bg-milk overflow-hidden">
               <div className="aspect-[5/3] relative">
                 <svg className="absolute inset-0 w-full h-full" viewBox="0 0 300 180" preserveAspectRatio="xMidYMid meet">
                   <defs>
                     <linearGradient id="dg" x1="0" x2="1">
-                      <stop offset="0" stopColor={cluster.color} stopOpacity="0.1" />
-                      <stop offset="1" stopColor={cluster.color} stopOpacity="0.35" />
+                      <stop offset="0" stopColor={cluster.color} stopOpacity="0.08" />
+                      <stop offset="1" stopColor={cluster.color} stopOpacity="0.28" />
                     </linearGradient>
                   </defs>
                   <rect width="300" height="180" fill="url(#dg)" />
-                  <g fill="none" stroke={cluster.color} strokeWidth="1.4" opacity="0.8">
+                  <g fill="none" stroke={cluster.color} strokeWidth="1.4" opacity="0.78">
                     <path d="M20 150 Q 80 120, 140 90 T 280 30" />
                     <path d="M20 160 Q 80 140, 140 110 T 280 70" strokeDasharray="2 4" />
                   </g>
                   {[40, 80, 140, 200, 260].map((x, i) => (
                     <circle key={i} cx={x} cy={150 - i * 20} r="3" fill={cluster.color} />
                   ))}
-                  <text x="15" y="170" fontFamily="JetBrains Mono" fontSize="8" fill="#1a2f26" opacity="0.45">seq length (log)</text>
-                  <text x="285" y="20" fontFamily="JetBrains Mono" fontSize="8" fill="#1a2f26" opacity="0.45" textAnchor="end">throughput</text>
+                  <text x="15" y="170"  fontFamily="JetBrains Mono" fontSize="8" fill="#264635" opacity="0.5">seq length (log)</text>
+                  <text x="285" y="20"  fontFamily="JetBrains Mono" fontSize="8" fill="#264635" opacity="0.5" textAnchor="end">throughput</text>
                 </svg>
               </div>
-              <figcaption className="px-4 py-3 font-[family-name:var(--font-serif)] italic text-[12px] text-forest/65 leading-snug">
-                <span className="smcp not-italic text-sienna mr-2 tracking-[0.18em] text-[0.9em]">Figure 2.</span>
+              <figcaption className="px-5 py-3 border-t border-forest/12 font-[family-name:var(--font-editorial)] italic text-[12.5px] text-forest/70 leading-snug">
+                <span className="not-italic font-[family-name:var(--font-mono)] text-[9.5px] tracking-[0.22em] uppercase mr-2 text-sage-deep">figure 2.</span>
                 Throughput vs. sequence length, comparing dense attention against the proposed hybrid across 5 scales.
               </figcaption>
             </figure>
@@ -848,14 +890,14 @@ function DetailDrawer({ paper, cluster, onClose }: { paper: Paper; cluster: Clus
 
           {/* Key equation */}
           <div className="mb-8">
-            <div className="smcp text-forest/50 text-[11px] mb-3 tracking-[0.22em]">Key equation</div>
-            <div className="bg-cream border border-forest/10 squircle-sm px-5 py-4 flex items-center justify-between gap-4">
+            <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/55 mb-3">key equation</div>
+            <div className="bg-parchment/40 border border-forest/12 rounded-2xl px-5 py-5 flex items-center justify-between gap-4">
               <KaTeX
                 math="\mathrm{Attn}(Q, K, V) = \mathrm{softmax}\!\left(\frac{QK^{\top}}{\sqrt{d_k}}\right) V"
                 display
                 className="flex-1 text-center"
               />
-              <span className="font-[family-name:var(--font-mono)] text-[9px] text-forest/40 shrink-0">(2)</span>
+              <span className="font-[family-name:var(--font-mono)] text-[10px] text-forest/50 shrink-0">(2)</span>
             </div>
           </div>
 
@@ -863,29 +905,39 @@ function DetailDrawer({ paper, cluster, onClose }: { paper: Paper; cluster: Clus
           <div className="flex gap-2 flex-wrap">
             <Link
               to="/editor/scratch"
-              className="flex-1 min-w-[180px] flex items-center justify-center gap-2 h-10 bg-forest text-parchment squircle-sm font-[family-name:var(--font-body)] text-[11px] tracking-[0.22em] uppercase hover:bg-forest-deep transition-colors"
+              className="flex-1 min-w-[180px] inline-flex items-center justify-center gap-2 h-11 rounded-full bg-forest text-parchment hover:bg-forest-ink transition-colors font-[family-name:var(--font-editorial)] italic text-[14px]"
             >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /></svg>
-              Cite in manuscript
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              cite in manuscript
             </Link>
-            <button className="flex items-center gap-2 h-10 px-4 border border-forest/20 text-forest/70 hover:text-forest hover:border-forest/40 squircle-sm font-[family-name:var(--font-body)] text-[11px] tracking-[0.22em] uppercase transition-colors">
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-              Open on arXiv
+            <button className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-full bg-milk border border-forest/20 hover:bg-sage/15 hover:border-forest/40 transition-colors font-[family-name:var(--font-editorial)] italic text-[14px] text-forest/75 hover:text-forest">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+              open on arXiv
             </button>
           </div>
 
-          {/* BibTeX stub */}
+          {/* BibTeX */}
           <div className="mt-8">
-            <div className="smcp text-forest/50 text-[11px] mb-3 tracking-[0.22em]">BibTeX</div>
-            <pre className="bg-forest text-parchment/90 font-[family-name:var(--font-mono)] text-[10.5px] leading-snug p-4 squircle-sm overflow-x-auto">
-{`@article{${paper.authors[0]?.split('.')[0]?.toLowerCase() || 'anon'}${paper.year}${paper.title.split(' ')[0].toLowerCase()},
-  title   = {${paper.title}},
-  author  = {${paper.authors.join(' and ')}},
-  journal = {${paper.venue}},
-  year    = {${paper.year}},
-  eprint  = {${paper.id}},
-}`}
-            </pre>
+            <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/55 mb-3">bibtex</div>
+            <div className="codebox">
+              <div className="codebox-titlebar">
+                <span className="codebox-dots"><span className="codebox-dot" /><span className="codebox-dot" /><span className="codebox-dot" /></span>
+                <span>bibtex · {paper.id}.bib</span>
+              </div>
+              <pre className="p-4 overflow-x-auto leading-[1.7]">
+<span className="tok-kw">@article</span>&#123;<span className="tok-fn">{paper.authors[0]?.split('.')[0]?.toLowerCase() || 'anon'}{paper.year}{paper.title.split(' ')[0].toLowerCase()}</span>,{'\n'}
+{'  '}<span className="tok-sym">title</span>   = &#123;<span className="tok-str">{paper.title}</span>&#125;,{'\n'}
+{'  '}<span className="tok-sym">author</span>  = &#123;<span className="tok-str">{paper.authors.join(' and ')}</span>&#125;,{'\n'}
+{'  '}<span className="tok-sym">journal</span> = &#123;<span className="tok-str">{paper.venue}</span>&#125;,{'\n'}
+{'  '}<span className="tok-sym">year</span>    = &#123;<span className="tok-num">{paper.year}</span>&#125;,{'\n'}
+{'  '}<span className="tok-sym">eprint</span>  = &#123;<span className="tok-str">{paper.id}</span>&#125;,{'\n'}
+&#125;
+              </pre>
+            </div>
           </div>
         </div>
       </div>

@@ -3,15 +3,45 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Folio · journal of the working scholar</title>
+    <title>Folio · a scholar's notebook</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Gamja+Flower&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500;600&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,400&display=swap" rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Gamja+Flower&family=Archivo:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,700;1,9..144,400&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css" />
   </head>
   <body>
     <div id="root"></div>
+    <div id="boot-diag" style="position:fixed;inset:0;z-index:99999;background:#F5F2EA;color:#264635;font:14px ui-monospace,monospace;padding:24px;overflow:auto;">
+      <div id="boot-status">⏳ boot: HTML loaded. waiting for React…</div>
+      <pre id="boot-errors" style="white-space:pre-wrap;color:#C85544;margin-top:12px;"></pre>
+    </div>
+    <script>
+      (function () {
+        var diag = document.getElementById('boot-diag');
+        var errBox = document.getElementById('boot-errors');
+        var status = document.getElementById('boot-status');
+        window.addEventListener('error', function (e) {
+          status.textContent = '❌ boot: script error';
+          errBox.textContent += '\n' + (e.error && e.error.stack ? e.error.stack : (e.message + ' @ ' + e.filename + ':' + e.lineno));
+        });
+        window.addEventListener('unhandledrejection', function (e) {
+          status.textContent = '❌ boot: unhandled rejection';
+          errBox.textContent += '\n' + (e.reason && e.reason.stack ? e.reason.stack : String(e.reason));
+        });
+        setTimeout(function () {
+          var root = document.getElementById('root');
+          if (root && root.children.length > 0) {
+            diag.remove();
+          } else if (!errBox.textContent) {
+            status.textContent = '⚠ boot: root is still empty after 2s. No JS errors caught. Check Network tab for failed imports.';
+          }
+        }, 2000);
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

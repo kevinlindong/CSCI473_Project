@@ -1,24 +1,19 @@
 import { Link } from 'react-router-dom'
-import { useEffect, useRef, useState } from 'react'
 import { KaTeX } from '../components/KaTeX'
 
 /* ==========================================================================
-   Landing — a quiet doorway.
-   Two rooms: the manuscript (LaTeX editor) and the corpus (retrieval).
-   Zen minimal: negative space, hairline rules, one ink accent.
+   Landing — GMK Botanical. Minimal, zen, generous whitespace.
+   Rounded corners, soft shadows. A scholar's garden.
    ========================================================================== */
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-cream text-forest antialiased selection:bg-forest/10 selection:text-forest">
+    <div className="min-h-screen bg-cream text-forest antialiased selection:bg-sage/30">
       <TopBar />
       <Hero />
-      <Breath />
       <Rooms />
-      <Breath />
       <Specimen />
-      <Breath />
-      <Closing />
+      <Pipeline />
       <Colophon />
     </div>
   )
@@ -28,312 +23,401 @@ export default function Landing() {
 
 function TopBar() {
   return (
-    <header className="max-w-6xl mx-auto px-8 pt-8 flex items-center justify-between">
-      <Link to="/" className="flex items-baseline gap-2 group">
-        <span className="font-[family-name:var(--font-editorial)] italic text-[22px] tracking-tight text-forest">
-          Folio
-        </span>
-        <span className="w-[6px] h-[6px] rounded-full bg-sienna/80 group-hover:bg-sienna transition-colors" />
-      </Link>
-      <nav className="flex items-center gap-8 text-[13px] font-[family-name:var(--font-serif)] italic text-forest/55">
-        <Link to="/browse" className="hover:text-forest transition-colors">Corpus</Link>
-        <Link to="/editor/scratch" className="hover:text-forest transition-colors">Manuscript</Link>
-        <Link to="/how-it-works" className="hover:text-forest transition-colors">Notes</Link>
-        <Link
-          to="/home"
-          className="text-forest/80 hover:text-forest border-b border-forest/30 hover:border-forest transition-colors not-italic font-[family-name:var(--font-body)] text-[12px] pb-0.5"
-        >
-          enter →
+    <header className="relative z-20">
+      <div className="max-w-6xl mx-auto px-8 pt-8 pb-6 flex items-center justify-between">
+        <Link to="/" className="flex items-center gap-3 group">
+          <LogoLeaf />
+          <span className="font-[family-name:var(--font-editorial)] text-[30px] text-forest leading-none italic tracking-tight">
+            Folio
+          </span>
         </Link>
-      </nav>
+
+        <nav className="flex items-center gap-1">
+          <Link to="/browse" className="hidden md:inline-flex h-10 px-4 items-center font-[family-name:var(--font-body)] text-[13px] text-forest/70 hover:text-forest rounded-full transition-colors">
+            corpus
+          </Link>
+          <Link to="/editor/scratch" className="hidden md:inline-flex h-10 px-4 items-center font-[family-name:var(--font-body)] text-[13px] text-forest/70 hover:text-forest rounded-full transition-colors">
+            manuscript
+          </Link>
+          <Link to="/how-it-works" className="hidden md:inline-flex h-10 px-4 items-center font-[family-name:var(--font-body)] text-[13px] text-forest/70 hover:text-forest rounded-full transition-colors">
+            how it works
+          </Link>
+
+          <Link to="/home" className="bau-btn ml-3">
+            enter the study
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+              <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </Link>
+        </nav>
+      </div>
     </header>
   )
 }
 
-/* ── 2 · Hero — the single quiet statement ───────────────────────────── */
+function LogoLeaf() {
+  return (
+    <svg width="34" height="34" viewBox="0 0 40 40" className="shrink-0">
+      <circle cx="20" cy="20" r="18" fill="#E9E4D4" />
+      <path d="M 20 8 C 12 12, 10 22, 14 30 C 22 28, 28 20, 26 10 C 24 11, 22 11, 20 8 Z"
+            fill="#264635" opacity="0.92" />
+      <path d="M 20 8 C 20 14, 18 22, 14 30" stroke="#A3B18A" strokeWidth="0.8" fill="none" />
+    </svg>
+  )
+}
+
+/* ── 2 · Hero  ───────────────────────────────────────────────────────── */
 
 function Hero() {
   return (
-    <section className="max-w-6xl mx-auto px-8 pt-40 pb-32">
-      <div className="grid grid-cols-12 gap-8 items-start">
+    <section className="relative">
+      {/* quiet botanical backdrop */}
+      <div className="absolute inset-0 -z-10 pointer-events-none overflow-hidden">
+        <div className="absolute top-40 -right-20 w-[520px] h-[520px] rounded-full bg-sage/25" />
+        <div className="absolute -bottom-10 -left-20 w-[340px] h-[340px] rounded-full bg-parchment/60" />
+      </div>
 
-        {/* Enso mark — the one signature flourish */}
-        <div className="col-span-12 md:col-span-3 flex md:justify-center">
-          <Enso />
-        </div>
-
-        <div className="col-span-12 md:col-span-9 max-w-[52ch]">
-          <div className="flex items-center gap-3 mb-10 text-[10px] tracking-[0.4em] uppercase font-[family-name:var(--font-mono)] text-forest/40">
-            <span className="inline-block w-2 h-px bg-forest/40" />
-            <span>a place for papers</span>
+      <div className="max-w-6xl mx-auto px-8 pt-24 pb-32 grid grid-cols-12 gap-10 items-center">
+        {/* Left — the statement */}
+        <div className="col-span-12 md:col-span-7 relative">
+          <div className="mb-6 flex items-center gap-3">
+            <span className="h-px w-10 bg-forest/25" />
+            <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.28em] uppercase text-forest/55">
+              a scholar's notebook
+            </span>
           </div>
 
-          <h1 className="font-[family-name:var(--font-editorial)] text-forest font-light leading-[1.02] tracking-tight">
-            <span className="block text-[86px] md:text-[112px] italic">Write.</span>
-            <span className="block text-[86px] md:text-[112px] text-forest/40 italic">Read.</span>
-            <span className="block text-[86px] md:text-[112px] italic">Cite.</span>
+          <h1 className="font-[family-name:var(--font-editorial)] text-[76px] md:text-[92px] leading-[0.98] tracking-[-0.02em] text-forest font-light">
+            Where papers
+            <br />
+            <span className="italic">grow into</span>
+            <br />
+            <span className="font-normal">folios.</span>
           </h1>
 
-          <p className="mt-12 font-[family-name:var(--font-serif)] text-[17px] leading-[1.75] text-forest/65 max-w-[46ch]">
-            A quiet LaTeX study, paired with a corpus of the literature that answers
-            in whole paragraphs, every claim pinned to its source.
+          <p className="mt-10 font-[family-name:var(--font-editorial)] text-[18px] leading-[1.75] text-forest/70 max-w-[46ch]">
+            Folio is a calm place to write mathematics and read the corpus — a
+            LaTeX editor, a library, and a quiet reading room. No compile step,
+            no clutter. Just ink and light.
           </p>
 
-          <div className="mt-14 flex items-center gap-6">
-            <Link
-              to="/editor/scratch"
-              className="group inline-flex items-baseline gap-2 text-forest border-b border-forest/60 hover:border-forest pb-1 transition-colors"
-            >
-              <span className="font-[family-name:var(--font-editorial)] italic text-[20px]">
-                open the manuscript
-              </span>
-              <span className="translate-y-[-1px] transition-transform group-hover:translate-x-1">→</span>
+          <div className="mt-10 flex flex-wrap items-center gap-3">
+            <Link to="/login" className="bau-btn">
+              begin a folio
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+                <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </Link>
-
-            <Link
-              to="/browse"
-              className="inline-flex items-baseline gap-2 text-forest/55 hover:text-forest transition-colors pb-1"
-            >
-              <span className="font-[family-name:var(--font-editorial)] italic text-[20px]">
-                or consult the corpus
-              </span>
+            <Link to="/browse" className="bau-btn bau-btn--ghost">
+              browse the corpus
             </Link>
           </div>
+
+          <div className="mt-14 flex items-center gap-4 text-[12px] text-forest/50 font-[family-name:var(--font-mono)] tracking-[0.2em]">
+            <span>LATEX · NATIVE</span>
+            <span className="w-1 h-1 rounded-full bg-forest/25" />
+            <span>CITATIONS · PINNED</span>
+            <span className="w-1 h-1 rounded-full bg-forest/25" />
+            <span>NO COMPILE</span>
+          </div>
+        </div>
+
+        {/* Right — a single folio preview */}
+        <div className="col-span-12 md:col-span-5">
+          <FolioPreview />
         </div>
       </div>
     </section>
   )
 }
 
-/* A hand-drawn-feeling enso circle — the one signature flourish */
-function Enso() {
+function FolioPreview() {
   return (
-    <svg width="150" height="150" viewBox="0 0 150 150" className="opacity-90">
-      <defs>
-        <filter id="ink">
-          <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" seed="3" />
-          <feDisplacementMap in="SourceGraphic" scale="1.2" />
-        </filter>
-      </defs>
-      <path
-        d="M 75 18
-           C 36 18, 18 52, 18 78
-           C 18 112, 48 132, 80 132
-           C 108 132, 130 110, 130 80
-           C 130 56, 114 36, 88 30"
-        fill="none"
-        stroke="#1a2f26"
-        strokeWidth="2.4"
-        strokeLinecap="round"
-        filter="url(#ink)"
-        opacity="0.75"
-      />
-      <circle cx="88" cy="30" r="1.6" fill="#8B6E4E" opacity="0.85" />
-    </svg>
-  )
-}
+    <div className="relative">
+      <div className="latex-frame paper-grain bg-milk px-8 py-10 offset-shadow">
+        <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.28em] uppercase text-forest/40 mb-2">§ 2 · folio recto</div>
+        <h3 className="font-[family-name:var(--font-editorial)] text-[26px] font-normal text-forest mb-4 leading-tight">
+          On kernelised attention
+        </h3>
+        <p className="font-[family-name:var(--font-editorial)] text-[14px] leading-[1.8] text-forest/80">
+          For any feature map <em>φ : ℝ<sup>d</sup> → ℝ<sup>r</sup></em>, define the
+          linearised attention operator
+        </p>
+        <div className="my-5 flex justify-center text-forest">
+          <KaTeX display math="A_{ij} = \frac{\phi(q_i)^{\top}\phi(k_j)}{\sum_{\ell}\phi(q_i)^{\top}\phi(k_\ell)}" />
+        </div>
+        <div className="mt-4 rounded-xl bg-sage/15 px-4 py-3 border-l-[3px] border-sage">
+          <div className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.24em] uppercase text-forest/55 mb-0.5">Theorem 2.1</div>
+          <div className="font-[family-name:var(--font-editorial)] italic text-[13px] text-forest/80 leading-snug">
+            Positive random features give an unbiased estimate of softmax attention in <KaTeX math="\mathcal{O}(n)" /> time.
+          </div>
+        </div>
+        <div className="mt-6 flex items-center justify-between text-[10px] text-forest/40 font-[family-name:var(--font-mono)] tracking-[0.22em] uppercase">
+          <span>Choromanski et al., 2020</span>
+          <span>· 14 ·</span>
+        </div>
+      </div>
 
-/* ── 3 · Breathing space ─────────────────────────────────────────────── */
-
-function Breath() {
-  return (
-    <div className="max-w-6xl mx-auto px-8">
-      <div className="h-px bg-forest/10" />
+      {/* handwritten side-note */}
+      <div className="absolute -right-4 top-12 hidden lg:block">
+        <span className="font-[family-name:var(--font-display)] text-[19px] text-forest/55 inline-block -rotate-3">
+          ← as you type ✦
+        </span>
+      </div>
     </div>
   )
 }
 
-/* ── 4 · Two rooms ───────────────────────────────────────────────────── */
+/* ── 3 · Two rooms ───────────────────────────────────────────────────── */
 
 function Rooms() {
   return (
-    <section className="max-w-6xl mx-auto px-8 py-32">
-      <div className="mb-20 flex items-baseline gap-4">
-        <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.4em] uppercase text-forest/40">
-          two rooms
-        </span>
-        <span className="font-[family-name:var(--font-editorial)] italic text-[18px] text-forest/50">
-          — joined by a corridor
-        </span>
-      </div>
+    <section className="bg-parchment/40 py-28">
+      <div className="max-w-6xl mx-auto px-8">
+        <div className="mb-16 text-center">
+          <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/50 mb-3">two rooms</div>
+          <h2 className="font-[family-name:var(--font-editorial)] text-[52px] leading-[1.02] text-forest italic font-light">
+            a desk, and a library.
+          </h2>
+        </div>
 
-      <div className="grid grid-cols-12 gap-20">
-        <Room
-          numeral="一"
-          kicker="the desk"
-          title="A typeset folio."
-          body="Write in plain LaTeX — sections, theorems, tables, figures, citations. A serif proof of the paper rises beside every keystroke."
-          link={{ to: '/editor/scratch', label: 'open the desk' }}
-        />
-        <Room
-          numeral="二"
-          kicker="the reading room"
-          title="A corpus of papers."
-          body="Ask a question. The library answers in whole paragraphs. Every sentence is pinned to the passage that taught it."
-          link={{ to: '/browse', label: 'enter the reading room' }}
-        />
+        <div className="grid grid-cols-12 gap-8">
+          <Room
+            n="I."
+            kicker="the desk"
+            title="Manuscript"
+            body="Compose in LaTeX. A typeset folio rises beside every keystroke. No build step, no staring at warnings. Equations bloom in place."
+            link={{ to: '/editor/scratch', label: 'open the desk' }}
+            accent="#264635"
+          />
+          <Room
+            n="II."
+            kicker="the reading room"
+            title="Corpus"
+            body="Ask in plain prose. The corpus answers with every claim pinned to its source — a calm librarian, never a hallucinator."
+            link={{ to: '/browse', label: 'enter the library' }}
+            accent="#7F9267"
+          />
+        </div>
       </div>
     </section>
   )
 }
 
 function Room({
-  numeral,
-  kicker,
-  title,
-  body,
-  link,
+  n, kicker, title, body, link, accent,
 }: {
-  numeral: string
-  kicker: string
-  title: string
-  body: string
-  link: { to: string; label: string }
+  n: string; kicker: string; title: string; body: string
+  link: { to: string; label: string }; accent: string
 }) {
   return (
-    <article className="col-span-12 md:col-span-6 group">
-      <div className="flex items-baseline gap-5 mb-8">
-        <span className="font-[family-name:var(--font-editorial)] text-[54px] text-forest/25 leading-none group-hover:text-forest/40 transition-colors">
-          {numeral}
-        </span>
-        <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.4em] uppercase text-sienna/80">
-          {kicker}
-        </span>
-      </div>
-      <h3 className="font-[family-name:var(--font-editorial)] italic text-[36px] leading-[1.1] text-forest mb-6 max-w-[20ch]">
-        {title}
-      </h3>
-      <p className="font-[family-name:var(--font-serif)] text-[16px] leading-[1.75] text-forest/65 max-w-[40ch] mb-10">
-        {body}
-      </p>
-      <Link
-        to={link.to}
-        className="inline-flex items-baseline gap-2 font-[family-name:var(--font-editorial)] italic text-[17px] text-forest/75 hover:text-forest border-b border-forest/20 hover:border-forest/60 pb-0.5 transition-colors"
-      >
-        {link.label}
-        <span>→</span>
+    <article className="col-span-12 md:col-span-6">
+      <Link to={link.to} className="block group">
+        <div className="bau-card p-10 h-full transition-all hover:-translate-y-1 hover:shadow-[0_20px_40px_-20px_rgba(38,70,53,0.25)]">
+          <div className="flex items-baseline justify-between mb-10">
+            <span
+              className="font-[family-name:var(--font-editorial)] text-[54px] leading-none italic"
+              style={{ color: accent, opacity: 0.75 }}
+            >
+              {n}
+            </span>
+            <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/45">
+              {kicker}
+            </span>
+          </div>
+
+          <h3 className="font-[family-name:var(--font-editorial)] text-[44px] leading-[1] text-forest italic mb-5">
+            {title}
+          </h3>
+          <p className="font-[family-name:var(--font-editorial)] text-[15.5px] leading-[1.75] text-forest/70 mb-10 max-w-[38ch]">
+            {body}
+          </p>
+
+          <div
+            className="inline-flex items-center gap-2 font-[family-name:var(--font-body)] text-[13px] text-forest/75 group-hover:gap-3 transition-all"
+          >
+            {link.label}
+            <span className="inline-block" style={{ color: accent }}>→</span>
+          </div>
+        </div>
       </Link>
     </article>
   )
 }
 
-/* ── 5 · Specimen — a single typeset fragment ────────────────────────── */
+/* ── 4 · Specimen — LaTeX side by side ───────────────────────────────── */
 
 function Specimen() {
   return (
-    <section className="max-w-6xl mx-auto px-8 py-32">
-      <div className="grid grid-cols-12 gap-16 items-start">
+    <section className="bg-forest text-parchment py-28 relative overflow-hidden">
+      <div className="absolute -top-20 -left-20 w-96 h-96 rounded-full bg-sage/10" />
+      <div className="absolute bottom-0 right-0 w-[420px] h-[420px] rounded-full bg-bau-yellow/5" />
 
-        <aside className="col-span-12 md:col-span-4">
-          <div className="flex items-center gap-3 mb-6 text-[10px] tracking-[0.4em] uppercase font-[family-name:var(--font-mono)] text-forest/40">
-            <span className="w-2 h-px bg-forest/40" />
-            <span>a specimen</span>
-          </div>
-          <h3 className="font-[family-name:var(--font-editorial)] italic text-[30px] leading-[1.15] text-forest mb-5">
-            Written once.<br/>Read twice.
+      <div className="max-w-6xl mx-auto px-8 relative">
+        <div className="mb-14 text-center">
+          <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-parchment/50 mb-3">a specimen</div>
+          <h3 className="font-[family-name:var(--font-editorial)] text-[48px] leading-[1.04] italic text-parchment font-light">
+            plain LaTeX. nothing weird.
           </h3>
-          <p className="font-[family-name:var(--font-serif)] text-[15px] leading-[1.7] text-forest/60 max-w-[30ch]">
-            A paragraph you drafted becomes a specimen — the corpus returns it
-            ranked against the literature, the editor returns it typeset. Same
-            prose, two lenses.
+          <p className="mt-4 font-[family-name:var(--font-editorial)] text-[15.5px] leading-[1.7] text-parchment/65 max-w-[48ch] mx-auto">
+            The source on one side, the typeset folio on the other —
+            indistinguishable from what a journal would print.
           </p>
-        </aside>
+        </div>
 
-        <figure className="col-span-12 md:col-span-8">
-          <div className="bg-parchment/80 border-t border-b border-forest/10 py-16 px-12 md:px-20">
-            <div className="text-center mb-10 font-[family-name:var(--font-mono)] text-[9px] tracking-[0.4em] uppercase text-forest/35">
-              query — efficient long-context attention
-            </div>
-
-            <p className="font-[family-name:var(--font-serif)] text-[18px] leading-[1.8] text-forest/80 max-w-[46ch] mx-auto text-left">
-              Recent work reframes attention as a kernel sum<sup className="text-sienna font-[family-name:var(--font-mono)] text-[10px] ml-0.5">1</sup>,
-              permitting linear-time approximations whose error depends only on
-              the chosen feature map. On long-context benchmarks these variants
-              hold pace with dense transformers while keeping memory sublinear in
-              sequence length<sup className="text-sienna font-[family-name:var(--font-mono)] text-[10px] ml-0.5">2</sup>.
-            </p>
-
-            <div className="my-10 flex justify-center text-forest/85">
-              <KaTeX
-                display
-                math="A_{ij} = \frac{\phi(q_i)^{\top}\phi(k_j)}{\sum_{l}\phi(q_i)^{\top}\phi(k_l)}"
-              />
-            </div>
-
-            <div className="max-w-[46ch] mx-auto font-[family-name:var(--font-serif)] text-[13px] leading-[1.7] text-forest/50 border-t border-forest/10 pt-6 space-y-1">
-              <div className="flex gap-3"><span className="text-sienna font-[family-name:var(--font-mono)] text-[10px]">1.</span><span><em>Rethinking Attention with Performers.</em> Choromanski et al. 2020.</span></div>
-              <div className="flex gap-3"><span className="text-sienna font-[family-name:var(--font-mono)] text-[10px]">2.</span><span><em>Efficient Transformers: A Survey.</em> Tay et al. 2022.</span></div>
+        <div className="grid grid-cols-12 gap-6 items-start">
+          {/* code */}
+          <div className="col-span-12 md:col-span-6">
+            <div className="codebox">
+              <div className="codebox-titlebar">
+                <span className="codebox-dots"><span className="codebox-dot" /><span className="codebox-dot" /><span className="codebox-dot" /></span>
+                <span className="ml-2">chapter_02.tex</span>
+                <span className="ml-auto text-parchment/40">42 ln</span>
+              </div>
+              <div className="p-6 overflow-x-auto">
+<pre className="whitespace-pre leading-[1.8]">
+<span className="tok-com">% kernelised attention</span>{'\n'}
+<span className="tok-tex">\documentclass</span>[<span className="tok-str">11pt</span>]&#123;<span className="tok-env">article</span>&#125;{'\n'}
+<span className="tok-tex">\usepackage</span>&#123;<span className="tok-env">amsmath,amsthm</span>&#125;{'\n'}
+{'\n'}
+<span className="tok-tex">\section</span>&#123;<span className="tok-arg">On kernelised attention</span>&#125;{'\n'}
+{'\n'}
+For any <span className="tok-sym">$\phi : \mathbb&#123;R&#125;^d \to \mathbb&#123;R&#125;^r$</span>,{'\n'}
+define{'\n'}
+<span className="tok-tex">\begin</span>&#123;<span className="tok-env">equation</span>&#125;{'\n'}
+{'  '}A_&#123;ij&#125; = <span className="tok-tex">\frac</span>&#123;<span className="tok-arg">\phi(q_i)^\top \phi(k_j)</span>&#125;{'\n'}
+{'           '}&#123;<span className="tok-arg">\sum_\ell \phi(q_i)^\top \phi(k_\ell)</span>&#125;.{'\n'}
+<span className="tok-tex">\end</span>&#123;<span className="tok-env">equation</span>&#125;
+</pre>
+              </div>
             </div>
           </div>
-        </figure>
+
+          {/* rendered */}
+          <div className="col-span-12 md:col-span-6">
+            <div className="bg-milk text-forest rounded-2xl px-8 py-10 paper-grain">
+              <div className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.28em] uppercase text-forest/40 mb-2">§ 2</div>
+              <h4 className="font-[family-name:var(--font-editorial)] text-[28px] font-normal text-forest mb-4">
+                On kernelised attention
+              </h4>
+              <p className="font-[family-name:var(--font-editorial)] text-[14.5px] leading-[1.8] text-forest/80">
+                For any feature map <em>φ : ℝ<sup>d</sup> → ℝ<sup>r</sup></em>, define
+              </p>
+              <div className="my-5 flex justify-center">
+                <KaTeX display math="A_{ij} = \frac{\phi(q_i)^{\top}\phi(k_j)}{\sum_{\ell}\phi(q_i)^{\top}\phi(k_\ell)}\,." />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* supporting equations */}
+        <div className="mt-10 grid grid-cols-12 gap-4">
+          <SpecimenEq label="Bayes" math="P(H \mid D) = \frac{P(D \mid H)\, P(H)}{\int P(D \mid H')\, P(H')\, dH'}" />
+          <SpecimenEq label="ELBO"  math="\mathcal{L} = \mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)] - \mathrm{KL}(q_\phi \,\Vert\, p)" />
+          <SpecimenEq label="Diffusion" math="x_{t-1} = \tfrac{1}{\sqrt{\alpha_t}}\!\left(x_t - \tfrac{1-\alpha_t}{\sqrt{1-\bar\alpha_t}}\,\varepsilon_\theta\right) + \sigma_t z" />
+        </div>
       </div>
     </section>
   )
 }
 
-/* ── 6 · Closing ─────────────────────────────────────────────────────── */
-
-function Closing() {
-  const [phraseIdx, setPhraseIdx] = useState(0)
-  const phrases = useRef([
-    'a quiet place to think through a paper',
-    'a library that answers in paragraphs',
-    'citations you can visit',
-    'a folio, rising beside every keystroke',
-  ]).current
-
-  useEffect(() => {
-    const t = setInterval(() => setPhraseIdx(i => (i + 1) % phrases.length), 4200)
-    return () => clearInterval(t)
-  }, [phrases.length])
-
+function SpecimenEq({ label, math }: { label: string; math: string }) {
   return (
-    <section className="max-w-6xl mx-auto px-8 py-40 text-center">
-      <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.4em] uppercase text-forest/35 mb-8">
-        —
+    <div className="col-span-12 md:col-span-4 bg-milk/95 text-forest rounded-2xl p-5">
+      <div className="font-[family-name:var(--font-mono)] text-[9.5px] tracking-[0.3em] uppercase text-forest/55 mb-3">
+        {label}
       </div>
-      <h3 className="font-[family-name:var(--font-editorial)] italic text-[48px] md:text-[72px] leading-[1.05] text-forest mb-10 font-light">
-        Pull up a chair.
-      </h3>
-
-      <div className="h-7 mb-12 flex items-center justify-center overflow-hidden">
-        <span
-          key={phraseIdx}
-          className="font-[family-name:var(--font-serif)] italic text-[17px] text-forest/55 animate-[ink-bloom_600ms_ease-out]"
-        >
-          {phrases[phraseIdx]}
-        </span>
+      <div className="overflow-x-auto">
+        <KaTeX display math={math} />
       </div>
+    </div>
+  )
+}
 
-      <Link
-        to="/home"
-        className="inline-flex items-baseline gap-3 font-[family-name:var(--font-editorial)] italic text-[22px] text-forest border-b border-forest/40 hover:border-forest transition-colors pb-1"
-      >
-        enter the study
-        <span>→</span>
-      </Link>
+/* ── 5 · Pipeline — how it works ─────────────────────────────────────── */
+
+function Pipeline() {
+  const steps = [
+    { n: 'one',   title: 'Draft in LaTeX',    body: 'Type the paper you mean to write. Folio typesets as you type, no compile step, no warnings.' },
+    { n: 'two',   title: 'Ask the corpus',    body: 'Mid-sentence, query the library in plain prose. Every claim returns with its source attached.' },
+    { n: 'three', title: 'Fork, merge, read', body: 'Others fork your folio, open merge requests, leave marginalia. The paper breathes with its readers.' },
+  ]
+  return (
+    <section className="py-28">
+      <div className="max-w-6xl mx-auto px-8">
+        <div className="mb-16 text-center">
+          <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/50 mb-3">how the garden grows</div>
+          <h3 className="font-[family-name:var(--font-editorial)] text-[48px] leading-[1.04] italic text-forest font-light">
+            three quiet moves.
+          </h3>
+        </div>
+
+        <div className="grid grid-cols-12 gap-8">
+          {steps.map((s, i) => (
+            <div key={i} className="col-span-12 md:col-span-4 bau-card p-8 hover:-translate-y-1 transition-all">
+              <div className="font-[family-name:var(--font-display)] text-[28px] text-sage-deep mb-4">{s.n}.</div>
+              <h4 className="font-[family-name:var(--font-editorial)] text-[26px] italic text-forest mb-4">{s.title}</h4>
+              <p className="font-[family-name:var(--font-editorial)] text-[14.5px] leading-[1.75] text-forest/70">{s.body}</p>
+            </div>
+          ))}
+        </div>
+      </div>
     </section>
   )
 }
 
-/* ── 7 · Colophon ────────────────────────────────────────────────────── */
+/* ── 6 · Colophon ────────────────────────────────────────────────────── */
 
 function Colophon() {
   return (
-    <footer className="max-w-6xl mx-auto px-8 pb-14 pt-8 border-t border-forest/10">
-      <div className="flex flex-wrap items-baseline justify-between gap-y-4 text-[11px] font-[family-name:var(--font-mono)] tracking-[0.28em] uppercase text-forest/35">
-        <span>Folio · {new Date().getFullYear()}</span>
-        <div className="flex items-center gap-6">
-          <Link to="/editor/scratch" className="hover:text-forest/70 transition-colors">Manuscript</Link>
-          <Link to="/browse" className="hover:text-forest/70 transition-colors">Corpus</Link>
-          <Link to="/how-it-works" className="hover:text-forest/70 transition-colors">Notes</Link>
-          <Link to="/terms" className="hover:text-forest/70 transition-colors">Terms</Link>
-          <Link to="/privacy" className="hover:text-forest/70 transition-colors">Privacy</Link>
+    <footer className="bg-forest-deep text-parchment py-20">
+      <div className="max-w-6xl mx-auto px-8">
+        <div className="flex flex-wrap items-start justify-between gap-10">
+          <div className="max-w-[30ch]">
+            <div className="flex items-center gap-3 mb-4">
+              <LogoLeaf />
+              <span className="font-[family-name:var(--font-editorial)] italic text-[26px] text-parchment leading-none">Folio</span>
+            </div>
+            <p className="font-[family-name:var(--font-editorial)] text-[14px] leading-[1.75] text-parchment/60">
+              A calm place to write mathematics. Built by scholars for scholars.
+            </p>
+          </div>
+
+          <ColLinks title="the study" links={[
+            { to: '/home', label: 'home' },
+            { to: '/editor/scratch', label: 'begin a folio' },
+            { to: '/browse', label: 'browse the corpus' },
+          ]} />
+          <ColLinks title="about" links={[
+            { to: '/how-it-works', label: 'how it works' },
+            { to: '/terms', label: 'terms' },
+            { to: '/privacy', label: 'privacy' },
+          ]} />
         </div>
-        <span className="font-[family-name:var(--font-serif)] italic normal-case tracking-normal text-forest/40">
-          set in Fraunces &amp; EB Garamond
-        </span>
+
+        <div className="mt-16 pt-6 border-t border-parchment/15 flex flex-wrap items-center justify-between gap-4 text-[11px] font-[family-name:var(--font-mono)] tracking-[0.22em] text-parchment/45">
+          <span>© 2026 FOLIO · A SCHOLAR'S NOTEBOOK</span>
+          <span>SET IN FRAUNCES, ARCHIVO &amp; GAMJA FLOWER</span>
+        </div>
       </div>
     </footer>
   )
 }
+
+function ColLinks({ title, links }: { title: string; links: { to: string; label: string }[] }) {
+  return (
+    <div>
+      <div className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.3em] uppercase text-parchment/45 mb-5">{title}</div>
+      <ul className="space-y-2.5">
+        {links.map(l => (
+          <li key={l.to}>
+            <Link to={l.to} className="font-[family-name:var(--font-editorial)] italic text-[15px] text-parchment/75 hover:text-parchment transition-colors">
+              {l.label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+

@@ -7,6 +7,7 @@ import { EditorBridgeProvider } from './contexts/EditorBridgeContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AIAgentFab } from './components/AIAgentFab'
+import { ErrorBoundary } from './components/ErrorBoundary'
 import Landing from './pages/Landing.tsx'
 import Home from './pages/Home.tsx'
 import Login from './pages/Login.tsx'
@@ -48,6 +49,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
+    <ErrorBoundary>
     <BrowserRouter>
       <ThemeProvider>
       <AuthProvider>
@@ -85,5 +87,6 @@ createRoot(document.getElementById('root')!).render(
       </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>
+    </ErrorBoundary>
   </StrictMode>,
 )

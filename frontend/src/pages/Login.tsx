@@ -1,22 +1,18 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import logoImg from '../assets/logo.png'
 import { KaTeX } from '../components/KaTeX'
 import { useAuth } from '../hooks/useAuth'
 
-/* ------------------------------------------------------------------ */
-/* Login Page                                                          */
-/* Google OAuth login with .edu verification for school features       */
-/* Bauhaus geometric composition with warm botanical palette           */
-/* ------------------------------------------------------------------ */
+/* ==========================================================================
+   Login — minimal zen botanical.
+   A quiet forest-deep panel on the left; a soft cream form on the right.
+   ========================================================================== */
 
 const floatingEquations = [
-  { math: 'e^{i\\pi} + 1 = 0', x: '8%', y: '18%', delay: '0s', size: 'text-xs' },
-  { math: '\\nabla \\times \\mathbf{E} = -\\frac{\\partial \\mathbf{B}}{\\partial t}', x: '72%', y: '12%', delay: '0.5s', size: 'text-[10px]' },
-  { math: '\\int_0^\\infty e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}', x: '5%', y: '72%', delay: '1s', size: 'text-[11px]' },
-  { math: 'H\\psi = E\\psi', x: '80%', y: '68%', delay: '1.5s', size: 'text-xs' },
-  { math: '\\sum_{n=1}^{\\infty} \\frac{1}{n^2} = \\frac{\\pi^2}{6}', x: '65%', y: '85%', delay: '0.8s', size: 'text-[10px]' },
-  { math: 'P(A|B) = \\frac{P(B|A)P(A)}{P(B)}', x: '12%', y: '45%', delay: '1.2s', size: 'text-[10px]' },
+  { math: 'e^{i\\pi} + 1 = 0',                                  x: '10%', y: '20%' },
+  { math: '\\nabla \\times \\mathbf{E} = -\\partial_t \\mathbf{B}', x: '68%', y: '14%' },
+  { math: '\\int_0^\\infty e^{-x^2}dx = \\tfrac{\\sqrt{\\pi}}{2}', x: '8%',  y: '74%' },
+  { math: 'P(A|B) = \\tfrac{P(B|A)P(A)}{P(B)}',                 x: '70%', y: '80%' },
 ]
 
 export default function Login() {
@@ -25,14 +21,12 @@ export default function Login() {
   const location = useLocation()
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? '/home'
 
-  // Redirect authenticated users (handles post-OAuth callback)
   useEffect(() => {
     if (user) navigate(from, { replace: true })
   }, [user, navigate, from])
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [showEduPrompt, setShowEduPrompt] = useState(false)
   const [authError, setAuthError] = useState<string | null>(null)
   const [authLoading, setAuthLoading] = useState(false)
   const searchParams = new URLSearchParams(location.search)
@@ -43,7 +37,6 @@ export default function Login() {
   async function handleGoogleSignIn() {
     setAuthError(null)
     await signInWithGoogle()
-    // Redirect happens via OAuth callback
   }
 
   async function handleEmailSubmit(e: React.FormEvent) {
@@ -54,24 +47,22 @@ export default function Login() {
     const fn = mode === 'signup' ? signUp : signInWithEmail
     const { error } = await fn(email, password)
     setAuthLoading(false)
-    if (error) {
-      setAuthError(error)
-    } else {
-      navigate(from, { replace: true })
-    }
+    if (error) setAuthError(error)
+    else       navigate(from, { replace: true })
   }
 
   return (
     <main className="min-h-screen bg-cream flex relative overflow-hidden">
-      {/* Floating equations background */}
+      {/* faint floating equations on the cream side */}
       {floatingEquations.map((eq, i) => (
         <div
           key={i}
-          className={`absolute opacity-[0.06] ${eq.size} animate-float pointer-events-none select-none`}
+          className="absolute opacity-[0.06] animate-float pointer-events-none select-none text-forest"
           style={{
             left: eq.x,
             top: eq.y,
-            animationDelay: eq.delay,
+            fontSize: 14,
+            animationDelay: `${i * 0.5}s`,
             animationDuration: `${4 + i * 0.7}s`,
           }}
         >
@@ -79,164 +70,144 @@ export default function Login() {
         </div>
       ))}
 
-      {/* Decorative geometric shapes */}
-      <svg className="absolute top-0 right-0 w-[500px] h-[500px] opacity-[0.03] pointer-events-none" viewBox="0 0 500 500" fill="none">
-        <circle cx="400" cy="100" r="200" stroke="#264635" strokeWidth="1" />
-        <circle cx="400" cy="100" r="140" stroke="#A3B18A" strokeWidth="0.5" />
-        <rect x="300" y="0" width="200" height="200" stroke="#264635" strokeWidth="0.5" fill="none" />
-      </svg>
-      <svg className="absolute bottom-0 left-0 w-[400px] h-[400px] opacity-[0.03] pointer-events-none" viewBox="0 0 400 400" fill="none">
-        <polygon points="0,400 200,0 400,400" stroke="#A3B18A" strokeWidth="1" fill="none" />
-        <circle cx="200" cy="300" r="80" stroke="#264635" strokeWidth="0.5" />
-      </svg>
+      {/* ── LEFT PANEL — forest-deep, botanical ─────────────────────────── */}
+      <aside className="hidden lg:flex w-[46%] bg-forest-deep relative items-center justify-center overflow-hidden">
+        {/* soft botanical halos */}
+        <div className="absolute -top-24 -left-24 w-[420px] h-[420px] rounded-full bg-sage/15 blur-3xl" />
+        <div className="absolute bottom-0 right-0 w-[380px] h-[380px] rounded-full bg-bau-yellow/6 blur-3xl" />
 
-      {/* Left decorative panel — visible on larger screens */}
-      <div className="hidden lg:flex w-[45%] bg-forest relative items-center justify-center overflow-hidden">
-        {/* Inner geometric pattern */}
-        <svg className="absolute inset-0 w-full h-full opacity-[0.06]" viewBox="0 0 600 800" fill="none">
-          <line x1="0" y1="0" x2="600" y2="800" stroke="#A3B18A" strokeWidth="0.5" />
-          <line x1="600" y1="0" x2="0" y2="800" stroke="#A3B18A" strokeWidth="0.5" />
-          <circle cx="300" cy="400" r="250" stroke="#E9E4D4" strokeWidth="0.5" />
-          <circle cx="300" cy="400" r="180" stroke="#A3B18A" strokeWidth="0.5" />
-          <circle cx="300" cy="400" r="110" stroke="#E9E4D4" strokeWidth="0.5" />
-          <rect x="100" y="200" width="400" height="400" stroke="#A3B18A" strokeWidth="0.3" fill="none" />
-        </svg>
-
-        <div className="relative z-10 px-12 max-w-md stagger">
-          <Link to="/" className="logo-wave logo-wave-lg flex mb-10">
-            <span className="font-[family-name:var(--font-display)] text-[5.5rem] text-parchment leading-[0.85] flex">
-              {'nootes'.split('').map((letter, i) => (
-                <span key={i} className="wave-letter">{letter}</span>
-              ))}
+        <div className="relative max-w-[440px] px-12 text-parchment">
+          <Link to="/" className="inline-flex items-center gap-3 mb-14 group">
+            <LogoLeafDark />
+            <span className="font-[family-name:var(--font-editorial)] italic text-[32px] text-parchment leading-none">
+              Folio
             </span>
           </Link>
 
-          <svg className="w-24 mb-6" viewBox="0 0 200 20" fill="none">
-            <path d="M0 10 C 16 2, 32 18, 48 10 C 64 2, 80 18, 96 10 C 112 2, 128 18, 144 10 C 160 2, 176 18, 200 10" stroke="#A3B18A" strokeWidth="1" opacity="0.3" strokeLinecap="round" />
-          </svg>
+          <h1 className="font-[family-name:var(--font-editorial)] text-[60px] leading-[1.02] tracking-[-0.015em] font-light italic text-parchment">
+            a quiet
+            <br />
+            place to
+            <br />
+            <span className="font-normal not-italic">write mathematics.</span>
+          </h1>
 
-          <p className="font-[family-name:var(--font-display)] text-3xl text-parchment/70 leading-snug mb-6">
-            merge ideas,<br />not just text
-          </p>
-          <p className="font-[family-name:var(--font-body)] text-sm text-sage/50 leading-relaxed mb-10">
-            Join the community that's building the world's best nootes — together. Write, fork, merge, and learn.
+          <p className="mt-10 font-[family-name:var(--font-editorial)] italic text-[17px] leading-[1.75] text-parchment/70 max-w-[38ch]">
+            No compile step. No clutter. Just the paper you mean to write,
+            rising beside you as you type.
           </p>
 
-          {/* Testimonial card */}
-          <div className="bg-parchment/[0.06] border border-parchment/[0.08] squircle-xl p-5">
-            <p className="font-[family-name:var(--font-display)] text-lg text-parchment/40 leading-relaxed mb-4">
-              "Finally — a knowledge base that grows with you. Everyone builds on the same foundation now."
-            </p>
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-forest/60 border border-parchment/10 flex items-center justify-center overflow-hidden">
-                <span className="font-[family-name:var(--font-display)] text-sm text-parchment">K</span>
-              </div>
-              <div>
-                <span className="font-[family-name:var(--font-body)] text-xs text-parchment/60 block">Kevin D.</span>
-                <span className="font-mono text-[9px] text-sage/40">NYU · CS</span>
-              </div>
-            </div>
+          <div className="mt-14 flex items-center gap-5 font-[family-name:var(--font-mono)] text-[10px] tracking-[0.28em] uppercase text-parchment/45">
+            <span className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-sage" /> LaTeX</span>
+            <span className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-bau-yellow" /> Corpus</span>
+            <span className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-bau-red" /> Merges</span>
           </div>
         </div>
-      </div>
+      </aside>
 
-      {/* Right side — login form */}
-      <div className="flex-1 flex items-center justify-center p-8 relative">
-        <div className="w-full max-w-sm stagger">
-          {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-2 mb-10">
-            <img src={logoImg} alt="Nootes" style={{ width: 36, height: 36 }} />
-            <Link to="/" className="logo-wave flex">
-              <span className="font-[family-name:var(--font-display)] text-3xl text-forest flex">
-                {'nootes'.split('').map((letter, i) => (
-                  <span key={i} className="wave-letter">{letter}</span>
-                ))}
-              </span>
-            </Link>
-          </div>
+      {/* ── RIGHT PANEL — form ──────────────────────────────────────────── */}
+      <section className="flex-1 flex items-center justify-center px-8 py-12 relative">
+        <div className="w-full max-w-[420px]">
+          <Link to="/" className="inline-flex items-center gap-2 font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/55 mb-10 hover:text-forest transition-colors">
+            <span>←</span> back home
+          </Link>
 
-          <span className="font-mono text-[10px] text-sage/50 tracking-[0.3em] uppercase block mb-3">
-            {mode === 'signup' ? 'JOIN THE COMMUNITY' : 'WELCOME BACK'}
-          </span>
-          <h1 className="font-[family-name:var(--font-display)] text-5xl text-forest mb-2 leading-tight">
-            {mode === 'signup' ? 'Sign up' : 'Sign in'}
-          </h1>
-          <p className="font-[family-name:var(--font-body)] text-sm text-forest/45 mb-10">
-            {mode === 'signup'
-              ? 'Start building the best knowledge repo you\'ve ever had.'
-              : 'Pick up where you left off — your noots are waiting.'}
+          <h2 className="font-[family-name:var(--font-editorial)] text-[44px] leading-[1.02] italic text-forest font-light mb-3">
+            {mode === 'signin' ? 'welcome back.' : 'begin a folio.'}
+          </h2>
+          <p className="font-[family-name:var(--font-editorial)] text-[15px] leading-[1.7] text-forest/60 mb-10">
+            {mode === 'signin'
+              ? 'Sign in and the library will remember what you were reading.'
+              : 'Create an account. The study is quiet and ready.'}
           </p>
 
-          {/* Email fallback */}
-          <form onSubmit={handleEmailSubmit} className="space-y-4">
-            <div>
-              <label className="font-mono text-[10px] text-forest/40 tracking-[0.15em] uppercase block mb-2">Email address</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value)
-                  setShowEduPrompt(e.target.value.length > 3 && !e.target.value.endsWith('.edu'))
-                }}
-                placeholder="you@org.com"
-                className="w-full bg-parchment border border-forest/10 squircle px-4 py-3 font-[family-name:var(--font-body)] text-sm text-forest placeholder:text-forest/25 outline-none focus:border-sage/40 focus:ring-2 focus:ring-sage/10 transition-all"
-              />
-              {false && null}
-            </div>
+          <button
+            onClick={handleGoogleSignIn}
+            className="w-full h-12 rounded-full bg-milk border border-forest/20 hover:border-forest/40 hover:bg-parchment/60 transition-all flex items-center justify-center gap-3 font-[family-name:var(--font-body)] text-[14px] text-forest font-medium"
+          >
+            <GoogleIcon />
+            continue with Google
+          </button>
 
-            <div>
-              <label className="font-mono text-[10px] text-forest/40 tracking-[0.15em] uppercase block mb-2">Password</label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full bg-parchment border border-forest/10 squircle px-4 py-3 font-[family-name:var(--font-body)] text-sm text-forest placeholder:text-forest/25 outline-none focus:border-sage/40 focus:ring-2 focus:ring-sage/10 transition-all"
-              />
-            </div>
+          <div className="my-7 flex items-center gap-3">
+            <span className="h-px flex-1 bg-forest/15" />
+            <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.28em] uppercase text-forest/40">or</span>
+            <span className="h-px flex-1 bg-forest/15" />
+          </div>
+
+          <form onSubmit={handleEmailSubmit} className="space-y-4">
+            <LabelledInput label="email" type="email" value={email} onChange={setEmail} placeholder="you@example.edu" />
+            <LabelledInput label="password" type="password" value={password} onChange={setPassword} placeholder="••••••••" />
 
             {authError && (
-              <p className="font-mono text-[10px] text-amber/80 flex items-center gap-1.5">
-                <svg className="w-3 h-3 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
+              <div className="rounded-xl bg-bau-red/10 border border-bau-red/30 px-4 py-3 font-[family-name:var(--font-editorial)] text-[13px] text-bau-red">
                 {authError}
-              </p>
+              </div>
             )}
 
-            <div className="flex items-center gap-2">
-              <button
-                type="submit"
-                disabled={authLoading}
-                className="flex-1 bg-forest/[0.06] text-forest px-6 py-3 squircle font-[family-name:var(--font-body)] text-sm hover:bg-forest/[0.1] transition-all border border-forest/10 disabled:opacity-50"
-              >
-                {authLoading ? 'Loading…' : mode === 'signup' ? 'Create Account' : 'Continue with Email'}
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode(m => m === 'signin' ? 'signup' : 'signin')}
-                className="font-mono text-[10px] text-forest/30 hover:text-forest/50 transition-colors whitespace-nowrap"
-              >
-                {mode === 'signin' ? 'Sign up' : 'Sign in'}
-              </button>
-            </div>
+            <button
+              type="submit"
+              disabled={authLoading || !email || !password}
+              className="w-full h-12 rounded-full bg-forest text-parchment font-[family-name:var(--font-body)] text-[14px] font-medium hover:bg-forest-ink transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {authLoading ? '…' : (mode === 'signin' ? 'sign in' : 'create account')}
+            </button>
           </form>
 
-          {/* Fine print */}
-          <p className="font-[family-name:var(--font-body)] text-[11px] text-forest/25 text-center mt-8 leading-relaxed">
-            By signing in, you agree to our{' '}
-            <Link to="/terms" className="underline hover:text-forest/40 transition-colors">Terms of Service</Link>{' '}
-            and{' '}
-            <Link to="/privacy" className="underline hover:text-forest/40 transition-colors">Privacy Policy</Link>.
-          </p>
-
-          {/* Back to landing */}
           <div className="mt-8 text-center">
-            <Link to="/" className="font-[family-name:var(--font-body)] text-xs text-forest/30 hover:text-forest/60 transition-colors inline-flex items-center gap-1">
-              <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
-              Back to nootes
-            </Link>
+            <button
+              onClick={() => { setMode(mode === 'signin' ? 'signup' : 'signin'); setAuthError(null) }}
+              className="font-[family-name:var(--font-editorial)] italic text-[14px] text-forest/65 hover:text-forest transition-colors"
+            >
+              {mode === 'signin' ? 'new here? ' : 'have an account? '}
+              <span className="underline decoration-forest/30 underline-offset-4">
+                {mode === 'signin' ? 'begin a folio →' : 'sign in ←'}
+              </span>
+            </button>
           </div>
         </div>
-      </div>
+      </section>
     </main>
+  )
+}
+
+function LabelledInput({
+  label, type, value, onChange, placeholder,
+}: { label: string; type: string; value: string; onChange: (v: string) => void; placeholder: string }) {
+  return (
+    <label className="block">
+      <div className="font-[family-name:var(--font-mono)] text-[9.5px] tracking-[0.28em] uppercase text-forest/55 mb-1.5">
+        {label}
+      </div>
+      <input
+        type={type}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="w-full h-12 rounded-xl bg-milk border border-forest/20 px-4 font-[family-name:var(--font-body)] text-[14px] text-forest placeholder:text-forest/30 outline-none focus:border-forest/45 transition-colors"
+      />
+    </label>
+  )
+}
+
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24">
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A10.98 10.98 0 0 0 1 12c0 1.77.42 3.45 1.18 4.93l3.66-2.84z" />
+      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+    </svg>
+  )
+}
+
+function LogoLeafDark() {
+  return (
+    <svg width="34" height="34" viewBox="0 0 40 40" className="shrink-0">
+      <circle cx="20" cy="20" r="18" fill="#A3B18A" opacity="0.18" />
+      <path d="M 20 8 C 12 12, 10 22, 14 30 C 22 28, 28 20, 26 10 C 24 11, 22 11, 20 8 Z"
+            fill="#E9E4D4" opacity="0.9" />
+      <path d="M 20 8 C 20 14, 18 22, 14 30" stroke="#A3B18A" strokeWidth="0.8" fill="none" />
+    </svg>
   )
 }
