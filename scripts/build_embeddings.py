@@ -62,12 +62,11 @@ def _load_existing_matrix(path: str) -> np.ndarray | None:
 
 def _encode_papers(papers, model) -> tuple[
     list[str],           # abstract_ids
-    np.ndarray,          # abstract_embs  (N, D)
+    np.ndarray,          # abstract_embs   (N, D)
     list[object],        # all_chunks
-    np.ndarray,          # chunk_embs     (M, D)
-    list[str],           # caption_ids
-    list[dict],          # caption_records
-    np.ndarray,          # caption_embs   (C, D)
+    np.ndarray,          # chunk_embs      (M, D)
+    list[dict],          # caption_records — {paper_id, title, caption}
+    np.ndarray,          # caption_embs    (C, D)
 ]:
     """Encode abstracts, chunks (via late chunking), and captions for a list of papers."""
     # --- Abstracts ---
@@ -117,7 +116,6 @@ def _encode_papers(papers, model) -> tuple[
         for fig in p.figures
         if fig.caption.strip()
     ]
-    caption_ids = [r["paper_id"] for r in caption_records]
     caption_texts = [f"{r['title']}\n\n{r['caption']}" for r in caption_records]
     caption_embs = (
         encode(caption_texts, model)
@@ -125,7 +123,7 @@ def _encode_papers(papers, model) -> tuple[
         else np.empty((0, config.EMBEDDING_DIM), dtype=np.float32)
     )
 
-    return abstract_ids, abstract_embs, all_chunks, chunk_embs, caption_ids, caption_records, caption_embs
+    return abstract_ids, abstract_embs, all_chunks, chunk_embs, caption_records, caption_embs
 
 
 def build_embeddings(rebuild: bool = False):
@@ -148,6 +146,12 @@ def build_embeddings(rebuild: bool = False):
                 f"Encoder mismatch: index was built with '{stored_model}' "
                 f"but config says '{config.ENCODER_MODEL_NAME}'. "
                 f"Run with --rebuild to re-encode the full corpus."
+            )
+        if any(isinstance(c, str) for c in existing_index.get("captions", [])):
+            raise RuntimeError(
+                "Caption index uses the legacy paper_id-only format. "
+                "Run with --rebuild to migrate to the current format "
+                "(dicts with paper_id, title, caption)."
             )
 
     existing_ids: set[str] = set(existing_index.get("abstracts", []))
@@ -180,7 +184,6 @@ def build_embeddings(rebuild: bool = False):
         new_abstract_embs,
         new_chunks,
         new_chunk_embs,
-        new_caption_ids,
         new_caption_records,
         new_caption_embs,
     ) = _encode_papers(papers_to_encode, model)
@@ -208,7 +211,7 @@ def build_embeddings(rebuild: bool = False):
             }
             for c in new_chunks
         ]
-        merged_caption_ids = new_caption_ids
+        merged_caption_records = list(new_caption_records)
 
     else:
         existing_abstract_embs = _load_existing_matrix(abstract_path)
@@ -239,7 +242,7 @@ def build_embeddings(rebuild: bool = False):
             }
             for c in new_chunks
         ]
-        merged_caption_ids = existing_index.get("captions", []) + new_caption_ids
+        merged_caption_records = existing_index.get("captions", []) + list(new_caption_records)
 
     print(f"\nFinal corpus:")
     print(f"  abstracts.npy: {abstract_embs.shape}")
@@ -255,7 +258,7 @@ def build_embeddings(rebuild: bool = False):
         "encoder_model": config.ENCODER_MODEL_NAME,
         "abstracts": merged_abstract_ids,
         "chunks": merged_chunk_entries,
-        "captions": merged_caption_ids,
+        "captions": merged_caption_records,
     }
     with open(index_path, "w") as f:
         json.dump(index, f, indent=2)
