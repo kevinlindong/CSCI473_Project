@@ -22,15 +22,32 @@ N_RETRIEVAL_RESULTS = 20
 N_RERANK_RESULTS = 5
 
 # --- Clustering ---
-N_CLUSTERS = 10
+# N_CLUSTERS=13 chosen via external-validation sweep over k ∈ [4, 30]:
+#   - silhouette is uninformative on 768-d sentence-transformer embeddings
+#     (flat at 0.06–0.08 across the whole range); used NMI against arXiv
+#     primary_category as the objective instead
+#   - NMI rises with k but degenerates into singleton clusters starting at k=14
+#   - k=13 is the largest non-degenerate k before singletons appear
+#     (NMI=0.344, ARI=0.085, min_cluster_size=9)
+#   - captures sub-cluster structure within cs.LG (attention / RL / generative)
+#   - re-run the sweep after any significant corpus change
+N_CLUSTERS = 13
 KMEANS_MAX_ITER = 100
 KMEANS_SEED = 42
+
+# --- k-NN graph ---
+KNN_NEIGHBORS = 8
 
 # --- PCA ---
 N_PCA_COMPONENTS = 2
 
 # --- LLM ---
-LLM_MODEL_NAME = "google/flan-t5-base"  # Small model for dev; swap for demo
+# Instruction-tuned causal LM used for (a) cluster topic labeling at pipeline
+# time and (b) RAG answer generation. Qwen2.5-1.5B-Instruct was chosen after
+# flan-T5-base (250M) produced extractive / single-word labels even with
+# few-shot prompting; the 6× param bump plus a modern chat template gives
+# coherent 2-5 word topic phrases.
+LLM_MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"
 MAX_CONTEXT_LENGTH = 2048
 
 # --- Arxiv Fetch ---
