@@ -3,6 +3,22 @@ import { Link } from 'react-router-dom'
 import { Navbar } from '../components/Navbar'
 import { KaTeX } from '../components/KaTeX'
 import { useAuth } from '../hooks/useAuth'
+import { useLibrary } from '../hooks/useLibrary'
+
+const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? ''
+
+interface HealthPayload {
+  status: string
+  loaded: Record<string, boolean>
+  llm_enabled: boolean
+}
+
+interface CorpusStats {
+  papers: number
+  clusters: number
+  llm: boolean
+  artifacts: { label: string; ready: boolean }[]
+}
 
 /* ==========================================================================
    Home — "the study" — minimal zen botanical welcome.
@@ -69,8 +85,8 @@ export default function Home() {
           <Doorway
             roman="I"
             kicker="the desk"
-            title="open a manuscript"
-            lede="Compose in LaTeX. A typeset folio rises beside every keystroke."
+            title="open the editor"
+            lede="Compose in LaTeX. A typeset scholar rises beside every keystroke."
             link={{ to: '/editor/scratch', label: 'begin writing' }}
             accent="#264635"
             preview={<DeskPreview />}
@@ -93,7 +109,7 @@ export default function Home() {
       <section className="max-w-5xl mx-auto px-8 py-20">
         <div className="mb-10 flex items-baseline gap-4">
           <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/50">
-            recent passes
+            system ledger
           </span>
           <span className="h-px flex-1 bg-forest/15" />
         </div>
@@ -102,7 +118,7 @@ export default function Home() {
 
       <footer className="max-w-5xl mx-auto px-8 pb-14 pt-10">
         <div className="flex items-center justify-between flex-wrap gap-4 text-[11px] font-[family-name:var(--font-mono)] tracking-[0.22em] uppercase text-forest/40">
-          <span>Folio · the study</span>
+          <span>Scholar · the study</span>
           <span>set in Gamja Flower, Venus &amp; JetBrains Mono</span>
         </div>
       </footer>
@@ -171,7 +187,7 @@ function DeskPreview() {
   return (
     <div className="rounded-xl bg-parchment/40 paper-grain py-6 px-4">
       <div className="text-center mb-2">
-        <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.28em] uppercase text-forest/40">folio · i</span>
+        <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.28em] uppercase text-forest/40">scholar · i</span>
       </div>
       <div className="text-center font-[family-name:var(--font-display)] text-[19px] text-forest mb-3">
         On Kernelized Attention
@@ -245,35 +261,118 @@ function CorpusPreview() {
   )
 }
 
-/* ── Ledger — quiet activity stream ───────────────────────────────── */
-
-const ACTIVITY = [
-  { when: 'this morning', verb: 'indexed',   what: '312 preprints',      where: 'cs.CL · cs.LG' },
-  { when: 'yesterday',    verb: 'clustered', what: '7 topic centroids',  where: 'k-means · pc₁·pc₂' },
-  { when: 'two days ago', verb: 'retrieved', what: '1,082 chunks',       where: 'abstract → chunk space' },
-  { when: 'last week',    verb: 'encoded',   what: '96 figure captions', where: 'caption space' },
-]
+/* ── Ledger — live system stats from /api/health and /api/topic-map ───── */
 
 function Ledger() {
+  const [stats, setStats] = useState<CorpusStats | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const { count: libraryCount } = useLibrary()
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        const [healthRes, topicRes, papersRes] = await Promise.all([
+          fetch(`${API_BASE}/api/health`),
+          fetch(`${API_BASE}/api/topic-map`).catch(() => null),
+          fetch(`${API_BASE}/api/papers?limit=1`).catch(() => null),
+        ])
+        if (!healthRes.ok) throw new Error(`/api/health ${healthRes.status}`)
+        const health = (await healthRes.json()) as HealthPayload
+
+        let papers = 0
+        let clusters = 0
+        if (topicRes && topicRes.ok) {
+          const topic = await topicRes.json()
+          papers = (topic.nodes ?? []).length
+          clusters = (topic.clusters ?? []).length
+        } else if (papersRes && papersRes.ok) {
+          // Fallback: we only know the artifact exists, not the count.
+          papers = health.loaded.papers_json ? 1 : 0
+        }
+
+        if (cancelled) return
+        setStats({
+          papers,
+          clusters,
+          llm: health.llm_enabled,
+          artifacts: [
+            { label: 'abstract embeddings', ready: !!health.loaded.abstracts_npy },
+            { label: 'chunk embeddings',    ready: !!health.loaded.chunks_npy },
+            { label: 'caption embeddings',  ready: !!health.loaded.captions_npy },
+            { label: 'topic graph',         ready: !!health.loaded.topic_graph },
+          ],
+        })
+      } catch (e) {
+        if (!cancelled) setError(e instanceof Error ? e.message : String(e))
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [])
+
+  if (error) {
+    return (
+      <div className="bau-card px-7 py-6">
+        <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-[#C85544] mb-2">
+          backend unreachable
+        </div>
+        <div className="font-[family-name:var(--font-body)] text-[14px] text-forest/70">{error}</div>
+      </div>
+    )
+  }
+
+  if (!stats) {
+    return (
+      <div className="bau-card px-7 py-6 font-[family-name:var(--font-mono)] text-[11px] tracking-[0.28em] uppercase text-forest/50">
+        loading…
+      </div>
+    )
+  }
+
+  const rows = [
+    { label: 'corpus',      value: stats.papers ? `${stats.papers.toLocaleString()} papers` : 'not built', kind: 'indexed' },
+    { label: 'constellations', value: stats.clusters ? `${stats.clusters} topic clusters` : 'not built', kind: 'clustered' },
+    { label: 'synthesis',   value: stats.llm ? 'qwen · on device' : 'disabled', kind: 'generator' },
+    { label: 'your shelf',  value: libraryCount > 0 ? `${libraryCount} saved` : 'empty', kind: 'library' },
+  ]
+
   return (
-    <ol className="bau-card divide-y divide-forest/10 overflow-hidden">
-      {ACTIVITY.map((a, i) => (
-        <li
-          key={i}
-          className="grid grid-cols-12 gap-4 items-center px-7 py-5 hover:bg-parchment/40 transition-colors"
-        >
-          <span className="col-span-12 sm:col-span-3 font-[family-name:var(--font-display)] text-[15px] text-forest/55">
-            {a.when}
+    <>
+      <ol className="bau-card divide-y divide-forest/10 overflow-hidden">
+        {rows.map((r, i) => (
+          <li
+            key={i}
+            className="grid grid-cols-12 gap-4 items-center px-7 py-5 hover:bg-parchment/40 transition-colors"
+          >
+            <span className="col-span-12 sm:col-span-3 font-[family-name:var(--font-display)] text-[15px] text-forest/55">
+              {r.label}
+            </span>
+            <span className="col-span-12 sm:col-span-6 font-[family-name:var(--font-body)] text-[15px]">
+              <span className="font-[family-name:var(--font-display)] text-forest/60">{r.kind}</span>{' '}
+              <span className="text-forest">{r.value}</span>
+            </span>
+            <span className="col-span-12 sm:col-span-3 sm:text-right font-[family-name:var(--font-mono)] text-[10px] tracking-[0.24em] uppercase text-forest/45">
+              live
+            </span>
+          </li>
+        ))}
+      </ol>
+      <div className="mt-5 flex flex-wrap gap-2">
+        {stats.artifacts.map(a => (
+          <span
+            key={a.label}
+            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full font-[family-name:var(--font-mono)] text-[10px] tracking-[0.2em] uppercase border ${
+              a.ready
+                ? 'bg-sage/15 text-forest border-sage-deep/30'
+                : 'bg-milk text-forest/50 border-forest/15'
+            }`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${a.ready ? 'bg-sage-deep' : 'bg-forest/30'}`} />
+            {a.label}
           </span>
-          <span className="col-span-12 sm:col-span-6 font-[family-name:var(--font-body)] text-[15px]">
-            <span className="font-[family-name:var(--font-display)] text-forest/60">{a.verb}</span>{' '}
-            <span className="text-forest">{a.what}</span>
-          </span>
-          <span className="col-span-12 sm:col-span-3 sm:text-right font-[family-name:var(--font-mono)] text-[10px] tracking-[0.24em] uppercase text-forest/45">
-            {a.where}
-          </span>
-        </li>
-      ))}
-    </ol>
+        ))}
+      </div>
+    </>
   )
 }

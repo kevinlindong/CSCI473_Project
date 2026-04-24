@@ -63,7 +63,7 @@ const GLOWING_CARDS = [
 const FEATURES = [
   { icon: '◎', title: 'Collaborative Editing', desc: 'Write together in real-time with LaTeX and code.' },
   { icon: '⬡', title: 'Semantic Merges', desc: 'AI merging that understands meaning, not just text.' },
-  { icon: '◈', title: 'Study Tools', desc: 'Generate flashcards and practice exams from nootes.' },
+  { icon: '◈', title: 'Study Tools', desc: 'Generate flashcards and practice exams from scholar.' },
 ]
 
 export default function HomeV5() {
@@ -137,7 +137,7 @@ export default function HomeV5() {
             <div className="absolute -inset-3 bg-sage/[0.02] blur-2xl rounded-3xl pointer-events-none" />
             <SpotlightSearch
               mode="inline"
-              placeholder="Search nootes, ask anything…"
+              placeholder="Search scholar, ask anything…"
               variant="dark"
             />
           </div>

@@ -28,7 +28,7 @@ function TopBar() {
         <Link to="/" className="flex items-center gap-3 group">
           <LogoLeaf />
           <span className="font-[family-name:var(--font-display)] text-[30px] text-forest leading-none tracking-tight">
-            Folio
+            Scholar
           </span>
         </Link>
 
@@ -92,18 +92,18 @@ function Hero() {
             <br />
             <span>grow into</span>
             <br />
-            <span className="font-normal">folios.</span>
+            <span className="font-normal">scholars.</span>
           </h1>
 
           <p className="mt-10 font-[family-name:var(--font-body)] text-[18px] leading-[1.75] text-forest/70 max-w-[46ch]">
-            Folio is a calm place to write mathematics and read the corpus — a
+            Scholar is a calm place to write mathematics and read the corpus — a
             LaTeX editor, a library, and a quiet reading room. No compile step,
             no clutter. Just ink and light.
           </p>
 
           <div className="mt-10 flex flex-wrap items-center gap-3">
             <Link to="/login" className="bau-btn">
-              begin a folio
+              begin a scholar
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
                 <path d="M5 12h14M13 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -122,20 +122,20 @@ function Hero() {
           </div>
         </div>
 
-        {/* Right — a single folio preview */}
+        {/* Right — a single scholar preview */}
         <div className="col-span-12 md:col-span-5">
-          <FolioPreview />
+          <ScholarPreview />
         </div>
       </div>
     </section>
   )
 }
 
-function FolioPreview() {
+function ScholarPreview() {
   return (
     <div className="relative">
       <div className="latex-frame paper-grain bg-milk px-8 py-10 offset-shadow">
-        <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.28em] uppercase text-forest/40 mb-2">§ 2 · folio recto</div>
+        <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.28em] uppercase text-forest/40 mb-2">§ 2 · scholar recto</div>
         <h3 className="font-[family-name:var(--font-display)] text-[26px] font-normal text-forest mb-4 leading-tight">
           On kernelised attention
         </h3>
@@ -186,7 +186,7 @@ function Rooms() {
             n="I."
             kicker="the desk"
             title="Manuscript"
-            body="Compose in LaTeX. A typeset folio rises beside every keystroke. No build step, no staring at warnings. Equations bloom in place."
+            body="Compose in LaTeX. A typeset scholar rises beside every keystroke. No build step, no staring at warnings. Equations bloom in place."
             link={{ to: '/editor/scratch', label: 'open the desk' }}
             accent="#264635"
           />
@@ -260,7 +260,7 @@ function Specimen() {
             plain LaTeX. nothing weird.
           </h3>
           <p className="mt-4 font-[family-name:var(--font-body)] text-[15.5px] leading-[1.7] text-parchment/65 max-w-[48ch] mx-auto">
-            The source on one side, the typeset folio on the other —
+            The source on one side, the typeset scholar on the other —
             indistinguishable from what a journal would print.
           </p>
         </div>
@@ -338,9 +338,9 @@ function SpecimenEq({ label, math }: { label: string; math: string }) {
 
 function Pipeline() {
   const steps = [
-    { n: 'one',   title: 'Draft in LaTeX',    body: 'Type the paper you mean to write. Folio typesets as you type, no compile step, no warnings.' },
+    { n: 'one',   title: 'Draft in LaTeX',    body: 'Type the paper you mean to write. Scholar typesets as you type, no compile step, no warnings.' },
     { n: 'two',   title: 'Ask the corpus',    body: 'Mid-sentence, query the library in plain prose. Every claim returns with its source attached.' },
-    { n: 'three', title: 'Fork, merge, read', body: 'Others fork your folio, open merge requests, leave marginalia. The paper breathes with its readers.' },
+    { n: 'three', title: 'Fork, merge, read', body: 'Others fork your scholar, open merge requests, leave marginalia. The paper breathes with its readers.' },
   ]
   return (
     <section className="py-28">
@@ -376,7 +376,7 @@ function Colophon() {
           <div className="max-w-[30ch]">
             <div className="flex items-center gap-3 mb-4">
               <LogoLeaf />
-              <span className="font-[family-name:var(--font-display)] text-[26px] text-parchment leading-none">Folio</span>
+              <span className="font-[family-name:var(--font-display)] text-[26px] text-parchment leading-none">Scholar</span>
             </div>
             <p className="font-[family-name:var(--font-body)] text-[14px] leading-[1.75] text-parchment/60">
               A calm place to write mathematics. Built by scholars for scholars.
@@ -385,7 +385,7 @@ function Colophon() {
 
           <ColLinks title="the study" links={[
             { to: '/home', label: 'home' },
-            { to: '/editor/scratch', label: 'begin a folio' },
+            { to: '/editor/scratch', label: 'begin a scholar' },
             { to: '/browse', label: 'browse the corpus' },
           ]} />
           <ColLinks title="about" links={[
@@ -396,7 +396,7 @@ function Colophon() {
         </div>
 
         <div className="mt-16 pt-6 border-t border-parchment/15 flex flex-wrap items-center justify-between gap-4 text-[11px] font-[family-name:var(--font-mono)] tracking-[0.22em] text-parchment/45">
-          <span>© 2026 FOLIO · A SCHOLAR'S NOTEBOOK</span>
+          <span>© 2026 SCHOLAR · A SCHOLAR'S NOTEBOOK</span>
           <span>SET IN GAMJA FLOWER, VENUS &amp; JETBRAINS MONO</span>
         </div>
       </div>

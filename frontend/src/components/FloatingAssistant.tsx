@@ -106,7 +106,7 @@ export function FloatingAssistant() {
           <div className="flex items-center justify-between px-4 py-3 border-b border-forest/10 shrink-0">
             <div className="flex items-center gap-2">
               <span className="text-sage text-base animate-pulse-soft" style={{ animationDuration: '2s' }}>✦</span>
-              <span className="font-[family-name:var(--font-display)] text-base text-forest">nootes AI</span>
+              <span className="font-[family-name:var(--font-display)] text-base text-forest">scholar AI</span>
             </div>
             <button
               onClick={() => setOpen(false)}
@@ -155,7 +155,7 @@ export function FloatingAssistant() {
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter' && !loading) sendMessage() }}
-                placeholder="Ask about your nootes..."
+                placeholder="Ask about your scholar..."
                 className="flex-1 bg-transparent text-xs text-forest placeholder:text-forest/30 outline-none font-[family-name:var(--font-body)]"
               />
               <button

@@ -65,31 +65,137 @@ const takeOptionalArg = (s: string, start: number): { arg: string; end: number }
 
 export function extractMeta(source: string): { meta: PaperMeta; body: string } {
   const src = stripComments(source)
+    .replace(/[\uFF3C\u2216\u29F5\uFE68]/g, '\\')
+    .replace(/[\u200B-\u200F\u061C\u2060-\u206F\uFEFF]/g, '')
   const meta: PaperMeta = {}
+  const preamble = src.match(/^[\s\S]*?(?=\\begin\{document\}|$)/)?.[0] ?? src
 
   const grab = (cmd: string): string | undefined => {
-    const re = new RegExp(`\\\\${cmd}\\s*\\{`)
+    const re = new RegExp(`\\\\${cmd}(?![a-zA-Z@])\\s*(?:\\[[^\\]]*\\]\\s*)*\\{`)
     const m = src.match(re)
     if (!m || m.index === undefined) return undefined
-    const { arg } = takeBraceArg(src, m.index + m[0].length - 1)
-    return arg.trim() || undefined
+    // Scan for the matching '}', but bail out if we hit \begin{document} or
+    // \maketitle — a preamble command with a runaway closing brace would
+    // otherwise slurp the entire document body. We don't bail on blank
+    // lines: some users put multi-line keyword lists with blank lines for
+    // readability, and the document-start guard is already sufficient.
+    const openIdx = m.index + m[0].length - 1
+    let depth = 1
+    let j = openIdx + 1
+    while (j < src.length && depth > 0) {
+      const ch = src[j]
+      if (ch === '\\') {
+        if (/^\\(?:begin\{document\}|maketitle\b)/.test(src.slice(j))) return undefined
+        if (j + 1 < src.length) { j += 2; continue }
+      }
+      if (ch === '{') depth++
+      else if (ch === '}') depth--
+      j++
+    }
+    if (depth !== 0) return undefined
+    const arg = src.slice(openIdx + 1, j - 1).trim()
+    return arg || undefined
   }
 
-  meta.title = grab('title')
-  const authorRaw = grab('author')
-  if (authorRaw) {
-    meta.authors = authorRaw.split(/\\and|,\s*|\s+and\s+/i).map(a => a.trim()).filter(Boolean)
+  const grabAny = (...cmds: string[]): string | undefined => {
+    for (const cmd of cmds) {
+      const value = grab(cmd)
+      if (value) return value
+    }
+    return undefined
   }
-  meta.date = grab('date')
-  const affilRaw = grab('affiliation') || grab('affil')
-  if (affilRaw) meta.affiliations = affilRaw.split(/\\and|,\s*/).map(a => a.trim()).filter(Boolean)
-  meta.keywords = grab('keywords')?.split(/,\s*/).filter(Boolean)
+
+  const grabLine = (...cmds: string[]): string | undefined => {
+    const commandSet = new Set(cmds.map(c => c.toLowerCase()))
+    for (const rawLine of preamble.split(/\r?\n/)) {
+      const line = rawLine.trim()
+      const slashIdx = line.indexOf('\\')
+      if (slashIdx < 0) continue
+      const cmdMatch = line.slice(slashIdx).match(/^\\([a-zA-Z@]+)\*?(.*)$/)
+      if (!cmdMatch) continue
+      if (!commandSet.has(cmdMatch[1].toLowerCase())) continue
+      const withNoOpt = cmdMatch[2].trim().replace(/^\[[^\]]*\]\s*/, '')
+      if (!withNoOpt || withNoOpt.startsWith('{')) continue
+      const value = withNoOpt.replace(/^\s*[:=]\s*/, '').trim()
+      if (value) return value
+    }
+    return undefined
+  }
+
+  const splitList = (raw: string, splitter: RegExp): string[] =>
+    raw
+      .split(splitter)
+      .map(item => item.trim())
+      .filter(Boolean)
+
+  const titleRaw = grab('title') ?? grabLine('title')
+  if (titleRaw) meta.title = titleRaw
+
+  const authorRaw = grabAny('author', 'authors') ?? grabLine('author', 'authors')
+  if (authorRaw) {
+    const authors = splitList(
+      authorRaw.replace(/\\\\(?:\[[^\]]*\])?/g, '\n'),
+      /\\and\b|\s+and\s+|,\s*|;\s*|\n+/i,
+    )
+    if (authors.length > 0) meta.authors = authors
+  }
+
+  const dateRaw = grab('date') ?? grabLine('date')
+  if (dateRaw) {
+    meta.date = /^\\today\b/.test(dateRaw.trim())
+      ? new Intl.DateTimeFormat(undefined, { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date())
+      : dateRaw
+  }
+
+  const affilRaw = grabAny('affiliation', 'affil') ?? grabLine('affiliation', 'affil')
+  if (affilRaw) {
+    const affiliations = splitList(
+      affilRaw.replace(/\\\\(?:\[[^\]]*\])?/g, '\n'),
+      /\\and\b|,\s*|;\s*|\n+/i,
+    )
+    if (affiliations.length > 0) meta.affiliations = affiliations
+  }
+
+  const keywordEnvRaw = src.match(/\\begin\{keywords?\}([\s\S]*?)\\end\{keywords?\}/)?.[1]
+  const keywordLooseRaw = preamble.match(/\\keywords?(?![a-zA-Z@])(?:\s*\[[^\]]*\])?\s*[:=]?\s*([^\r\n%]*)/i)?.[1]
+  const keywordRaw = grabAny('keywords', 'keyword') ?? keywordEnvRaw ?? grabLine('keywords', 'keyword') ?? keywordLooseRaw
+  if (keywordRaw) {
+    const keywords = splitList(
+      keywordRaw
+        .replace(/^\{\s*|\s*\}$/g, '')
+        .replace(/\\\\(?:\[[^\]]*\])?/g, '\n'),
+      /\\sep\b|,\s*|;\s*|\n+/i,
+    )
+    if (keywords.length > 0) meta.keywords = keywords
+  }
 
   const abstractMatch = src.match(/\\begin\{abstract\}([\s\S]*?)\\end\{abstract\}/)
-  if (abstractMatch) meta.abstract = abstractMatch[1].trim()
+  let abstractRaw = abstractMatch?.[1].trim()
+  if (abstractRaw) {
+    const abstractKeywordLabel = /(?:\\vspace\{[^}]*\}\s*)*(?:\\noindent\s*)?(?:\\textbf\{)?\s*keywords?\s*[:\-]\s*(?:\})?/i
+    const keywordLineIdx = abstractRaw.search(abstractKeywordLabel)
+    if (keywordLineIdx >= 0) {
+      const keywordTail = abstractRaw.slice(keywordLineIdx).replace(abstractKeywordLabel, '').trim()
+      if (!meta.keywords || meta.keywords.length === 0) {
+        const keywords = splitList(
+          keywordTail
+            .replace(/\\[a-zA-Z@]+\*?(?:\[[^\]]*\])?(?:\{[^}]*\})?/g, ' ')
+            .replace(/[{}]/g, ' ')
+            .replace(/[.\s\\]+$/, ''),
+          /\\sep\b|,\s*|;\s*|\n+/i,
+        ).map(k => k.replace(/\s+/g, ' ').trim().replace(/[.\s\\]+$/, ''))
+        if (keywords.length > 0) meta.keywords = keywords
+      }
+      abstractRaw = abstractRaw.slice(0, keywordLineIdx).trim()
+    }
+    if (abstractRaw) meta.abstract = abstractRaw
+  }
 
   const bodyMatch = src.match(/\\begin\{document\}([\s\S]*?)\\end\{document\}/)
-  const body = bodyMatch ? bodyMatch[1] : src
+  let body = bodyMatch ? bodyMatch[1] : src
+  // Abstract is hoisted into meta and rendered above the body, so strip it
+  // from the body to avoid rendering it twice.
+  body = body.replace(/\\begin\{abstract\}[\s\S]*?\\end\{abstract\}/g, '')
   return { meta, body }
 }
 
@@ -310,7 +416,9 @@ type Block =
   | { kind: 'rule' }
 
 function findMatchingEnv(src: string, start: number, name: string): number {
-  const re = new RegExp(`\\\\(begin|end)\\{${name}\\}`, 'g')
+  // Escape regex specials in name — notably '*' for starred envs like equation*.
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const re = new RegExp(`\\\\(begin|end)\\{${escaped}\\}`, 'g')
   re.lastIndex = start
   let depth = 0
   let m
@@ -368,15 +476,27 @@ function parseBlocks(body: string): Block[] {
       flush()
       const name = envM[1]
       const afterBegin = i + envM[0].length
-      const endIdx = findMatchingEnv(src, afterBegin, name.replace(/\*$/, ''))
+      const endIdx = findMatchingEnv(src, afterBegin, name)
       if (endIdx < 0) { paragraphBuf += src[i]; i++; continue }
-      // Optional bracket arg like \begin{figure}[h!]
+      // Strip any [optional] and {required} args that follow \begin{env} on
+      // the same line (e.g. \begin{tabular}{lrr}, \begin{figure}[h!],
+      // \begin{minipage}[t]{0.5\textwidth}). We only consume args on the
+      // same line so we don't accidentally swallow body content that happens
+      // to start with '{'.
       let bodyStart = afterBegin
-      const bracket = src.slice(afterBegin).match(/^\s*\[[^\]]*\]/)
-      if (bracket) bodyStart += bracket[0].length
+      while (bodyStart < endIdx) {
+        let peek = bodyStart
+        while (peek < endIdx && (src[peek] === ' ' || src[peek] === '\t')) peek++
+        if (peek >= endIdx) break
+        const ch = src[peek]
+        if (ch !== '[' && ch !== '{') break
+        const result = ch === '[' ? takeOptionalArg(src, peek) : takeBraceArg(src, peek)
+        if (result.end <= peek) break
+        bodyStart = result.end
+      }
       const content = src.slice(bodyStart, endIdx)
-      blocks.push({ kind: 'env', env: { name: name.replace(/\*$/, ''), body: content } })
-      i = endIdx + `\\end{${name.replace(/\*$/, '')}}`.length
+      blocks.push({ kind: 'env', env: { name, body: content } })
+      i = endIdx + `\\end{${name}}`.length
       continue
     }
 
@@ -399,7 +519,11 @@ function parseBlocks(body: string): Block[] {
 
 function renderEnv(env: Env, refs: Refs, figNum: { n: number }, key: string): ReactNode {
   const n = env.name
-  if (n === 'abstract') {
+  // Strip trailing '*' for env-type matching (equation*, figure*, align*, …).
+  // The starred form is still observable via n.endsWith('*') — we use that
+  // below to hide equation labels for starred math envs.
+  const base = n.replace(/\*$/, '')
+  if (base === 'abstract') {
     return (
       <div key={key} className="my-8 mx-auto max-w-[560px] text-[0.96em]">
         <div className="text-center smcp text-forest/55 text-[0.78em] mb-3">Abstract</div>
@@ -414,10 +538,10 @@ function renderEnv(env: Env, refs: Refs, figNum: { n: number }, key: string): Re
       </div>
     )
   }
-  if (n === 'equation' || n === 'displaymath' || n === 'align' || n === 'align*' || n === 'equation*' || n === 'gather' || n === 'multline') {
+  if (base === 'equation' || base === 'displaymath' || base === 'align' || base === 'gather' || base === 'multline') {
     const labelMatch = env.body.match(/\\label\{([^}]+)\}/)
     const cleaned = env.body.replace(/\\label\{[^}]+\}/g, '').trim()
-    const isAlign = n.startsWith('align')
+    const isAlign = base === 'align'
     const expr = isAlign ? `\\begin{aligned}${cleaned}\\end{aligned}` : cleaned
     return (
       <div key={key} className="my-6 flex items-center justify-between gap-6 px-2">
@@ -428,20 +552,20 @@ function renderEnv(env: Env, refs: Refs, figNum: { n: number }, key: string): Re
       </div>
     )
   }
-  if (n === 'itemize' || n === 'enumerate') {
+  if (base === 'itemize' || base === 'enumerate') {
     const items = env.body.split(/\\item\b/).slice(1).map(s => s.trim())
-    const Tag = n === 'itemize' ? 'ul' : 'ol'
+    const Tag = base === 'itemize' ? 'ul' : 'ol'
     return (
-      <Tag key={key} className={`my-4 pl-6 ${n === 'itemize' ? 'list-none' : 'list-decimal'} text-forest/85 leading-[1.75]`}>
+      <Tag key={key} className={`my-4 pl-6 ${base === 'itemize' ? 'list-none' : 'list-decimal'} text-forest/85 leading-[1.75]`}>
         {items.map((it, idx) => (
-          <li key={idx} className={`mb-1.5 relative ${n === 'itemize' ? 'before:content-[\'\'] before:absolute before:-left-4 before:top-[0.7em] before:w-1.5 before:h-1.5 before:bg-sage/60 before:rotate-45' : ''}`}>
+          <li key={idx} className={`mb-1.5 relative ${base === 'itemize' ? 'before:content-[\'\'] before:absolute before:-left-4 before:top-[0.7em] before:w-1.5 before:h-1.5 before:bg-sage/60 before:rotate-45' : ''}`}>
             {parseInline(it, refs, `${key}-it${idx}`)}
           </li>
         ))}
       </Tag>
     )
   }
-  if (n === 'figure') {
+  if (base === 'figure') {
     figNum.n++
     const captionMatch = env.body.match(/\\caption\{([\s\S]*?)\}(?=\s*(\\label|\\end|$))/)
     const graphicsMatch = env.body.match(/\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}/)
@@ -473,21 +597,21 @@ function renderEnv(env: Env, refs: Refs, figNum: { n: number }, key: string): Re
       </figure>
     )
   }
-  if (n === 'quote' || n === 'quotation') {
+  if (base === 'quote' || base === 'quotation') {
     return (
       <blockquote key={key} className="my-5 pl-6 border-l-2 border-sage/40 text-forest/75 font-[family-name:var(--font-body)] leading-[1.7]">
         {parseInline(env.body.trim(), refs, `${key}-qt`)}
       </blockquote>
     )
   }
-  if (n === 'center') {
+  if (base === 'center') {
     return (
       <div key={key} className="my-5 text-center text-forest/85 leading-[1.75]">
         {parseInline(env.body.trim(), refs, `${key}-ctr`)}
       </div>
     )
   }
-  if (n === 'tabular' || n === 'array') {
+  if (base === 'tabular' || base === 'array') {
     const lines = env.body.trim().split(/\\\\\s*/).filter(Boolean)
     const rows = lines.map(l => l.split(/(?<!\\)&/).map(c => c.trim()))
     return (
@@ -517,7 +641,7 @@ function renderEnv(env: Env, refs: Refs, figNum: { n: number }, key: string): Re
       </div>
     )
   }
-  if (n === 'thebibliography') {
+  if (base === 'thebibliography') {
     // very light-weight — each \bibitem is a reference
     const items = env.body.split(/\\bibitem/).slice(1).map(s => s.trim())
     return (
@@ -626,22 +750,30 @@ export function RenderPaper({ source, showLineNumbers = false }: { source: strin
         </header>
       )}
 
-      {/* Abstract block derived from \begin{abstract} if present */}
-      {meta.abstract && !blocks.some(b => b.kind === 'env' && b.env.name === 'abstract') && (
-        <div className="my-8 mx-auto max-w-[560px]">
+      {/* Abstract — always drawn from meta; extractMeta strips the env from body. */}
+      {meta.abstract && (
+        <div className="mt-8 mx-auto max-w-[560px] text-[0.96em]">
           <div className="text-center smcp text-forest/55 text-[0.78em] mb-3">Abstract</div>
-          <div className="text-forest/80 leading-[1.75] text-justify font-[family-name:var(--font-body)] text-[0.98em]">
+          <div className="text-forest/80 leading-[1.75] text-justify font-[family-name:var(--font-body)]">
             {parseInline(meta.abstract, refs, 'abs')}
+          </div>
+          <div className="flex justify-center mt-4">
+            <svg width="56" height="6" viewBox="0 0 56 6" fill="none">
+              <path d="M0 3 Q 14 -1, 28 3 T 56 3" stroke="#8B6E4E" strokeWidth="0.8" opacity="0.5" />
+            </svg>
           </div>
         </div>
       )}
 
-      {/* Keywords */}
+      {/* Keywords — sit immediately below the abstract, academic-paper style. */}
       {meta.keywords && meta.keywords.length > 0 && (
-        <div className="my-6 flex items-baseline gap-3 justify-center flex-wrap">
-          <span className="smcp text-forest/50 text-[0.78em]">Keywords</span>
-          {meta.keywords.map(k => (
-            <span key={k} className="font-[family-name:var(--font-mono)] text-[10px] text-moss border-b border-dotted border-moss/40 px-1">{k}</span>
+        <div className="mt-5 mb-10 mx-auto max-w-[560px] flex flex-wrap items-baseline justify-center gap-x-1.5 gap-y-1 font-[family-name:var(--font-body)] text-[0.9em]">
+          <span className="smcp text-forest/55 text-[0.78em] tracking-[0.14em] mr-1">Keywords</span>
+          {meta.keywords.map((k, idx) => (
+            <span key={k} className="text-forest/80 italic">
+              {k}
+              {idx < meta.keywords!.length - 1 && <span className="not-italic text-forest/40 ml-1.5">·</span>}
+            </span>
           ))}
         </div>
       )}
@@ -702,7 +834,7 @@ export const DEFAULT_LATEX = `\\documentclass[11pt]{article}
 \\author{Ada Kovalenko \\and Mirra Chen \\and R.~Okonkwo}
 \\affiliation{Department of Computer Science, Example University}
 \\date{\\today}
-\\keywords{attention, transformers, long-context, efficiency}
+\\keywords{attention mechanisms, transformers, long-context modeling, sparse attention, linear attention, efficient deep learning}
 
 \\begin{document}
 \\maketitle

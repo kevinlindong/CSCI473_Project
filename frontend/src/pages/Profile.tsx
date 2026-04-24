@@ -142,7 +142,7 @@ export default function Profile() {
         setActivity(activityRes.data.map((d: any) => ({
           id: d.id,
           title: d.title ?? '',
-          repo_title: d.repositories?.title ?? 'Unknown folio',
+          repo_title: d.repositories?.title ?? 'Unknown scholar',
           updated_at: d.updated_at,
           created_at: d.created_at,
         })))
@@ -211,7 +211,7 @@ export default function Profile() {
             <div className="flex items-center justify-center h-64">
               <div className="flex flex-col items-center gap-3">
                 <div className="w-10 h-10 border-[2px] border-forest/20 border-t-forest animate-spin" />
-                <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/40">loading folio…</span>
+                <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/40">loading scholar…</span>
               </div>
             </div>
           ) : (
@@ -232,7 +232,7 @@ export default function Profile() {
                       >
                         <div>
                           <div className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.3em] uppercase text-forest/50 mb-1">amend</div>
-                          <h2 className="font-[family-name:var(--font-display)] text-[30px] text-forest leading-none">edit folio</h2>
+                          <h2 className="font-[family-name:var(--font-display)] text-[30px] text-forest leading-none">edit scholar</h2>
                         </div>
 
                         <Field label="Full name">
@@ -357,7 +357,7 @@ export default function Profile() {
                           <StatCell label="Aura"      value={profile.aura.toLocaleString()}  color="#C85544" glyph="✦" />
                           <StatCell label="Noots"     value={counts ? String(counts.noots) : '—'}     color="#2C4B70" />
                           <StatCell label="Merges"    value={counts ? String(counts.merges) : '—'}    color="#A3B18A" />
-                          <StatCell label="Folios"    value={counts ? String(counts.nootbooks) : '—'} color="#E0B13A" />
+                          <StatCell label="Scholars"    value={counts ? String(counts.nootbooks) : '—'} color="#E0B13A" />
                         </div>
 
                         {/* Badges */}
@@ -441,7 +441,7 @@ export default function Profile() {
                           onClick={openEdit}
                           className="bau-btn bau-btn--ghost w-full justify-center mt-6 !py-2.5 !text-[11px]"
                         >
-                          Edit folio
+                          Edit scholar
                         </button>
                       </div>
                     )}
@@ -497,13 +497,13 @@ export default function Profile() {
 
                 {/* Top Noots */}
                 <section>
-                  <SectionHeader kicker="pinned" title="top folios" accent="#E0B13A" />
+                  <SectionHeader kicker="pinned" title="top scholars" accent="#E0B13A" />
                   <div className="bg-milk border border-forest/15 border-dashed rounded-2xl p-10 text-center">
                     <span className="font-[family-name:var(--font-display)] text-[26px] text-forest/50 leading-none">
                       nothing pinned yet —
                     </span>
                     <p className="font-[family-name:var(--font-body)] text-[13.5px] text-forest/50 mt-3">
-                      your most-starred folios will surface here.
+                      your most-starred scholars will surface here.
                     </p>
                   </div>
                 </section>
@@ -522,7 +522,7 @@ export default function Profile() {
                         a quiet day —
                       </span>
                       <p className="font-[family-name:var(--font-body)] text-[13.5px] text-forest/50 mt-3">
-                        start writing your first folio.
+                        start writing your first scholar.
                       </p>
                     </div>
                   ) : (
@@ -543,7 +543,7 @@ export default function Profile() {
                                 <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.18em] uppercase text-forest/55">{item.repo_title}</span>
                               </div>
                               <p className="font-[family-name:var(--font-body)] text-[15px] text-forest group-hover:text-forest-ink transition-colors truncate">
-                                {item.title || <span className="text-forest/45">untitled folio</span>}
+                                {item.title || <span className="text-forest/45">untitled scholar</span>}
                               </p>
                             </div>
                             <span className="col-span-12 sm:col-span-3 sm:text-right font-[family-name:var(--font-mono)] text-[10px] tracking-[0.22em] uppercase text-forest/45">

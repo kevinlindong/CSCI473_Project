@@ -146,7 +146,7 @@ body{background:#E9E4D4;color:#1A1A18;font-family:'JetBrains Mono',monospace;fon
 .label{display:inline-block;font-size:7pt;text-transform:uppercase;letter-spacing:.15em;color:#A3B18A;border:1pt solid #A3B18A;padding:1pt 5pt;margin-right:8pt;vertical-align:middle}
 @media print{body{background:#E9E4D4;padding:0}.graph-section{page-break-inside:avoid}.task-item{page-break-inside:avoid}}
 </style></head><body>
-<div class="cover"><div class="brand">nootes · noot ai companion</div><h1 class="main-title">${escHtml(mainPrompt)}</h1><div class="meta">generated ${generatedAt}</div></div>
+<div class="cover"><div class="brand">scholar · noot ai companion</div><h1 class="main-title">${escHtml(mainPrompt)}</h1><div class="meta">generated ${generatedAt}</div></div>
 ${bodyHtml}</body></html>`
 
   const win = window.open('', '_blank')

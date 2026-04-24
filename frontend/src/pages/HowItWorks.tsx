@@ -3,7 +3,7 @@ import logoImg from '../assets/logo.png'
 
 /* ------------------------------------------------------------------ */
 /* How It Works — public marketing page                                */
-/* Walks through the 4-step nootes workflow                            */
+/* Walks through the 4-step scholar workflow                            */
 /* ------------------------------------------------------------------ */
 
 // ── Inline mockup components ─────────────────────────────────────────
@@ -274,9 +274,9 @@ export default function HowItWorks() {
       <header className="shrink-0 bg-cream/80 backdrop-blur-sm border-b border-forest/[0.06] sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-6 h-14">
           <Link to="/" className="logo-wave flex items-center gap-1 hover:opacity-80 transition-opacity">
-            <img src={logoImg} alt="Nootes logo" style={{ width: 36, height: 36 }} />
+            <img src={logoImg} alt="Scholar logo" style={{ width: 36, height: 36 }} />
             <span className="font-[family-name:var(--font-display)] text-2xl text-forest flex">
-              {'nootes'.split('').map((letter, i) => (
+              {'scholar'.split('').map((letter, i) => (
                 <span key={i} className="wave-letter">{letter}</span>
               ))}
             </span>
@@ -313,7 +313,7 @@ export default function HowItWorks() {
             Knowledge, together.
           </h1>
           <p className="font-[family-name:var(--font-body)] text-lg text-forest/55 leading-relaxed max-w-xl mx-auto mb-8">
-            Nootes is a living knowledge platform — discover course repositories, fork and contribute your insights, let AI synthesize the best of everyone's work, and learn with an AI companion built into your editor.
+            Scholar is a living knowledge platform — discover course repositories, fork and contribute your insights, let AI synthesize the best of everyone's work, and learn with an AI companion built into your editor.
           </p>
           {/* step pills */}
           <div className="flex items-center justify-center gap-2 flex-wrap">
@@ -429,8 +429,8 @@ export default function HowItWorks() {
         <footer className="border-t border-forest/[0.07]">
           <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
             <div className="flex items-center gap-1.5">
-              <img src={logoImg} alt="Nootes logo" style={{ width: 24, height: 24 }} />
-              <span className="font-[family-name:var(--font-display)] text-base text-forest/50">nootes</span>
+              <img src={logoImg} alt="Scholar logo" style={{ width: 24, height: 24 }} />
+              <span className="font-[family-name:var(--font-display)] text-base text-forest/50">scholar</span>
             </div>
             <p className="font-mono text-[9px] text-forest/35 tracking-wider">Built for learners, by learners.</p>
             <div className="flex items-center gap-4">

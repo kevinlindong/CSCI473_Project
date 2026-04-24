@@ -16,15 +16,16 @@ function getInitials(name: string): string {
 type NavItem = { path: string; label: string }
 
 const navLinks: NavItem[] = [
-  { path: '/home',           label: 'study'      },
   { path: '/browse',         label: 'corpus'     },
-  { path: '/editor/scratch', label: 'manuscript' },
+  { path: '/library',        label: 'library'    },
+  { path: '/editor/scratch', label: 'editor' },
 ]
 
 const profileDropdownLinks = [
   { path: '/profile',  label: 'profile'  },
   { path: '/settings', label: 'settings' },
 ]
+const BRAND_WORDMARK = 'Scholar'
 
 export function Navbar({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
   const location = useLocation()
@@ -51,19 +52,24 @@ export function Navbar({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
 
   return (
     <header className={`sticky top-0 z-50 ${chrome}`}>
-      <div className="max-w-7xl mx-auto flex items-center justify-between px-8 h-[64px]">
+      <div className="w-full flex items-center justify-between px-6 sm:px-8 lg:px-12 h-[64px]">
         {/* ── Logo: organic leaf + Gamja Flower wordmark ──────────── */}
         <Link
           to="/home"
           onClick={e => { if (location.pathname === '/home') e.preventDefault() }}
-          className="flex items-center gap-3 self-center hover:opacity-90 transition-opacity"
+          className="scholar-wordmark-group flex items-center gap-3 self-center hover:opacity-90 transition-opacity"
         >
           <LogoLeaf dark={isDark} />
           <span className={`font-[family-name:var(--font-display)] text-[24px] leading-none translate-y-[1px] ${inkStrong}`}>
-            Folio
-          </span>
-          <span className={`hidden sm:inline-block font-[family-name:var(--font-mono)] text-[9px] tracking-[0.3em] uppercase translate-y-[1px] ml-1 ${isDark ? 'text-parchment/40' : 'text-forest/40'}`}>
-            · a scholar's notebook
+            {BRAND_WORDMARK.split('').map((ch, idx) => (
+              <span
+                key={`${ch}-${idx}`}
+                className="scholar-wave-letter inline-block"
+                style={{ animationDelay: `${idx * 55}ms` }}
+              >
+                {ch}
+              </span>
+            ))}
           </span>
         </Link>
 

@@ -307,16 +307,16 @@ const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [themeId, setThemeIdState] = useState<string>(
-    () => localStorage.getItem('nootes-theme') ?? 'botanical'
+    () => localStorage.getItem('folio-theme') ?? 'botanical'
   )
   const [fontScale, setFontScaleState] = useState<FontScale>(
-    () => (localStorage.getItem('nootes-font-scale') as FontScale) ?? 'md'
+    () => (localStorage.getItem('folio-font-scale') as FontScale) ?? 'md'
   )
   const [compactMode, setCompactModeState] = useState<boolean>(
-    () => localStorage.getItem('nootes-compact') === 'true'
+    () => localStorage.getItem('folio-compact') === 'true'
   )
   const [latexPreview, setLatexPreviewState] = useState<boolean>(
-    () => localStorage.getItem('nootes-latex-preview') !== 'false'
+    () => localStorage.getItem('folio-latex-preview') !== 'false'
   )
 
   const currentTheme = THEMES.find(t => t.id === themeId) ?? THEMES[0]
@@ -352,22 +352,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   }, [compactMode])
 
   const setThemeId = (id: string) => {
-    localStorage.setItem('nootes-theme', id)
+    localStorage.setItem('folio-theme', id)
     setThemeIdState(id)
   }
 
   const setFontScale = (scale: FontScale) => {
-    localStorage.setItem('nootes-font-scale', scale)
+    localStorage.setItem('folio-font-scale', scale)
     setFontScaleState(scale)
   }
 
   const setCompactMode = (v: boolean) => {
-    localStorage.setItem('nootes-compact', String(v))
+    localStorage.setItem('folio-compact', String(v))
     setCompactModeState(v)
   }
 
   const setLatexPreview = (v: boolean) => {
-    localStorage.setItem('nootes-latex-preview', String(v))
+    localStorage.setItem('folio-latex-preview', String(v))
     setLatexPreviewState(v)
   }
 

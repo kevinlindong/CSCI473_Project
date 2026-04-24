@@ -97,7 +97,7 @@ export function newBlock(type: BlockType): Block {
 }
 
 const DEBOUNCE_MS = 1200
-const SCRATCH_KEY = (uid: string) => `nootes-scratch-${uid}`
+const SCRATCH_KEY = (uid: string) => `folio-scratch-${uid}`
 const BUCKET = 'documents'
 const storagePath = (uid: string, rid: string) => `${uid}/${rid}.json`
 

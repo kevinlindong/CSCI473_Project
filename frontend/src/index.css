@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ====================================================================
-   Folio — Bauhaus × Zen × Heytea
+   Scholar — Bauhaus × Zen × Heytea
    Palette : GMK Botanical  — #264635 · #A3B18A · #E9E4D4
    Fonts   : Gamja Flower (highlight / notebook) · Venus (body) ·
              JetBrains Mono (code)
@@ -61,6 +61,22 @@ body {
   -moz-osx-font-smoothing: grayscale;
   background: var(--color-cream);
   color: var(--color-forest);
+}
+
+@keyframes scholar-wordmark-wave {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+  100% { transform: translateY(0); }
+}
+
+.scholar-wave-letter {
+  transform: translateY(0);
+  will-change: transform;
+}
+
+.scholar-wordmark-group:hover .scholar-wave-letter,
+.scholar-wordmark-group:focus-visible .scholar-wave-letter {
+  animation: scholar-wordmark-wave 410ms ease-in-out 1 both;
 }
 
 /* scrollbar */

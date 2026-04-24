@@ -14,6 +14,7 @@ import Login from './pages/Login.tsx'
 import Editor from './pages/Editor.tsx'
 import PaperEditor from './pages/PaperEditor.tsx'
 import PaperBrowse from './pages/PaperBrowse.tsx'
+import Library from './pages/Library.tsx'
 import TopicGraph3D from './pages/TopicGraph3D.tsx'
 import Repos from './pages/Repos.tsx'
 import MyRepos from './pages/MyRepos.tsx'
@@ -36,7 +37,7 @@ import HomeV5 from './pages/HomeV5.tsx'
 // Renders AIAgentFab on all pages except landing, home (inline chatbox), and login
 function AppShell({ children }: { children: React.ReactNode }) {
   const location = useLocation()
-  const hideOn = new Set(['/', '/home', '/login', '/explore', '/how-it-works', '/browse', '/topic-graph', '/1', '/2', '/3', '/4', '/5'])
+  const hideOn = new Set(['/', '/home', '/login', '/explore', '/how-it-works', '/browse', '/library', '/topic-graph', '/1', '/2', '/3', '/4', '/5'])
   const isEditor = location.pathname.startsWith('/editor/')
   const isLegacyEditor = location.pathname.startsWith('/editor/legacy/')
   const showFab = !hideOn.has(location.pathname) && (!isEditor || isLegacyEditor)
@@ -64,6 +65,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/editor/legacy/:repoId" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
             <Route path="/editor/:repoId" element={<PaperEditor />} />
             <Route path="/browse" element={<PaperBrowse />} />
+            <Route path="/library" element={<Library />} />
             <Route path="/topic-graph" element={<TopicGraph3D />} />
             <Route path="/papers" element={<Navigate to="/browse" replace />} />
             <Route path="/explore" element={<PublicRepos />} />

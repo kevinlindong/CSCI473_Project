@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "nootes",
+      "name": "folio",
       "dependencies": {
         "@supabase/supabase-js": "^2.97.0",
         "@xyflow/react": "^12.10.1",

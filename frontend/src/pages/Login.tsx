@@ -80,7 +80,7 @@ export default function Login() {
           <Link to="/" className="inline-flex items-center gap-3 mb-14 group">
             <LogoLeafDark />
             <span className="font-[family-name:var(--font-display)] text-[32px] text-parchment leading-none">
-              Folio
+              Scholar
             </span>
           </Link>
 
@@ -113,7 +113,7 @@ export default function Login() {
           </Link>
 
           <h2 className="font-[family-name:var(--font-display)] text-[44px] leading-[1.02] text-forest font-light mb-3">
-            {mode === 'signin' ? 'welcome back.' : 'begin a folio.'}
+            {mode === 'signin' ? 'welcome back.' : 'begin a scholar.'}
           </h2>
           <p className="font-[family-name:var(--font-body)] text-[15px] leading-[1.7] text-forest/60 mb-10">
             {mode === 'signin'
@@ -161,7 +161,7 @@ export default function Login() {
             >
               {mode === 'signin' ? 'new here? ' : 'have an account? '}
               <span className="underline decoration-forest/30 underline-offset-4">
-                {mode === 'signin' ? 'begin a folio →' : 'sign in ←'}
+                {mode === 'signin' ? 'begin a scholar →' : 'sign in ←'}
               </span>
             </button>
           </div>

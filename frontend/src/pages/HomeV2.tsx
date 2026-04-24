@@ -100,7 +100,7 @@ export default function HomeV2() {
         {/* ── BLOCK D: Stats (3 cols, 1 row) ──────────────────────── */}
         <div className="col-span-3 row-span-1 bg-sage/10 p-4 flex items-center justify-around">
           {[
-            { n: '12.8K', l: 'nootes' },
+            { n: '12.8K', l: 'scholar' },
             { n: '487', l: 'books' },
             { n: '3.2K', l: 'learners' },
           ].map(s => (

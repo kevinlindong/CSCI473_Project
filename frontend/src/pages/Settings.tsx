@@ -96,17 +96,17 @@ export default function Settings() {
   const [savingPassword, setSavingPassword] = useState(false)
 
   // Notifications (persisted in localStorage)
-  const [notifyMerges, setNotifyMerges] = useState(() => localStorage.getItem('nootes-notify-merges') !== 'false')
-  const [notifyComments, setNotifyComments] = useState(() => localStorage.getItem('nootes-notify-comments') !== 'false')
-  const [notifyAura, setNotifyAura] = useState(() => localStorage.getItem('nootes-notify-aura') === 'true')
-  const [notifyDigest, setNotifyDigest] = useState(() => localStorage.getItem('nootes-notify-digest') !== 'false')
-  const [emailNotifications, setEmailNotifications] = useState(() => localStorage.getItem('nootes-notify-email') === 'true')
+  const [notifyMerges, setNotifyMerges] = useState(() => localStorage.getItem('folio-notify-merges') !== 'false')
+  const [notifyComments, setNotifyComments] = useState(() => localStorage.getItem('folio-notify-comments') !== 'false')
+  const [notifyAura, setNotifyAura] = useState(() => localStorage.getItem('folio-notify-aura') === 'true')
+  const [notifyDigest, setNotifyDigest] = useState(() => localStorage.getItem('folio-notify-digest') !== 'false')
+  const [emailNotifications, setEmailNotifications] = useState(() => localStorage.getItem('folio-notify-email') === 'true')
 
   // Privacy (persisted in localStorage)
-  const [profilePublic, setProfilePublic] = useState(() => localStorage.getItem('nootes-privacy-public') !== 'false')
-  const [activityVisible, setActivityVisible] = useState(() => localStorage.getItem('nootes-privacy-activity') !== 'false')
-  const [reposPublicDefault, setReposPublicDefault] = useState(() => localStorage.getItem('nootes-privacy-repos-public') === 'true')
-  const [showAura, setShowAura] = useState(() => localStorage.getItem('nootes-privacy-aura') !== 'false')
+  const [profilePublic, setProfilePublic] = useState(() => localStorage.getItem('folio-privacy-public') !== 'false')
+  const [activityVisible, setActivityVisible] = useState(() => localStorage.getItem('folio-privacy-activity') !== 'false')
+  const [reposPublicDefault, setReposPublicDefault] = useState(() => localStorage.getItem('folio-privacy-repos-public') === 'true')
+  const [showAura, setShowAura] = useState(() => localStorage.getItem('folio-privacy-aura') !== 'false')
 
   // Sync profile fields when profile loads
   useEffect(() => {
@@ -118,17 +118,17 @@ export default function Settings() {
   }, [profile])
 
   // Persist notification prefs
-  useEffect(() => { localStorage.setItem('nootes-notify-merges', String(notifyMerges)) }, [notifyMerges])
-  useEffect(() => { localStorage.setItem('nootes-notify-comments', String(notifyComments)) }, [notifyComments])
-  useEffect(() => { localStorage.setItem('nootes-notify-aura', String(notifyAura)) }, [notifyAura])
-  useEffect(() => { localStorage.setItem('nootes-notify-digest', String(notifyDigest)) }, [notifyDigest])
-  useEffect(() => { localStorage.setItem('nootes-notify-email', String(emailNotifications)) }, [emailNotifications])
+  useEffect(() => { localStorage.setItem('folio-notify-merges', String(notifyMerges)) }, [notifyMerges])
+  useEffect(() => { localStorage.setItem('folio-notify-comments', String(notifyComments)) }, [notifyComments])
+  useEffect(() => { localStorage.setItem('folio-notify-aura', String(notifyAura)) }, [notifyAura])
+  useEffect(() => { localStorage.setItem('folio-notify-digest', String(notifyDigest)) }, [notifyDigest])
+  useEffect(() => { localStorage.setItem('folio-notify-email', String(emailNotifications)) }, [emailNotifications])
 
   // Persist privacy prefs
-  useEffect(() => { localStorage.setItem('nootes-privacy-public', String(profilePublic)) }, [profilePublic])
-  useEffect(() => { localStorage.setItem('nootes-privacy-activity', String(activityVisible)) }, [activityVisible])
-  useEffect(() => { localStorage.setItem('nootes-privacy-repos-public', String(reposPublicDefault)) }, [reposPublicDefault])
-  useEffect(() => { localStorage.setItem('nootes-privacy-aura', String(showAura)) }, [showAura])
+  useEffect(() => { localStorage.setItem('folio-privacy-public', String(profilePublic)) }, [profilePublic])
+  useEffect(() => { localStorage.setItem('folio-privacy-activity', String(activityVisible)) }, [activityVisible])
+  useEffect(() => { localStorage.setItem('folio-privacy-repos-public', String(reposPublicDefault)) }, [reposPublicDefault])
+  useEffect(() => { localStorage.setItem('folio-privacy-aura', String(showAura)) }, [showAura])
 
   async function saveProfile() {
     if (!user) return
@@ -475,7 +475,7 @@ function DangerZone({ onSignOut }: { onSignOut?: () => void }) {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = 'nootes-export.json'
+      a.download = 'scholar-export.json'
       a.click()
       URL.revokeObjectURL(url)
       setExportLoading(false)

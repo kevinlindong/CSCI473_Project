@@ -1,12 +1,18 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { Navbar } from '../components/Navbar'
 import { RenderPaper, highlightTeX, extractMeta, DEFAULT_LATEX } from '../lib/latex'
+import {
+  readDraftSource,
+  writeDraftSource,
+  useDrafts,
+  SCRATCH_ID,
+} from '../hooks/useDrafts'
 
 /* ==========================================================================
    PaperEditor — "the desk" — minimal zen botanical composer.
    A soft cream chrome holds two panes: a calm dark "garden of code" on the
-   left, and a parchment folio rising in real time on the right. Snippets
+   left, and a parchment scholar rising in real time on the right. Snippets
    sit in a quiet pill strip; the outline whispers from a soft side rail.
    ========================================================================== */
 
@@ -60,14 +66,26 @@ function lineCount(src: string): number {
   return src.split('\n').length
 }
 
-const STORAGE_KEY = 'paper-editor:draft'
-
 // ─── component ──────────────────────────────────────────────────────────────
 
+function initialSourceFor(draftId: string): string {
+  const stored = readDraftSource(draftId)
+  if (stored !== null) return stored
+  // brand-new draft — scratch gets the showcase doc, others start blank
+  return draftId === SCRATCH_ID ? DEFAULT_LATEX : ''
+}
+
 export default function PaperEditor() {
-  const [source, setSource] = useState<string>(() => {
-    try { return window.localStorage.getItem(STORAGE_KEY) || DEFAULT_LATEX } catch { return DEFAULT_LATEX }
-  })
+  const { repoId } = useParams<{ repoId: string }>()
+  const draftId = repoId ?? SCRATCH_ID
+  const { touchDraft } = useDrafts()
+
+  const [source, setSource] = useState<string>(() => initialSourceFor(draftId))
+
+  // Re-hydrate when the user navigates between drafts without remounting.
+  useEffect(() => {
+    setSource(initialSourceFor(draftId))
+  }, [draftId])
   const [splitRatio, setSplitRatio] = useState(0.48)
   const [isDragging, setIsDragging] = useState(false)
   const [focusMode, setFocusMode] = useState<'split' | 'source' | 'preview'>('split')
@@ -81,16 +99,23 @@ export default function PaperEditor() {
   const containerRef = useRef<HTMLDivElement>(null)
 
   // ── debounced localStorage autosave ─────────────────────────────────────
+  // Writes the source under the per-draft key and upserts the index entry
+  // so the Library can enumerate every open draft with its latest title.
   useEffect(() => {
     setSaveState('saving')
     const t = setTimeout(() => {
       try {
-        window.localStorage.setItem(STORAGE_KEY, source)
+        writeDraftSource(draftId, source)
+        const extracted = extractMeta(source).meta.title
+        const title =
+          (extracted && extracted.replace(/\\\\/g, ' ').trim()) ||
+          (draftId === SCRATCH_ID ? 'scratch scholar' : 'untitled scholar')
+        touchDraft(draftId, title)
         setSaveState('saved')
       } catch { setSaveState('idle') }
     }, 420)
     return () => clearTimeout(t)
-  }, [source])
+  }, [source, draftId, touchDraft])
 
   // ── sync scroll ──────────────────────────────────────────────────────────
   const syncScroll = useCallback(() => {
@@ -223,10 +248,10 @@ export default function PaperEditor() {
             <LeafBadge />
             <div className="flex flex-col leading-tight">
               <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.32em] uppercase text-forest/50">
-                manuscript
+                editor
               </span>
               <span className="font-[family-name:var(--font-display)] text-[18px] text-forest leading-none mt-1">
-                draft folio
+                draft scholar
               </span>
             </div>
           </div>
@@ -239,7 +264,7 @@ export default function PaperEditor() {
             <div className="font-[family-name:var(--font-display)] text-[19px] text-forest truncate">
               {meta.title
                 ? meta.title.replace(/\\\\/g, ' ')
-                : <span className="text-forest/45">untitled — give your folio a name</span>}
+                : <span className="text-forest/45">untitled — give your scholar a name</span>}
             </div>
           </div>
 
@@ -417,7 +442,9 @@ export default function PaperEditor() {
                 )}
                 {meta.keywords && meta.keywords.length > 0 && (
                   <div>
-                    <dt className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.22em] uppercase text-forest/40 mb-1">keywords</dt>
+                    <dt className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.22em] uppercase text-forest/40 mb-1">
+                      {meta.keywords.length === 1 ? 'keyword' : 'keywords'}
+                    </dt>
                     <dd className="flex flex-wrap gap-1">
                       {meta.keywords.map(k => (
                         <span key={k} className="font-[family-name:var(--font-mono)] text-[9.5px] tracking-[0.08em] uppercase border border-forest/20 rounded-full px-2 py-0.5 text-forest/70 bg-milk/60">
@@ -528,7 +555,7 @@ export default function PaperEditor() {
             </div>
           )}
 
-          {/* ── PREVIEW PANE — parchment folio ──────────────── */}
+          {/* ── PREVIEW PANE — parchment scholar ──────────────── */}
           {showPreview && (
             <div
               className="relative min-h-0 overflow-auto bg-cream"
@@ -538,20 +565,20 @@ export default function PaperEditor() {
               <div className="sticky top-0 z-10 flex items-center gap-2 px-6 h-7 bg-cream/90 backdrop-blur border-b border-forest/12">
                 <span className="w-1.5 h-1.5 rounded-full bg-sage-deep" />
                 <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.3em] uppercase text-forest/55">
-                  typeset · folio recto
+                  typeset · scholar recto
                 </span>
                 <div className="flex-1" />
                 <span className="font-[family-name:var(--font-body)] text-[12px] text-forest/50">live preview</span>
               </div>
 
-              {/* Folio page */}
+              {/* Scholar page */}
               <div className="flex justify-center py-12 px-8">
                 <div className="relative max-w-[680px] w-full">
                   <div className="relative bg-milk paper-grain border border-forest/15 rounded-3xl overflow-hidden shadow-[0_24px_60px_-30px_rgba(38,70,53,0.28)]">
-                    {/* Folio header band */}
+                    {/* Scholar header band */}
                     <div className="flex items-center justify-between px-7 py-3 border-b border-forest/10 bg-parchment/40">
                       <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.3em] uppercase text-forest/50">
-                        folio · I
+                        scholar · I
                       </span>
                       <span className="font-[family-name:var(--font-display)] text-[15px] text-forest/70 leading-none">
                         a scholar's draft
@@ -566,7 +593,7 @@ export default function PaperEditor() {
                       <RenderPaper source={source} />
                     </div>
 
-                    {/* Folio footer */}
+                    {/* Scholar footer */}
                     <div className="flex items-center justify-between px-7 py-3 border-t border-forest/10 bg-parchment/40">
                       <span className="flex items-center gap-1.5">
                         <span className="w-1.5 h-1.5 rounded-full bg-sage" />
@@ -587,7 +614,7 @@ export default function PaperEditor() {
                 <div className="flex items-center gap-3">
                   <span className="w-1 h-1 rounded-full bg-forest/30" />
                   <span className="font-[family-name:var(--font-body)] text-[12px] text-forest/45">
-                    folio · v1 · live render
+                    scholar · v1 · live render
                   </span>
                   <span className="w-1 h-1 rounded-full bg-forest/30" />
                 </div>

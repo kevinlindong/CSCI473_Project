@@ -541,7 +541,7 @@ export default function Design1() {
                     {repoMeta ? `${repoMeta.code} · ${repoMeta.org} — MASTER` : repoId.toUpperCase()}
                   </span>
                   <h1 className="font-[family-name:var(--font-display)] text-7xl text-forest leading-[0.9] mb-6">
-                    {masterDoc?.title ?? 'Master Nootes'}
+                    {masterDoc?.title ?? 'Master Scholar'}
                   </h1>
 
                   {/* Decorative wave */}

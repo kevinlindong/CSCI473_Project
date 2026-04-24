@@ -162,7 +162,7 @@ export const MessageBubble = ({ msg }: { msg: Message }) => {
           </div>
         ) : (
           <div className="bg-parchment border border-forest/10 squircle-xl px-5 py-4">
-            <div className="prose-nootes text-sm text-forest leading-relaxed">
+            <div className="prose-scholar text-sm text-forest leading-relaxed">
               <ReactMarkdown
                 remarkPlugins={[remarkMath]}
                 rehypePlugins={[rehypeKatex]}

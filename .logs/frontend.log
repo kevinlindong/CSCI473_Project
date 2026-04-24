@@ -1,0 +1,242 @@
+
+> folio@1.0.0 dev
+> vite --port 5173
+
+11:30:02 PM [vite] (client) Re-optimizing dependencies because lockfile has changed
+Port 5173 is in use, trying another one...
+
+  VITE v6.4.1  ready in 640 ms
+
+  ➜  Local:   http://localhost:5174/
+  ➜  Network: use --host to expose
+11:37:42 PM [vite] (client) hmr update /src/pages/PaperBrowse.tsx, /src/index.css
+11:37:46 PM [vite] (client) hmr update /src/pages/PaperBrowse.tsx, /src/index.css
+11:37:54 PM [vite] (client) hmr update /src/pages/PaperBrowse.tsx, /src/index.css
+11:38:04 PM [vite] (client) hmr update /src/pages/PaperBrowse.tsx, /src/index.css
+11:38:15 PM [vite] (client) hmr update /src/pages/PaperBrowse.tsx, /src/index.css
+11:38:23 PM [vite] (client) page reload tsconfig.tsbuildinfo
+11:38:30 PM [vite] (clien12:25:28 AM [vite] (client) page reload index.html
+te] (client) page reload tsconfig.tsbuildinfo
+11:44:24 PM [vite] (client) hmr update /src/components/Navbar.tsx, /src/index.css
+11:44:52 PM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+11:44:54 PM [vite] (client) hmr update /src/pages/Home.tsx, /src/index.css
+11:45:54 PM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+11:46:01 PM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+11:46:09 PM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+11:46:18 PM [vite] (client) hmr update /src/pages/Library.tsx, /src/index.css
+11:46:24 PM [vite] (client) hmr update /src/pages/Library.tsx, /src/index.css
+11:46:35 PM [vite] (client) hmr update /src/pages/Library.tsx, /src/index.css
+11:46:59 PM [vite] (client) hmr update /src/pages/Library.tsx, /src/index.css
+11:47:30 PM [vite] (client) hmr update /src/pages/Library.tsx, /src/index.css
+11:47:39 PM [vite] (client) page reload tsconfig.tsbuildinfo
+11:47:54 PM [vite] (client) page reload tsconfig.tsbuildinfo
+11:49:43 PM [vite] (client) hmr update /src/pages/PaperBrowse.tsx, /src/index.css
+11:49:53 PM [vite] (client) hmr update /src/pages/PaperBrowse.tsx, /src/index.css
+11:49:58 PM [vite] (client) hmr update /src/pages/PaperBrowse.tsx, /src/index.css
+11:50:14 PM [vite] (client) hmr update /src/pages/PaperBrowse.tsx, /src/index.css
+11:50:18 PM [vite] (client) hmr update /src/pages/PaperBrowse.tsx, /src/index.css
+11:50:34 PM [vite] (client) hmr update /src/pages/PaperBrowse.tsx, /src/index.css
+11:50:42 PM [vite] (client) page reload tsconfig.tsbuildinfo
+12:01:50 AM [vite] (client) hmr update /src/lib/latex.tsx, /src/index.css
+12:01:51 AM [vite] (client) hmr invalidate /src/lib/latex.tsx Could not Fast Refresh ("extractMeta" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:01:51 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+12:01:54 AM [vite] (client) hmr update /src/lib/latex.tsx, /src/index.css
+12:01:54 AM [vite] (client) hmr invalidate /src/lib/latex.tsx Could not Fast Refresh ("extractMeta" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:01:54 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+12:02:03 AM [vite] (client) hmr update /src/lib/latex.tsx, /src/index.css
+12:02:03 AM [vite] (client) hmr invalidate /src/lib/latex.tsx Could not Fast Refresh ("extractMeta" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:02:03 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+12:02:20 AM [vite] (client) hmr update /src/lib/latex.tsx, /src/index.css
+12:02:20 AM [vite] (client) hmr invalidate /src/lib/latex.tsx Could not Fast Refresh ("extractMeta" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:02:20 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+12:02:52 AM [vite] (client) hmr update /src/lib/latex.tsx, /src/index.css
+12:02:52 AM [vite] (client) hmr invalidate /src/lib/latex.tsx Could not Fast Refresh ("extractMeta" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:02:52 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+12:02:54 AM [vite] (client) hmr update /src/lib/latex.tsx, /src/index.css
+12:02:54 AM [vite] (client) hmr invalidate /src/lib/latex.tsx Could not Fast Refresh ("extractMeta" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:02:54 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+12:03:01 AM [vite] (client) hmr update /src/lib/latex.tsx, /src/index.css
+12:03:01 AM [vite] (client) hmr invalidate /src/lib/latex.tsx Could not Fast Refresh ("extractMeta" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:03:01 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+12:03:02 AM [vite] (client) hmr update /src/lib/latex.tsx, /src/index.css
+12:03:02 AM [vite] (client) hmr invalidate /src/lib/latex.tsx Could not Fast Refresh ("extractMeta" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:03:02 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+12:03:03 AM [vite] (client) hmr update /src/lib/latex.tsx, /src/index.css
+12:03:03 AM [vite] (client) hmr invalidate /src/lib/latex.tsx Could not Fast Refresh ("extractMeta" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:03:03 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+12:03:04 AM [vite] (client) hmr update /src/lib/latex.tsx, /src/index.css
+12:03:04 AM [vite] (client) hmr invalidate /src/lib/latex.tsx Could not Fast Refresh ("extractMeta" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:03:04 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+12:03:05 AM [vite] (client) hmr update /src/lib/latex.tsx, /src/index.css
+12:03:05 AM [vite] (client) hmr invalidate /src/lib/latex.tsx Could not Fast Refresh ("extractMeta" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:03:05 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+12:03:17 AM [vite] (client) page reload tsconfig.tsbuildinfo
+12:22:25 AM [vite] (client) hmr update /src/lib/latex.tsx, /src/index.css
+12:22:25 AM [vite] (client) hmr invalidate /src/lib/latex.tsx Could not Fast Refresh ("extractMeta" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:22:25 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+12:25:28 AM [vite] (client) page reload index.html
+12:25:54 AM [vite] (client) hmr update /src/index.css
+12:26:00 AM [vite] (client) hmr update /src/components/Navbar.tsx, /src/index.css
+12:26:10 AM [vite] (client) page reload src/components/FloatingAssistant.tsx
+12:26:13 AM [vite] (client) page reload src/components/FloatingAssistant.tsx
+12:26:18 AM [vite] (client) hmr update /src/components/SpotlightSearch.tsx, /src/index.css
+12:26:26 AM [vite] (client) hmr update /src/pages/Home.tsx, /src/index.css
+12:26:31 AM [vite] (client) hmr update /src/pages/Home.tsx, /src/index.css
+12:26:35 AM [vite] (client) hmr update /src/pages/Home.tsx, /src/index.css
+12:26:42 AM [vite] (client) hmr update /src/pages/Landing.tsx, /src/index.css
+12:26:44 AM [vite] (client) hmr update /src/pages/Landing.tsx, /src/index.css
+12:26:48 AM [vite] (client) hmr update /src/pages/Landing.tsx, /src/index.css
+12:26:51 AM [vite] (client) hmr update /src/pages/Landing.tsx, /src/index.css
+12:26:54 AM [vite] (client) hmr update /src/pages/Landing.tsx, /src/index.css
+12:26:57 AM [vite] (client) hmr update /src/pages/Landing.tsx, /src/index.css
+12:27:01 AM [vite] (client) hmr update /src/pages/Landing.tsx, /src/index.css
+12:27:07 AM [vite] (client) hmr update /src/pages/Landing.tsx, /src/index.css
+12:27:10 AM [vite] (client) hmr update /src/pages/Landing.tsx, /src/index.css
+12:27:13 AM [vite] (client) hmr update /src/pages/Landing.tsx, /src/index.css
+12:27:16 AM [vite] (client) hmr update /src/pages/Landing.tsx, /src/index.css
+12:27:18 AM [vite] (client) hmr update /src/pages/PaperBrowse.tsx, /src/index.css
+12:27:19 AM [vite] (client) hmr update /src/pages/Landing.tsx, /src/index.css
+12:27:25 AM [vite] (client) hmr update /src/pages/Landing.tsx, /src/index.css
+12:27:28 AM [vite] (client) hmr update /src/pages/Landing.tsx, /src/index.css
+12:27:36 AM [vite] (client) hmr update /src/pages/Library.tsx, /src/index.css
+12:27:42 AM [vite] (client) hmr update /src/pages/Library.tsx, /src/index.css
+12:27:47 AM [vite] (client) hmr update /src/pages/Library.tsx, /src/index.css
+12:27:53 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+12:27:58 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+12:28:03 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+12:28:05 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+12:28:11 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+12:28:15 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+12:28:18 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+12:28:20 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+12:28:23 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+12:28:25 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+12:28:28 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+12:28:38 AM [vite] (client) hmr update /src/pages/Profile.tsx, /src/index.css
+12:28:44 AM [vite] (client) hmr update /src/pages/Profile.tsx, /src/index.css
+12:28:47 AM [vite] (client) hmr update /src/pages/Profile.tsx, /src/index.css
+12:28:53 AM [vite] (client) hmr update /src/pages/Profile.tsx, /src/index.css
+12:28:59 AM [vite] (client) hmr update /src/pages/Profile.tsx, /src/index.css
+12:29:04 AM [vite] (client) hmr update /src/pages/Profile.tsx, /src/index.css
+12:29:06 AM [vite] (client) hmr update /src/pages/Profile.tsx, /src/index.css
+12:29:10 AM [vite] (client) hmr update /src/pages/Profile.tsx, /src/index.css
+12:29:16 AM [vite] (client) hmr update /src/pages/Profile.tsx, /src/index.css
+12:29:25 AM [vite] (client) hmr update /src/pages/TermsOfService.tsx, /src/index.css
+12:29:29 AM [vite] (client) hmr update /src/pages/TermsOfService.tsx, /src/index.css
+12:29:34 AM [vite] (client) hmr update /src/pages/TermsOfService.tsx, /src/index.css
+12:29:39 AM [vite] (client) hmr update /src/pages/TermsOfService.tsx, /src/index.css
+12:29:47 AM [vite] (client) hmr update /src/pages/TermsOfService.tsx, /src/index.css
+12:29:51 AM [vite] (client) hmr update /src/pages/TermsOfService.tsx, /src/index.css
+12:29:54 AM [vite] (client) hmr update /src/pages/TermsOfService.tsx, /src/index.css
+12:30:01 AM [vite] (client) hmr update /src/pages/TermsOfService.tsx, /src/index.css
+12:30:04 AM [vite] (client) hmr update /src/pages/TermsOfService.tsx, /src/index.css
+12:30:08 AM [vite] (client) hmr update /src/pages/TermsOfService.tsx, /src/index.css
+12:30:13 AM [vite] (client) hmr update /src/pages/TermsOfService.tsx, /src/index.css
+12:30:19 AM [vite] (client) hmr update /src/pages/TermsOfService.tsx, /src/index.css
+12:30:23 AM [vite] (client) hmr update /src/pages/TermsOfService.tsx, /src/index.css
+12:30:26 AM [vite] (client) hmr update /src/pages/TermsOfService.tsx, /src/index.css
+12:30:36 AM [vite] (client) hmr update /src/pages/PrivacyPolicy.tsx, /src/index.css
+12:30:41 AM [vite] (client) hmr update /src/pages/PrivacyPolicy.tsx, /src/index.css
+12:30:45 AM [vite] (client) hmr update /src/pages/PrivacyPolicy.tsx, /src/index.css
+12:30:48 AM [vite] (client) hmr update /src/pages/PrivacyPolicy.tsx, /src/index.css
+12:30:52 AM [vite] (client) hmr update /src/pages/PrivacyPolicy.tsx, /src/index.css
+12:30:56 AM [vite] (client) hmr update /src/pages/PrivacyPolicy.tsx, /src/index.css
+12:31:00 AM [vite] (client) hmr update /src/pages/PrivacyPolicy.tsx, /src/index.css
+12:31:03 AM [vite] (client) hmr update /src/pages/PrivacyPolicy.tsx, /src/index.css
+12:31:07 AM [vite] (client) hmr update /src/pages/PrivacyPolicy.tsx, /src/index.css
+12:31:10 AM [vite] (client) hmr update /src/pages/PrivacyPolicy.tsx, /src/index.css
+12:31:14 AM [vite] (client) hmr update /src/pages/PrivacyPolicy.tsx, /src/index.css
+12:31:17 AM [vite] (client) hmr update /src/pages/PrivacyPolicy.tsx, /src/index.css
+12:31:28 AM [vite] (client) hmr update /src/pages/HowItWorks.tsx, /src/index.css
+12:31:35 AM [vite] (client) hmr update /src/pages/HowItWorks.tsx, /src/index.css
+12:31:39 AM [vite] (client) hmr update /src/pages/HowItWorks.tsx, /src/index.css
+12:31:44 AM [vite] (client) hmr update /src/pages/HowItWorks.tsx, /src/index.css
+12:31:55 AM [vite] (client) hmr update /src/pages/PublicRepos.tsx, /src/index.css
+12:32:03 AM [vite] (client) hmr update /src/pages/Editor.tsx, /src/index.css
+12:32:10 AM [vite] (client) hmr update /src/pages/Graph_Creation.tsx, /src/index.css
+12:32:10 AM [vite] (client) hmr invalidate /src/pages/Graph_Creation.tsx Could not Fast Refresh ("parseGraphResponse" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:32:10 AM [vite] (client) hmr update /src/main.tsx, /src/index.css
+12:32:10 AM [vite] (client) hmr invalidate /src/main.tsx Could not Fast Refresh ("true" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+12:32:10 AM [vite] (client) hmr update /src/index.css
+12:32:15 AM [vite] (client) hmr update /src/pages/HomeV1.tsx, /src/index.css
+12:32:21 AM [vite] (client) hmr update /src/pages/HomeV1.tsx, /src/index.css
+12:32:24 AM [vite] (client) hmr update /src/pages/HomeV1.tsx, /src/index.css
+12:32:27 AM [vite] (client) hmr update /src/pages/HomeV1.tsx, /src/index.css
+12:32:33 AM [vite] (client) hmr update /src/pages/HomeV2.tsx, /src/index.css
+12:32:40 AM [vite] (client) hmr update /src/pages/HomeV3.tsx, /src/index.css
+12:32:44 AM [vite] (client) hmr update /src/pages/HomeV3.tsx, /src/index.css
+12:32:49 AM [vite] (client) hmr update /src/pages/HomeV4.tsx, /src/index.css
+12:32:54 AM [vite] (client) hmr update /src/pages/HomeV4.tsx, /src/index.css
+12:33:01 AM [vite] (client) hmr update /src/pages/HomeV5.tsx, /src/index.css
+12:33:07 AM [vite] (client) hmr update /src/pages/HomeV5.tsx, /src/index.css
+12:33:15 AM [vite] (client) hmr update /src/pages/AuraStore.tsx, /src/index.css
+12:33:21 AM [vite] (client) hmr update /src/pages/AuraStore.tsx, /src/index.css
+12:33:34 AM [vite] (client) hmr update /src/pages/AuraStore.tsx, /src/index.css
+12:33:44 AM [vite] (client) hmr update /src/pages/Login.tsx, /src/index.css
+12:33:47 AM [vite] (client) hmr update /src/pages/Login.tsx, /src/index.css
+12:33:51 AM [vite] (client) hmr update /src/pages/Login.tsx, /src/index.css
+12:33:58 AM [vite] (client) hmr update /src/index.css, /src/pages/PaperEditor.tsx, /src/pages/Library.tsx
+12:34:01 AM [vite] (client) hmr update /src/index.css, /src/pages/PaperEditor.tsx, /src/pages/Library.tsx
+12:34:15 AM [vite] (client) hmr update /src/pages/Settings.tsx, /src/index.css
+12:35:07 AM [vite] (client) page reload tsconfig.tsbuildinfo
+12:56:47 AM [vite] (client) page reload tsconfig.tsbuildinfo
+12:56:55 AM [vite] (client) page reload tsconfig.tsbuildinfo
+2:08:20 AM [vite] (client) hmr update /src/lib/latex.tsx, /src/index.css
+2:08:21 AM [vite] (client) hmr invalidate /src/lib/latex.tsx Could not Fast Refresh ("extractMeta" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+2:08:21 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+2:08:39 AM [vite] (client) page reload tsconfig.tsbuildinfo
+2:08:52 AM [vite] (client) hmr update /src/lib/latex.tsx, /src/index.css
+2:08:52 AM [vite] (client) hmr invalidate /src/lib/latex.tsx Could not Fast Refresh ("DEFAULT_LATEX" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+2:08:52 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+2:17:17 AM [vite] (client) page reload tsconfig.tsbuildinfo
+2:18:44 AM [vite] (client) hmr update /src/lib/latex.tsx, /src/index.css
+2:18:44 AM [vite] (client) hmr invalidate /src/lib/latex.tsx Could not Fast Refresh ("extractMeta" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+2:18:44 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+2:18:54 AM [vite] (client) page reload tsconfig.tsbuildinfo
+2:19:58 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+2:20:10 AM [vite] (client) page reload tsconfig.tsbuildinfo
+2:23:41 AM [vite] (client) hmr update /src/lib/latex.tsx, /src/index.css
+2:23:41 AM [vite] (client) hmr invalidate /src/lib/latex.tsx Could not Fast Refresh ("extractMeta" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+2:23:41 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+2:23:58 AM [vite] (client) page reload tsconfig.tsbuildinfo
+2:25:10 AM [vite] (client) hmr update /src/lib/latex.tsx, /src/index.css
+2:25:10 AM [vite] (client) hmr invalidate /src/lib/latex.tsx Could not Fast Refresh ("extractMeta" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+2:25:10 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+2:25:39 AM [vite] (client) hmr update /src/lib/latex.tsx, /src/index.css
+2:25:39 AM [vite] (client) hmr invalidate /src/lib/latex.tsx Could not Fast Refresh ("extractMeta" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+2:25:39 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+2:26:22 AM [vite] (client) page reload tsconfig.tsbuildinfo
+2:29:05 AM [vite] (client) hmr update /src/lib/latex.tsx, /src/index.css
+2:29:05 AM [vite] (client) hmr invalidate /src/lib/latex.tsx Could not Fast Refresh ("extractMeta" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+2:29:05 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+2:29:22 AM [vite] (client) page reload tsconfig.tsbuildinfo
+2:34:14 AM [vite] (client) hmr update /src/lib/latex.tsx, /src/index.css
+2:34:14 AM [vite] (client) hmr invalidate /src/lib/latex.tsx Could not Fast Refresh ("extractMeta" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+2:34:14 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+2:34:37 AM [vite] (client) page reload tsconfig.tsbuildinfo
+2:39:16 AM [vite] (client) hmr update /src/components/Navbar.tsx, /src/index.css
+2:39:33 AM [vite] (client) page reload tsconfig.tsbuildinfo
+2:40:41 AM [vite] (client) hmr update /src/components/Navbar.tsx, /src/index.css
+2:40:53 AM [vite] (client) page reload tsconfig.tsbuildinfo
+2:44:38 AM [vite] (client) hmr update /src/pages/PaperBrowse.tsx, /src/index.css
+2:44:51 AM [vite] (client) hmr update /src/components/CorpusGraph3D.tsx, /src/index.css
+2:45:03 AM [vite] (client) page reload tsconfig.tsbuildinfo
+2:49:30 AM [vite] (client) hmr update /src/lib/latex.tsx, /src/index.css
+2:49:30 AM [vite] (client) hmr invalidate /src/lib/latex.tsx Could not Fast Refresh ("extractMeta" export is incompatible). Learn more at https://github.com/vitejs/vite-plugin-react/tree/main/packages/plugin-react#consistent-components-exports
+2:49:30 AM [vite] (client) hmr update /src/pages/PaperEditor.tsx, /src/index.css
+2:50:28 AM [vite] (client) page reload tsconfig.tsbuildinfo
+2:56:33 AM [vite] (client) hmr update /src/pages/Library.tsx, /src/index.css
+2:56:44 AM [vite] (client) hmr update /src/components/Navbar.tsx, /src/index.css
+2:56:55 AM [vite] (client) hmr update /src/index.css
+2:57:08 AM [vite] (client) page reload tsconfig.tsbuildinfo
+3:00:08 AM [vite] (client) hmr update /src/index.css
+3:00:21 AM [vite] (client) page reload tsconfig.tsbuildinfo
+3:01:17 AM [vite] (client) hmr update /src/index.css
+3:01:32 AM [vite] (client) page reload tsconfig.tsbuildinfo
+3:02:20 AM [vite] (client) hmr update /src/index.css
+3:02:32 AM [vite] (client) page reload tsconfig.tsbuildinfo
+3:03:31 AM [vite] (client) hmr update /src/index.css
+3:03:40 AM [vite] (client) hmr update /src/index.css
+3:03:45 AM [vite] (client) hmr update /src/index.css
+3:04:01 AM [vite] (client) hmr update /src/index.css
+3:04:09 AM [vite] (client) hmr update /src/index.css

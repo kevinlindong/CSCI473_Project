@@ -13,7 +13,7 @@ const sections = [
     title: 'Information We Collect',
     body: [
       'When you create an account, we collect basic profile information including your name, email address, and, if you sign in with Google, your profile picture. This information is provided directly by you or by the OAuth provider you choose.',
-      'As you use the Service, we collect content you create — notes, documents, comments, and any other User Content you upload or generate within Nootes. We also collect usage data such as features accessed, pages visited, and interaction patterns to help us improve the product.',
+      'As you use the Service, we collect content you create — notes, documents, comments, and any other User Content you upload or generate within Scholar. We also collect usage data such as features accessed, pages visited, and interaction patterns to help us improve the product.',
       'We automatically receive certain technical data when you access the Service, including your IP address, browser type, operating system, referring URLs, and device identifiers. This data is used for security, analytics, and to diagnose issues.',
     ],
   },
@@ -22,7 +22,7 @@ const sections = [
     title: 'How We Use Your Information',
     body: [
       'We use your information to provide and operate the Service — including storing your notes, enabling collaboration with classmates, processing AI-powered merges and study material, and maintaining your account.',
-      'We use usage data to understand how people interact with Nootes, identify areas for improvement, and develop new features. We do not sell this data to advertisers.',
+      'We use usage data to understand how people interact with Scholar, identify areas for improvement, and develop new features. We do not sell this data to advertisers.',
       'We may use your email address to send you important notices about your account, security updates, or material changes to our policies. You can opt out of non-essential communications at any time from your account settings.',
       'If you use AI features (such as merge, flashcard generation, or summaries), your content is processed by our AI models solely to deliver the requested output. We do not use your note content to train third-party AI models without your explicit consent.',
     ],
@@ -42,8 +42,8 @@ const sections = [
     number: '04',
     title: 'Authentication & Third-Party Sign-In',
     body: [
-      'Nootes uses Supabase Auth to manage authentication. When you sign in with Google, we receive your name, email address, and profile picture from Google. We do not receive or store your Google password.',
-      'Your authentication tokens are stored securely in your browser\'s local storage and are used only to verify your identity when you access the Service. You can revoke Nootes\'s access to your Google account at any time from your Google Account settings.',
+      'Scholar uses Supabase Auth to manage authentication. When you sign in with Google, we receive your name, email address, and profile picture from Google. We do not receive or store your Google password.',
+      'Your authentication tokens are stored securely in your browser\'s local storage and are used only to verify your identity when you access the Service. You can revoke Scholar\'s access to your Google account at any time from your Google Account settings.',
     ],
   },
   {
@@ -59,7 +59,7 @@ const sections = [
     number: '06',
     title: 'Cookies & Local Storage',
     body: [
-      'Nootes uses browser local storage to persist your authentication session across visits. We do not use third-party advertising cookies.',
+      'Scholar uses browser local storage to persist your authentication session across visits. We do not use third-party advertising cookies.',
       'We may use first-party cookies for preferences such as theme settings and compact mode. You can clear cookies and local storage through your browser settings, but doing so will sign you out of the Service.',
     ],
   },
@@ -69,14 +69,14 @@ const sections = [
     body: [
       'We take the security of your information seriously. All data is transmitted over HTTPS. Authentication is handled through Supabase, which implements industry-standard security practices including JWT-based session management.',
       'We perform regular security reviews and follow responsible disclosure practices. However, no method of transmission over the internet or electronic storage is 100% secure. We cannot guarantee absolute security.',
-      'If you discover a security vulnerability, please report it responsibly to security@nootes.app rather than disclosing it publicly.',
+      'If you discover a security vulnerability, please report it responsibly to security@scholar.app rather than disclosing it publicly.',
     ],
   },
   {
     number: '08',
     title: "Children's Privacy",
     body: [
-      'Nootes is not directed at children under the age of 13, and we do not knowingly collect personal information from children under 13. If we learn that we have collected personal information from a child under 13, we will delete that information promptly.',
+      'Scholar is not directed at children under the age of 13, and we do not knowingly collect personal information from children under 13. If we learn that we have collected personal information from a child under 13, we will delete that information promptly.',
       'If you are between 13 and 18, you should review these Terms and this Privacy Policy with a parent or guardian before using the Service.',
     ],
   },
@@ -85,7 +85,7 @@ const sections = [
     title: 'Your Rights',
     body: [
       'Depending on your location, you may have certain rights regarding your personal information, including the right to access, correct, or delete the data we hold about you.',
-      'You can update your profile information directly from your account settings. To request deletion of your account and associated data, you can use the account deletion option in settings or email us at privacy@nootes.app.',
+      'You can update your profile information directly from your account settings. To request deletion of your account and associated data, you can use the account deletion option in settings or email us at privacy@scholar.app.',
       'If you are located in the European Economic Area, you have additional rights under the GDPR. Please contact us to exercise these rights.',
     ],
   },
@@ -101,7 +101,7 @@ const sections = [
     number: '11',
     title: 'Contact Us',
     body: [
-      'If you have questions, concerns, or requests regarding this Privacy Policy or our handling of your personal information, please contact us at privacy@nootes.app.',
+      'If you have questions, concerns, or requests regarding this Privacy Policy or our handling of your personal information, please contact us at privacy@scholar.app.',
       'We aim to respond to all privacy-related inquiries within five business days.',
     ],
   },
@@ -115,7 +115,7 @@ export default function PrivacyPolicy() {
       <header className="shrink-0 bg-cream/80 backdrop-blur-sm border-b border-forest/[0.06] sticky top-0 z-10">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-6 h-14">
           <Link to="/">
-            <img src={logoImg} alt="Nootes logo" style={{ width: 36, height: 36 }} />
+            <img src={logoImg} alt="Scholar logo" style={{ width: 36, height: 36 }} />
           </Link>
           <nav className="flex items-center gap-2">
             <Link to="/explore" className="font-[family-name:var(--font-body)] text-sm text-forest/55 hover:text-forest transition-colors px-3 py-1.5">
@@ -207,7 +207,7 @@ export default function PrivacyPolicy() {
 
           {/* Footer note */}
           <p className="font-mono text-[10px] text-forest/25 text-center pt-4">
-            Nootes · {LAST_UPDATED} · <Link to="/terms" className="hover:text-forest/40 transition-colors underline">Terms of Service</Link>
+            Scholar · {LAST_UPDATED} · <Link to="/terms" className="hover:text-forest/40 transition-colors underline">Terms of Service</Link>
           </p>
         </div>
       </div>
@@ -216,8 +216,8 @@ export default function PrivacyPolicy() {
       <footer className="border-t border-forest/[0.07]">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
-            <img src={logoImg} alt="Nootes logo" style={{ width: 24, height: 24 }} />
-            <span className="font-[family-name:var(--font-display)] text-base text-forest/50">nootes</span>
+            <img src={logoImg} alt="Scholar logo" style={{ width: 24, height: 24 }} />
+            <span className="font-[family-name:var(--font-display)] text-base text-forest/50">scholar</span>
           </div>
           <p className="font-mono text-[9px] text-forest/35 tracking-wider">Built for learners, by learners.</p>
           <div className="flex items-center gap-4">

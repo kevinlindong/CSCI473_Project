@@ -8,7 +8,7 @@ import { useAuth } from '../hooks/useAuth'
 /* HomeV1 — "The Open Book"                                            */
 /* Two-column layout like an open book lying flat. Left page holds      */
 /* the search area + quick-access links. Right page holds a flowing    */
-/* stream of featured nootes with LaTeX and code previews. A subtle    */
+/* stream of featured scholar with LaTeX and code previews. A subtle    */
 /* spine divider runs down the center. Warm paper feel.                */
 /* ------------------------------------------------------------------ */
 
@@ -105,7 +105,7 @@ export default function HomeV1() {
           <div className="mb-8">
             <SpotlightSearch
               mode="inline"
-              placeholder={`Search nootes, ask a question…`}
+              placeholder={`Search scholar, ask a question…`}
               variant="light"
             />
           </div>
@@ -130,7 +130,7 @@ export default function HomeV1() {
           <div className="mt-auto pt-4 border-t border-forest/[0.06]">
             <div className="flex items-center gap-4">
               {[
-                { n: '12,847', l: 'nootes' },
+                { n: '12,847', l: 'scholar' },
                 { n: '487', l: 'nootbooks' },
                 { n: '3,214', l: 'learners' },
               ].map(s => (
@@ -153,7 +153,7 @@ export default function HomeV1() {
           <div className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-2 h-2 rounded-full bg-sage/20" />
         </div>
 
-        {/* ── RIGHT PAGE — Featured Nootes Stream ─────────────────── */}
+        {/* ── RIGHT PAGE — Featured Scholar Stream ─────────────────── */}
         <div className="flex-1 overflow-y-auto px-8 xl:px-10 pt-8 pb-10">
           <div className="flex items-center gap-2 mb-5">
             <div className="w-1.5 h-1.5 rounded-full bg-sage/50 animate-pulse-soft" style={{ animationDuration: '2.4s' }} />

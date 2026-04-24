@@ -115,7 +115,7 @@ export default function HomeV4() {
 
           {/* Right: stats */}
           <div className="shrink-0 flex items-center gap-4">
-            {[{ n: '12.8K', l: 'nootes' }, { n: '487', l: 'books' }].map(s => (
+            {[{ n: '12.8K', l: 'scholar' }, { n: '487', l: 'books' }].map(s => (
               <div key={s.l} className="flex items-baseline gap-1">
                 <span className="font-mono text-xs text-forest/40 font-medium">{s.n}</span>
                 <span className="font-mono text-[7px] text-forest/18 tracking-wider">{s.l}</span>
@@ -207,7 +207,7 @@ export default function HomeV4() {
           {/* Footer message */}
           <div className="text-center mt-10">
             <p className="font-[family-name:var(--font-display)] text-base text-sage/25">
-              the best nootes are written together ✦
+              the best scholar are written together ✦
             </p>
           </div>
         </div>
