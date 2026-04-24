@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback, useLayoutEffect } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Navbar } from '../components/Navbar'
 import { RenderPaper, highlightTeX, extractMeta, DEFAULT_LATEX } from '../lib/latex'
@@ -40,6 +40,20 @@ const SNIPPETS: Snippet[] = [
   { id: 'table',      glyph: '⊞',   label: 'Table',       group: 'block',  insert: '\\begin{tabular}{lll}\nA & B & C \\\\\n1 & 2 & 3 \\\\\n4 & 5 & 6\n\\end{tabular}\n', cursor: 20, hint: '3×3 tabular' },
   { id: 'ref',        glyph: '→',   label: 'Reference',   group: 'ref',    insert: '\\ref{}', cursor: 5, hint: 'reference label' },
 ]
+
+// Core snippets shown inline in the toolbar — the most-used LaTeX primitives
+// in priority order. The strip only renders as many pills as fit in the
+// currently available width; the rest remain accessible through the palette.
+const TOOLBAR_SNIPPET_IDS: ReadonlyArray<Snippet['id']> = [
+  'section', 'subsection', 'eq', 'inline', 'bold', 'italic',
+  'cite', 'ref', 'list', 'enum', 'figure', 'table',
+]
+const TOOLBAR_SNIPPETS: ReadonlyArray<Snippet> = TOOLBAR_SNIPPET_IDS
+  .map(id => SNIPPETS.find(s => s.id === id)!)
+  .filter(Boolean)
+// gap-1.5 → 0.375rem → 6px. Keep in sync with the flex `gap-*` utility on
+// the strip container.
+const TOOLBAR_GAP_PX = 6
 
 // soft, restrained tints — used as quiet ring/dot accents, never as flat fills
 const groupTint: Record<Snippet['group'], string> = {
@@ -97,6 +111,38 @@ export default function PaperEditor() {
   const overlayRef  = useRef<HTMLPreElement>(null)
   const gutterRef   = useRef<HTMLDivElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const toolbarStripRef = useRef<HTMLDivElement>(null)
+  const toolbarMeasureRef = useRef<HTMLDivElement>(null)
+
+  // How many pills fit inline at the current toolbar width. Remaining pills
+  // are only reachable through the palette. Measured via an offscreen layer
+  // that mirrors the full snippet set so we can compute natural pill widths
+  // without flashing them in the real toolbar.
+  const [visibleCount, setVisibleCount] = useState(TOOLBAR_SNIPPETS.length)
+  useLayoutEffect(() => {
+    const strip = toolbarStripRef.current
+    const measure = toolbarMeasureRef.current
+    if (!strip || !measure) return
+    const recompute = () => {
+      const btns = Array.from(measure.querySelectorAll<HTMLElement>('[data-tb-btn]'))
+      if (btns.length === 0) return
+      const available = strip.clientWidth
+      let used = 0
+      let n = 0
+      for (let k = 0; k < btns.length; k++) {
+        const w = btns[k].offsetWidth
+        const next = n === 0 ? w : used + TOOLBAR_GAP_PX + w
+        if (next > available) break
+        used = next
+        n++
+      }
+      setVisibleCount(prev => (prev === n ? prev : n))
+    }
+    const ro = new ResizeObserver(recompute)
+    ro.observe(strip)
+    recompute()
+    return () => ro.disconnect()
+  }, [])
 
   // ── debounced localStorage autosave ─────────────────────────────────────
   // Writes the source under the per-draft key and upserts the index entry
@@ -242,7 +288,7 @@ export default function PaperEditor() {
 
       {/* ── Manuscript Header — calm cream band with leaf mark ─────── */}
       <div className="border-b border-forest/12 shrink-0 bg-cream/80 backdrop-blur relative">
-        <div className="px-6 py-3.5 flex items-center gap-5">
+        <div className="px-4 py-3.5 flex items-center gap-5">
           {/* Manuscript mark — leaf in soft halo */}
           <div className="flex items-center gap-3 pr-5 border-r border-forest/12">
             <LeafBadge />
@@ -251,7 +297,7 @@ export default function PaperEditor() {
                 editor
               </span>
               <span className="font-[family-name:var(--font-display)] text-[18px] text-forest leading-none mt-1">
-                draft scholar
+                guest
               </span>
             </div>
           </div>
@@ -266,6 +312,17 @@ export default function PaperEditor() {
                 ? meta.title.replace(/\\\\/g, ' ')
                 : <span className="text-forest/45">untitled — give your scholar a name</span>}
             </div>
+          </div>
+
+          {/* Save state */}
+          <div className="flex items-center gap-2 shrink-0">
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${saveState === 'saving' ? 'animate-pulse' : ''}`}
+              style={{ background: saveDot }}
+            />
+            <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.22em] uppercase text-forest/55">
+              {saveLabel}
+            </span>
           </div>
 
           {/* View mode — soft pill switch */}
@@ -284,17 +341,6 @@ export default function PaperEditor() {
                 {m}
               </button>
             ))}
-          </div>
-
-          {/* Save state */}
-          <div className="flex items-center gap-2 shrink-0">
-            <span
-              className={`w-1.5 h-1.5 rounded-full ${saveState === 'saving' ? 'animate-pulse' : ''}`}
-              style={{ background: saveDot }}
-            />
-            <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.22em] uppercase text-forest/55">
-              {saveLabel}
-            </span>
           </div>
 
           {/* Export */}
@@ -319,7 +365,7 @@ export default function PaperEditor() {
       </div>
 
       {/* ── Snippet toolbar — soft pill strip ─────────────────────── */}
-      <div className="border-b border-forest/12 bg-cream/70 shrink-0 px-4 py-2.5 flex items-center gap-1.5 overflow-x-auto">
+      <div className="border-b border-forest/12 bg-cream/70 shrink-0 px-4 py-2.5 flex items-center gap-1.5">
         <div className="flex items-center gap-1.5 shrink-0 pr-3 border-r border-forest/12 mr-2">
           <button
             onClick={() => setShowOutline(v => !v)}
@@ -334,37 +380,70 @@ export default function PaperEditor() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h10M4 12h16M4 18h7" />
             </svg>
           </button>
-          <button
-            onClick={() => setShowSnippetPalette(true)}
-            className="h-8 px-3 rounded-full flex items-center gap-2 border border-forest/20 hover:border-forest/45 hover:bg-sage/15 transition-colors cursor-pointer"
-            title="Snippet palette (⌘/)"
-          >
-            <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.16em] bg-forest text-parchment px-1.5 py-0.5 rounded-full">⌘/</span>
-            <span className="font-[family-name:var(--font-body)] text-[12px] text-forest/75">palette</span>
-          </button>
         </div>
 
-        {SNIPPETS.map(sn => (
-          <button
-            key={sn.id}
-            onClick={() => insertSnippet(sn)}
-            title={sn.hint}
-            className="shrink-0 h-8 px-3 rounded-full flex items-center gap-2 border border-transparent hover:border-forest/20 hover:bg-sage/12 transition-colors cursor-pointer group"
-          >
-            <span
-              className="w-1.5 h-1.5 rounded-full shrink-0"
-              style={{ background: groupTint[sn.group] }}
-            />
-            <span className="font-[family-name:var(--font-mono)] text-[11px] text-forest/55 group-hover:text-forest tabular-nums">
-              {sn.glyph}
-            </span>
-            <span className="font-[family-name:var(--font-body)] text-[12px] text-forest/65 group-hover:text-forest">
-              {sn.label}
-            </span>
-          </button>
-        ))}
+        <div
+          ref={toolbarStripRef}
+          className="flex-1 min-w-0 flex items-center gap-1.5 overflow-hidden"
+        >
+          {TOOLBAR_SNIPPETS.slice(0, visibleCount).map(sn => (
+            <button
+              key={sn.id}
+              onClick={() => insertSnippet(sn)}
+              title={sn.hint}
+              className="shrink-0 h-8 px-3 rounded-full inline-flex items-center gap-2 border border-transparent hover:border-forest/20 hover:bg-sage/12 transition-colors cursor-pointer group"
+            >
+              <span
+                className="w-1.5 h-1.5 rounded-full shrink-0"
+                style={{ background: groupTint[sn.group] }}
+              />
+              <span className="font-[family-name:var(--font-mono)] text-[11px] text-forest/55 group-hover:text-forest tabular-nums">
+                {sn.glyph}
+              </span>
+              <span className="font-[family-name:var(--font-body)] text-[12px] text-forest/65 group-hover:text-forest">
+                {sn.label}
+              </span>
+            </button>
+          ))}
+        </div>
 
-        <div className="ml-auto flex items-center gap-3 shrink-0 pl-4 border-l border-forest/12">
+        {/* Offscreen measurement layer — mirrors every candidate pill so we
+            can read natural widths and fit as many as possible into the strip
+            without overflowing into the palette button. */}
+        <div
+          ref={toolbarMeasureRef}
+          aria-hidden
+          style={{ position: 'fixed', left: '-9999px', top: 0, visibility: 'hidden', pointerEvents: 'none' }}
+          className="flex items-center gap-1.5"
+        >
+          {TOOLBAR_SNIPPETS.map(sn => (
+            <button
+              key={sn.id}
+              data-tb-btn
+              tabIndex={-1}
+              className="shrink-0 h-8 px-3 rounded-full inline-flex items-center gap-2 border border-transparent"
+            >
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ background: groupTint[sn.group] }} />
+              <span className="font-[family-name:var(--font-mono)] text-[11px] text-forest/55 tabular-nums">{sn.glyph}</span>
+              <span className="font-[family-name:var(--font-body)] text-[12px] text-forest/65">{sn.label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Palette button — pinned to the right of the toolbar section so it
+            stays visible no matter how many snippet pills flow in. The snippets
+            container clips its own overflow, so pills are truncated before they
+            reach this button. */}
+        <button
+          onClick={() => setShowSnippetPalette(true)}
+          className="shrink-0 h-8 px-3 ml-2 rounded-full flex items-center gap-2 border border-forest/20 bg-cream/70 hover:border-forest/45 hover:bg-sage/15 transition-colors cursor-pointer"
+          title="Snippet palette (⌘/)"
+        >
+          <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.16em] bg-forest text-parchment px-1.5 py-0.5 rounded-full">⌘/</span>
+          <span className="font-[family-name:var(--font-body)] text-[12px] text-forest/75">palette</span>
+        </button>
+
+        <div className="flex items-center gap-3 shrink-0 pl-4 ml-2 border-l border-forest/12">
           <span className="font-[family-name:var(--font-mono)] text-[10px] text-forest/55">
             <span className="text-forest font-medium">{words}</span>
             <span className="text-forest/35"> w</span>
@@ -571,52 +650,17 @@ export default function PaperEditor() {
                 <span className="font-[family-name:var(--font-body)] text-[12px] text-forest/50">live preview</span>
               </div>
 
-              {/* Scholar page */}
-              <div className="flex justify-center py-12 px-8">
-                <div className="relative max-w-[680px] w-full">
-                  <div className="relative bg-milk paper-grain border border-forest/15 rounded-3xl overflow-hidden shadow-[0_24px_60px_-30px_rgba(38,70,53,0.28)]">
-                    {/* Scholar header band */}
-                    <div className="flex items-center justify-between px-7 py-3 border-b border-forest/10 bg-parchment/40">
-                      <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.3em] uppercase text-forest/50">
-                        scholar · I
-                      </span>
-                      <span className="font-[family-name:var(--font-display)] text-[15px] text-forest/70 leading-none">
-                        a scholar's draft
-                      </span>
-                      <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.3em] uppercase text-forest/50">
-                        recto
-                      </span>
-                    </div>
-
-                    {/* Body */}
-                    <div className="px-14 py-14 relative">
+              {/* Overleaf-style page — white paper, Computer Modern body, soft drop shadow. */}
+              <div className="flex justify-center py-10 px-8">
+                <div className="relative max-w-[720px] w-full">
+                  <div className="relative bg-white border border-forest/10 rounded-md overflow-hidden shadow-[0_24px_60px_-30px_rgba(38,70,53,0.28)]">
+                    <div className="px-[72px] py-14 relative">
                       <RenderPaper source={source} />
                     </div>
-
-                    {/* Scholar footer */}
-                    <div className="flex items-center justify-between px-7 py-3 border-t border-forest/10 bg-parchment/40">
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-sage" />
-                        <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.28em] uppercase text-forest/45">
-                          typeset · KaTeX
-                        </span>
-                      </span>
-                      <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.28em] uppercase text-forest/45">
-                        — 1 —
-                      </span>
+                    <div className="flex items-center justify-center pb-8 pt-2">
+                      <span className="font-[family-name:var(--font-cm)] text-[12px] text-[#333]">1</span>
                     </div>
                   </div>
-                </div>
-              </div>
-
-              {/* Colophon */}
-              <div className="flex justify-center pb-12 pt-2">
-                <div className="flex items-center gap-3">
-                  <span className="w-1 h-1 rounded-full bg-forest/30" />
-                  <span className="font-[family-name:var(--font-body)] text-[12px] text-forest/45">
-                    scholar · v1 · live render
-                  </span>
-                  <span className="w-1 h-1 rounded-full bg-forest/30" />
                 </div>
               </div>
             </div>
@@ -627,12 +671,12 @@ export default function PaperEditor() {
       {/* ── Snippet palette modal ────────────────────────────────── */}
       {showSnippetPalette && (
         <div
-          className="fixed inset-0 z-50 flex items-start justify-center pt-32 bg-forest/40 backdrop-blur-sm animate-fade-up"
+          className="fixed inset-0 z-50 flex items-start justify-center pt-32 bg-forest/40 backdrop-blur-sm animate-palette-backdrop"
           onClick={() => setShowSnippetPalette(false)}
         >
           <div
             onClick={e => e.stopPropagation()}
-            className="w-full max-w-xl mx-4 bg-milk border border-forest/15 rounded-3xl shadow-[0_30px_80px_-30px_rgba(38,70,53,0.45)] overflow-hidden"
+            className="w-full max-w-xl mx-4 bg-milk border border-forest/15 rounded-3xl shadow-[0_30px_80px_-30px_rgba(38,70,53,0.45)] overflow-hidden animate-palette-pop"
           >
             <div className="px-6 py-4 border-b border-forest/10 flex items-center gap-3 bg-parchment/40">
               <div className="w-9 h-9 rounded-full bg-forest flex items-center justify-center text-parchment font-[family-name:var(--font-display)] text-[14px]">

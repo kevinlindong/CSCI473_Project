@@ -81,7 +81,19 @@ export default function TopicGraph3D() {
   const [selected, setSelected] = useState<VizNode | null>(null)
   const [selectedDetail, setSelectedDetail] = useState<PaperDetail | null>(null)
   const [hovered, setHovered] = useState<VizNode | null>(null)
-  const [isolatedCluster, setIsolatedCluster] = useState<number | null>(null)
+  // Multi-select: when the set is empty, the whole field is visible. Adding a
+  // cluster isolates it alongside any already-isolated ones, so users can pull
+  // several constellations into the same view.
+  const [isolatedClusters, setIsolatedClusters] = useState<Set<number>>(new Set())
+  const isolationActive = isolatedClusters.size > 0
+  const toggleIsolateCluster = useCallback((id: number) => {
+    setIsolatedClusters(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [projection, setProjection] = useState<QueryProjection | null>(null)
@@ -346,9 +358,9 @@ export default function TopicGraph3D() {
           nodeColor={(n: object) => {
             const nn = n as VizNode
             const color = nn.color
-            if (isolatedCluster === null) return color
+            if (!isolationActive) return color
             if (nn.isQuery) return color
-            return nn.cluster === isolatedCluster ? color : '#2a2f36'
+            return isolatedClusters.has(nn.cluster) ? color : '#2a2f36'
           }}
           nodeOpacity={0.92}
           nodeLabel={(n: object) => {
@@ -390,14 +402,14 @@ export default function TopicGraph3D() {
           onNodeClick={handleNodeClick}
           onNodeHover={(n: object | null) => setHovered(n as VizNode | null)}
           onBackgroundClick={() => { setSelected(null); setSelectedDetail(null) }}
-          // Dim non-isolated nodes via opacity filter when cluster isolated.
+          // Dim non-isolated nodes via opacity filter when any cluster is pinned.
           nodeVisibility={(n: object) => {
             const nn = n as VizNode
-            if (isolatedCluster === null) return true
-            return nn.isQuery || nn.cluster === isolatedCluster
+            if (!isolationActive) return true
+            return nn.isQuery || isolatedClusters.has(nn.cluster)
           }}
           linkVisibility={(l: object) => {
-            if (isolatedCluster === null) return true
+            if (!isolationActive) return true
             const ll = l as VizLink
             if (ll.isQueryEdge) return true
             // Resolve endpoint ids whether force-graph has mutated them or not
@@ -406,8 +418,9 @@ export default function TopicGraph3D() {
             const srcNode = graphData.nodes.find(n => n.id === s)
             const tgtNode = graphData.nodes.find(n => n.id === t)
             return (
-              srcNode?.cluster === isolatedCluster &&
-              tgtNode?.cluster === isolatedCluster
+              srcNode != null && tgtNode != null &&
+              isolatedClusters.has(srcNode.cluster) &&
+              isolatedClusters.has(tgtNode.cluster)
             )
           }}
         />
@@ -434,10 +447,15 @@ export default function TopicGraph3D() {
       {/* ── Sidebar: cluster legend with filter + rename ──────────── */}
       <aside className="w-full md:w-80 shrink-0 border-t md:border-t-0 md:border-l border-white/10 bg-neutral-950 p-4 overflow-y-auto">
         <div className="flex items-center justify-between mb-3">
-          <div className="text-[10px] tracking-widest uppercase opacity-60">clusters</div>
-          {isolatedCluster !== null && (
+          <div className="text-[10px] tracking-widest uppercase opacity-60">
+            clusters
+            {isolationActive && (
+              <span className="ml-2 opacity-70 tabular-nums">· {isolatedClusters.size} pinned</span>
+            )}
+          </div>
+          {isolationActive && (
             <button
-              onClick={() => setIsolatedCluster(null)}
+              onClick={() => setIsolatedClusters(new Set())}
               className="text-[10px] tracking-wider uppercase opacity-60 hover:opacity-100 underline"
             >
               show all
@@ -452,19 +470,18 @@ export default function TopicGraph3D() {
               label={labels[c.id] ?? c.label}
               isOverride={hasOverride(c.id)}
               color={clusterColor(c.id, data.clusters.length)}
-              isIsolated={isolatedCluster === c.id}
-              isDimmed={isolatedCluster !== null && isolatedCluster !== c.id}
+              isIsolated={isolatedClusters.has(c.id)}
+              isDimmed={isolationActive && !isolatedClusters.has(c.id)}
               onEditSave={v => setLabel(c.id, v)}
               onResetLabel={() => resetLabel(c.id)}
-              onToggleIsolate={() =>
-                setIsolatedCluster(prev => (prev === c.id ? null : c.id))
-              }
+              onToggleIsolate={() => toggleIsolateCluster(c.id)}
             />
           ))}
         </ul>
         <div className="mt-6 text-[11px] opacity-55 leading-relaxed">
-          Click a row to isolate that cluster. Double-click its label to rename
-          — edits save to this browser only.
+          Click a row to pin that cluster; click more to layer constellations
+          together. Double-click a label to rename — edits save to this
+          browser only.
         </div>
         {data.meta && (
           <div className="mt-6 text-[10px] opacity-40 font-mono leading-relaxed">

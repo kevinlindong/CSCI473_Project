@@ -1,17 +1,11 @@
 import { useState, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { useAuth } from '../hooks/useAuth'
 
 /* ==========================================================================
    Navbar — minimal zen botanical header.
-   • Soft cream chrome, single hairline border, organic leaf mark.
-   • Gamja Flower wordmark, lowercase nav links with restrained sage dot
-     on active.
+   Fixed-width layout so components never shift between pages.
+   Profile is pinned to "guest" — no auth state leaks into the UI.
    ========================================================================== */
-
-function getInitials(name: string): string {
-  return name.split(' ').map(n => n[0] ?? '').join('').toUpperCase().slice(0, 2)
-}
 
 type NavItem = { path: string; label: string }
 
@@ -26,11 +20,11 @@ const profileDropdownLinks = [
   { path: '/settings', label: 'settings' },
 ]
 const BRAND_WORDMARK = 'Scholar'
+const GUEST_LABEL = 'guest'
 
 export function Navbar({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
   const location = useLocation()
   const navigate = useNavigate()
-  const { signOut, profile, user } = useAuth()
   const isDark = variant === 'dark'
 
   const [dropdownOpen, setDropdownOpen] = useState(false)
@@ -52,14 +46,18 @@ export function Navbar({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
 
   return (
     <header className={`sticky top-0 z-50 ${chrome}`}>
-      <div className="w-full flex items-center justify-between px-6 sm:px-8 lg:px-12 h-[64px]">
-        {/* ── Logo: organic leaf + Gamja Flower wordmark ──────────── */}
+      <div className="w-full flex items-center justify-between px-4 h-[64px]">
+        {/* ── Logo: custom botanical mark + Gamja Flower wordmark ── */}
         <Link
           to="/home"
           onClick={e => { if (location.pathname === '/home') e.preventDefault() }}
           className="scholar-wordmark-group flex items-center gap-3 self-center hover:opacity-90 transition-opacity"
         >
-          <LogoLeaf dark={isDark} />
+          <img
+            src="/logoCB.png"
+            alt="Scholar logo"
+            className="w-9 h-9 object-contain shrink-0"
+          />
           <span className={`font-[family-name:var(--font-display)] text-[24px] leading-none translate-y-[1px] ${inkStrong}`}>
             {BRAND_WORDMARK.split('').map((ch, idx) => (
               <span
@@ -83,18 +81,12 @@ export function Navbar({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
               <Link
                 key={link.path}
                 to={link.path}
-                className={`group relative flex items-center gap-2 px-4 h-9 rounded-full font-[family-name:var(--font-body)] text-[14px] transition-all ${
+                className={`group relative flex items-center justify-center px-4 h-9 rounded-full font-[family-name:var(--font-body)] text-[14px] transition-colors ${
                   active
                     ? `${inkStrong} ${isDark ? 'bg-parchment/8' : 'bg-sage/18'}`
                     : `${inkSoft} ${isDark ? 'hover:text-parchment hover:bg-parchment/5' : 'hover:text-forest hover:bg-sage/12'}`
                 }`}
               >
-                {active && (
-                  <span
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{ background: isDark ? '#A3B18A' : '#7F9267' }}
-                  />
-                )}
                 {link.label}
               </Link>
             )
@@ -102,7 +94,7 @@ export function Navbar({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
 
           <span className={`h-5 w-px mx-3 ${isDark ? 'bg-parchment/15' : 'bg-forest/15'}`} />
 
-          {/* ── Profile avatar ─────────────────────────────────── */}
+          {/* ── Profile — locked to guest ──────────────────────── */}
           <div
             className="relative flex items-center"
             onMouseEnter={handleMouseEnter}
@@ -110,26 +102,14 @@ export function Navbar({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
           >
             <button
               onClick={() => navigate('/profile')}
-              aria-label="Profile"
+              aria-label="Guest profile"
               className={`group relative w-9 h-9 rounded-full overflow-hidden flex items-center justify-center text-[10px] transition-all cursor-pointer ${
                 isDark
                   ? 'bg-parchment/10 hover:bg-parchment/20 text-parchment ring-1 ring-parchment/15'
                   : 'bg-forest text-parchment hover:-translate-y-0.5 ring-1 ring-forest/15'
               }`}
             >
-              {profile?.avatar_url ? (
-                <img
-                  src={profile.avatar_url}
-                  alt={profile.display_name ?? 'profile'}
-                  className="w-full h-full object-cover"
-                />
-              ) : profile?.display_name ? (
-                <span className="font-[family-name:var(--font-display)] text-[14px] leading-none">
-                  {getInitials(profile.display_name)}
-                </span>
-              ) : (
-                <span className="font-[family-name:var(--font-display)] text-[16px] leading-none">·</span>
-              )}
+              <span className="font-[family-name:var(--font-display)] text-[14px] leading-none">G</span>
             </button>
 
             <div
@@ -142,7 +122,7 @@ export function Navbar({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
             >
               <div className={`px-5 py-4 border-b ${isDark ? 'border-parchment/10' : 'border-forest/10'}`}>
                 <span className={`block font-[family-name:var(--font-mono)] text-[9.5px] tracking-[0.28em] uppercase truncate ${isDark ? 'text-parchment/45' : 'text-forest/50'}`}>
-                  {profile?.display_name || user?.email || 'guest scholar'}
+                  {GUEST_LABEL}
                 </span>
                 <span className={`block font-[family-name:var(--font-display)] text-[18px] mt-1.5 leading-none ${inkStrong}`}>
                   hello there —
@@ -163,37 +143,6 @@ export function Navbar({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
                   {link.label}
                 </Link>
               ))}
-
-              {user && (
-                <button
-                  onClick={async () => {
-                    setDropdownOpen(false)
-                    await signOut()
-                    navigate('/')
-                  }}
-                  className={`w-full text-left px-5 py-2.5 font-[family-name:var(--font-body)] text-[14px] transition-colors cursor-pointer border-t ${
-                    isDark
-                      ? 'border-parchment/8 text-parchment/55 hover:text-parchment hover:bg-parchment/[0.04]'
-                      : 'border-forest/10 text-forest/55 hover:text-forest hover:bg-sage/12'
-                  }`}
-                >
-                  sign out ←
-                </button>
-              )}
-
-              {!user && (
-                <Link
-                  to="/login"
-                  onClick={() => setDropdownOpen(false)}
-                  className={`block px-5 py-2.5 font-[family-name:var(--font-body)] text-[14px] transition-colors border-t ${
-                    isDark
-                      ? 'border-parchment/8 text-parchment/55 hover:text-parchment hover:bg-parchment/[0.04]'
-                      : 'border-forest/10 text-forest/60 hover:text-forest hover:bg-sage/12'
-                  }`}
-                >
-                  sign in →
-                </Link>
-              )}
             </div>
           </div>
         </nav>
@@ -202,26 +151,3 @@ export function Navbar({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
   )
 }
 
-/* Organic leaf — soft botanical mark to replace the Bauhaus primitives. */
-function LogoLeaf({ dark }: { dark: boolean }) {
-  const ink   = dark ? '#E9E4D4' : '#264635'
-  const halo  = dark ? '#A3B18A' : '#A3B18A'
-  const vein  = dark ? '#A3B18A' : '#A3B18A'
-  return (
-    <svg width="30" height="30" viewBox="0 0 40 40" className="shrink-0">
-      <circle cx="20" cy="20" r="18" fill={halo} opacity={dark ? 0.16 : 0.18} />
-      <path
-        d="M 20 8 C 12 12, 10 22, 14 30 C 22 28, 28 20, 26 10 C 24 11, 22 11, 20 8 Z"
-        fill={ink}
-        opacity={dark ? 0.85 : 0.9}
-      />
-      <path
-        d="M 20 8 C 20 14, 18 22, 14 30"
-        stroke={vein}
-        strokeWidth="0.8"
-        fill="none"
-        opacity={0.85}
-      />
-    </svg>
-  )
-}

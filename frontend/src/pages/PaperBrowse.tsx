@@ -61,7 +61,7 @@ interface PaperDetail extends Paper {
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? ''
 const DEBOUNCE_MS = 300
 const PROJECTION_K = 24
-const MAX_CATALOGUE = 30
+const PAGE_SIZE = 12
 
 // FastAPI HTTPException responses are `{"detail": "..."}` — pull that out so
 // we don't show users curly braces. Falls through to raw body, then HTTP code.
@@ -118,8 +118,19 @@ export default function PaperBrowse() {
   const [answerError, setAnswerError] = useState<string | null>(null)
 
   // filters / selection
-  const [activeCluster, setActiveCluster] = useState<number | 'all'>('all')
+  // Multi-select cluster filter. Empty set = "all". Clicking a chip toggles it.
+  const [activeClusters, setActiveClusters] = useState<Set<number>>(new Set())
   const [selectedPaperId, setSelectedPaperId] = useState<string | null>(null)
+  const [page, setPage] = useState(0)
+
+  const toggleCluster = useCallback((id: number) => {
+    setActiveClusters(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
   const constellationPanelRef = useRef<HTMLElement | null>(null)
   const fieldSurveyHeaderRef = useRef<HTMLDivElement | null>(null)
   const [graphHeight, setGraphHeight] = useState(520)
@@ -253,13 +264,20 @@ export default function PaperBrowse() {
     } else {
       base = papers.map(p => ({ paper: p, score: 0 }))
     }
-    if (activeCluster !== 'all') {
-      base = base.filter(s => clusterById[s.paper.paper_id] === activeCluster)
+    if (activeClusters.size > 0) {
+      base = base.filter(s => activeClusters.has(clusterById[s.paper.paper_id]))
     }
     return base
-  }, [neighbors, debouncedQuery, papers, paperById, clusterById, activeCluster])
+  }, [neighbors, debouncedQuery, papers, paperById, clusterById, activeClusters])
 
-  const topResults = rankedPapers.slice(0, MAX_CATALOGUE)
+  // Reset to the first page whenever the filter/query shifts, so users don't
+  // land on a page that no longer exists for the narrower result set.
+  useEffect(() => { setPage(0) }, [debouncedQuery, activeClusters])
+
+  const pageCount = Math.max(1, Math.ceil(rankedPapers.length / PAGE_SIZE))
+  const clampedPage = Math.min(page, pageCount - 1)
+  const pageStart = clampedPage * PAGE_SIZE
+  const pagedResults = rankedPapers.slice(pageStart, pageStart + PAGE_SIZE)
 
   // ── "Synthesise" → /api/query (LLM answer + citations) ─────────────────
   const handleSynthesize = useCallback(async () => {
@@ -384,9 +402,9 @@ export default function PaperBrowse() {
               topics
             </span>
             <button
-              onClick={() => setActiveCluster('all')}
+              onClick={() => setActiveClusters(new Set())}
               className={`h-9 px-4 rounded-full font-[family-name:var(--font-body)] text-[13px] transition-all border ${
-                activeCluster === 'all'
+                activeClusters.size === 0
                   ? 'bg-forest text-parchment border-forest'
                   : 'border-forest/15 text-forest/60 hover:border-forest/35 hover:text-forest bg-milk'
               }`}
@@ -394,11 +412,11 @@ export default function PaperBrowse() {
               all · <span className="tabular-nums">{papers.length}</span>
             </button>
             {clusters.map(c => {
-              const active = activeCluster === c.id
+              const active = activeClusters.has(c.id)
               return (
                 <button
                   key={c.id}
-                  onClick={() => setActiveCluster(active ? 'all' : c.id)}
+                  onClick={() => toggleCluster(c.id)}
                   className={`h-9 pl-3 pr-3.5 rounded-full flex items-center gap-2 font-[family-name:var(--font-body)] text-[13px] transition-all border ${
                     active
                       ? 'bg-milk border-forest/35 text-forest'
@@ -499,18 +517,22 @@ export default function PaperBrowse() {
             </div>
             <p className="font-[family-name:var(--font-body)] text-[14px] text-forest/65 leading-[1.7] mb-5 max-w-[36ch]">
               {clusters.length
-                ? `${clusters.length} topic constellations, drawn from the abstract space. Click to isolate.`
+                ? `${clusters.length} topic constellations, drawn from the abstract space. Toggle any to combine.`
                 : 'loading constellations…'}
             </p>
 
             <ClusterLegend
               clusters={clusters}
-              active={activeCluster}
-              onPick={id => setActiveCluster(activeCluster === id ? 'all' : id)}
+              active={activeClusters}
+              onPick={toggleCluster}
             />
 
             <p className="mt-5 font-[family-name:var(--font-body)] text-[13px] text-forest/55 leading-[1.7] max-w-[36ch]">
-              isolate a constellation — the field survey to the right will settle onto just that cluster.
+              {activeClusters.size === 0
+                ? 'toggle any constellation to narrow the field survey — stack multiple to keep them all in view.'
+                : activeClusters.size === 1
+                  ? 'one constellation pinned. click it again to release, or add more to widen the survey.'
+                  : `${activeClusters.size} constellations pinned. click any to release, or press “all” above to reset.`}
             </p>
           </aside>
 
@@ -528,7 +550,7 @@ export default function PaperBrowse() {
               nodes={graphNodes}
               edges={graphEdges}
               clusters={clusters}
-              activeCluster={activeCluster}
+              activeClusters={activeClusters}
               selectedPaperId={selectedPaperId}
               queryText={debouncedQuery}
               queryNeighbors={neighbors}
@@ -554,7 +576,9 @@ export default function PaperBrowse() {
           </div>
           <div className="text-right">
             <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.24em] uppercase text-forest/50 tabular-nums">
-              {topResults.length} / {rankedPapers.length}
+              {rankedPapers.length === 0
+                ? '0 / 0'
+                : `${pageStart + 1}–${pageStart + pagedResults.length} / ${rankedPapers.length}`}
             </div>
             <div className="font-[family-name:var(--font-body)] text-[14px] text-forest/55 mt-1">
               {searching ? 'ranking…' : 'click any to open ↓'}
@@ -562,7 +586,7 @@ export default function PaperBrowse() {
           </div>
         </div>
 
-        {topResults.length === 0 ? (
+        {pagedResults.length === 0 ? (
           <div className="bg-milk border border-forest/15 border-dashed rounded-2xl py-16 px-8 text-center">
             <div className="font-[family-name:var(--font-display)] text-[26px] text-forest/55 mb-2">
               {loading ? 'loading…' : 'nothing in the stacks matched that.'}
@@ -574,21 +598,36 @@ export default function PaperBrowse() {
             )}
           </div>
         ) : (
-          <ol className="space-y-4">
-            {topResults.map((s, idx) => (
-              <CatalogueCard
-                key={s.paper.paper_id}
-                rank={idx + 1}
-                paper={s.paper}
-                similarity={debouncedQuery.trim() ? s.score : null}
-                clusterId={clusterById[s.paper.paper_id]}
-                clusterLabel={clusters.find(c => c.id === clusterById[s.paper.paper_id])?.label ?? ''}
-                query={debouncedQuery}
-                isSelected={selectedPaperId === s.paper.paper_id}
-                onSelect={() => setSelectedPaperId(s.paper.paper_id)}
+          <>
+            <ol className="space-y-4">
+              {pagedResults.map((s, idx) => (
+                <CatalogueCard
+                  key={s.paper.paper_id}
+                  rank={pageStart + idx + 1}
+                  paper={s.paper}
+                  similarity={debouncedQuery.trim() ? s.score : null}
+                  clusterId={clusterById[s.paper.paper_id]}
+                  clusterLabel={clusters.find(c => c.id === clusterById[s.paper.paper_id])?.label ?? ''}
+                  query={debouncedQuery}
+                  isSelected={selectedPaperId === s.paper.paper_id}
+                  onSelect={() => setSelectedPaperId(s.paper.paper_id)}
+                />
+              ))}
+            </ol>
+
+            {pageCount > 1 && (
+              <Pagination
+                page={clampedPage}
+                pageCount={pageCount}
+                onPick={p => {
+                  setPage(p)
+                  if (typeof window !== 'undefined') {
+                    window.scrollTo({ top: window.scrollY, behavior: 'auto' })
+                  }
+                }}
               />
-            ))}
-          </ol>
+            )}
+          </>
         )}
       </section>
 
@@ -718,10 +757,11 @@ function ClusterLegend({
   clusters, active, onPick,
 }: {
   clusters: Cluster[]
-  active: number | 'all'
+  active: Set<number>
   onPick: (id: number) => void
 }) {
   const max = Math.max(1, ...clusters.map(c => c.size))
+  const anyActive = active.size > 0
   return (
     <div className="border border-forest/15 rounded-2xl bg-milk overflow-hidden">
       {clusters.length === 0 ? (
@@ -733,17 +773,33 @@ function ClusterLegend({
         </div>
       ) : (
         clusters.map(c => {
-          const dim = active !== 'all' && active !== c.id
+          const isActive = active.has(c.id)
+          const dim = anyActive && !isActive
           const pct = (c.size / max) * 100
           return (
             <button
               key={c.id}
               onClick={() => onPick(c.id)}
+              aria-pressed={isActive}
               className={`w-full text-left px-5 py-3 flex items-center gap-3 border-b border-forest/10 last:border-b-0 hover:bg-sage/10 transition-colors ${
                 dim ? 'opacity-50' : ''
-              } ${active === c.id ? 'bg-sage/15' : ''}`}
+              } ${isActive ? 'bg-sage/15' : ''}`}
             >
-              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.color }} />
+              <span
+                className={`w-4 h-4 rounded-full shrink-0 flex items-center justify-center border transition-colors ${
+                  isActive ? 'border-forest/40' : 'border-forest/15'
+                }`}
+                style={{ background: isActive ? c.color : 'transparent' }}
+              >
+                {!isActive && (
+                  <span className="w-2 h-2 rounded-full" style={{ background: c.color }} />
+                )}
+                {isActive && (
+                  <svg className="w-2.5 h-2.5 text-parchment" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                )}
+              </span>
               <div className="flex-1 min-w-0">
                 <div className="font-[family-name:var(--font-body)] text-[13.5px] text-forest leading-snug truncate">
                   {c.label}
@@ -887,6 +943,73 @@ function CatalogueCard({
         </span>
       </div>
     </li>
+  )
+}
+
+// ─── Pagination — minimal prev/next with a windowed page cluster ───────────
+// Keeps the catalogue navigable when the full corpus runs into the hundreds.
+function Pagination({
+  page, pageCount, onPick,
+}: {
+  page: number
+  pageCount: number
+  onPick: (p: number) => void
+}) {
+  // Windowed page numbers: always show first, last, the active page and its
+  // neighbours. Collapsed gaps become "…".
+  const pages = useMemo(() => {
+    const set = new Set<number>([0, pageCount - 1, page, page - 1, page + 1])
+    const raw = [...set].filter(p => p >= 0 && p < pageCount).sort((a, b) => a - b)
+    const out: Array<number | 'gap'> = []
+    for (let i = 0; i < raw.length; i++) {
+      if (i > 0 && raw[i] - raw[i - 1] > 1) out.push('gap')
+      out.push(raw[i])
+    }
+    return out
+  }, [page, pageCount])
+
+  const btn = 'h-9 min-w-9 px-3 rounded-full border font-[family-name:var(--font-body)] text-[13px] tabular-nums transition-colors'
+
+  return (
+    <nav className="mt-10 flex items-center justify-center gap-2 flex-wrap">
+      <button
+        disabled={page === 0}
+        onClick={() => onPick(page - 1)}
+        className={`${btn} ${page === 0
+          ? 'border-forest/10 text-forest/30 cursor-not-allowed bg-milk'
+          : 'border-forest/15 text-forest/70 hover:text-forest hover:border-forest/35 bg-milk'}`}
+      >
+        ← prev
+      </button>
+
+      {pages.map((p, i) =>
+        p === 'gap' ? (
+          <span key={`gap-${i}`} className="px-1 font-[family-name:var(--font-mono)] text-[12px] text-forest/40">
+            …
+          </span>
+        ) : (
+          <button
+            key={p}
+            onClick={() => onPick(p)}
+            className={`${btn} ${p === page
+              ? 'bg-forest text-parchment border-forest'
+              : 'border-forest/15 text-forest/65 hover:text-forest hover:border-forest/35 bg-milk'}`}
+          >
+            {p + 1}
+          </button>
+        )
+      )}
+
+      <button
+        disabled={page >= pageCount - 1}
+        onClick={() => onPick(page + 1)}
+        className={`${btn} ${page >= pageCount - 1
+          ? 'border-forest/10 text-forest/30 cursor-not-allowed bg-milk'
+          : 'border-forest/15 text-forest/70 hover:text-forest hover:border-forest/35 bg-milk'}`}
+      >
+        next →
+      </button>
+    </nav>
   )
 }
 

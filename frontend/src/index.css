@@ -47,6 +47,9 @@
   --font-mono:      "JetBrains Mono", ui-monospace, monospace;
   --font-serif:     "Venus", "Futura", ui-sans-serif, sans-serif;
   --font-editorial: "Venus", "Futura", ui-sans-serif, sans-serif;
+  /* Computer Modern — KaTeX ships the Latin Modern / CM web fonts already; we
+     reuse them so the LaTeX preview matches the Overleaf default typeface. */
+  --font-cm:        "KaTeX_Main", "Latin Modern Roman", "CMU Serif", "Cambria", "Times New Roman", serif;
 }
 
 /* ====================================================================
@@ -534,3 +537,74 @@ html.compact-mode .mb-8  { margin-bottom: 1rem; }
   50%     { background-color: rgba(224,177,58,0.28); }
 }
 .cite-anim { animation: citation-pulse 2.2s ease-in-out infinite; }
+
+/* ====================================================================
+   9. PALETTE MODAL — snappy pop-in
+   ==================================================================== */
+@keyframes palette-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes palette-pop-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+.animate-palette-backdrop { animation: palette-backdrop-in 140ms ease-out both; }
+.animate-palette-pop      { animation: palette-pop-in 180ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+
+/* ====================================================================
+   10. PAGE ENTRANCE — quick stagger on route mount
+   AppShell wraps each route in <div key={pathname} className="page-enter">,
+   so these rules replay every time the path changes.
+   ---------------------------------------------------------------------
+   The first grandchild is conventionally the Navbar — we skip it so the
+   global chrome stays geometrically static across navigation. Only the
+   route's own content staggers in.
+   ==================================================================== */
+@keyframes page-enter-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+.page-enter > * > *:nth-child(n+2) {
+  animation: page-enter-in 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.page-enter > * > *:nth-child(2)   { animation-delay:   0ms; }
+.page-enter > * > *:nth-child(3)   { animation-delay:  70ms; }
+.page-enter > * > *:nth-child(4)   { animation-delay: 140ms; }
+.page-enter > * > *:nth-child(5)   { animation-delay: 200ms; }
+.page-enter > * > *:nth-child(n+6) { animation-delay: 240ms; }
+
+/* ====================================================================
+   11. PAPER PREVIEW — Overleaf-style Computer Modern typesetting
+   The RenderPaper output is wrapped in .paper-body; we force the whole
+   subtree onto KaTeX_Main so running text matches the math glyphs.
+   ==================================================================== */
+.paper-body {
+  font-family: var(--font-cm);
+  color: #1a1a1a;
+}
+.paper-body,
+.paper-body p,
+.paper-body li,
+.paper-body blockquote,
+.paper-body figcaption,
+.paper-body h1,
+.paper-body h2,
+.paper-body h3,
+.paper-body h4,
+.paper-body h5,
+.paper-body h6,
+.paper-body th,
+.paper-body td {
+  font-family: var(--font-cm);
+}
+.paper-body em,
+.paper-body i {
+  font-family: var(--font-cm);
+  font-style: italic;
+}
+.paper-body strong,
+.paper-body b {
+  font-family: var(--font-cm);
+  font-weight: 700;
+}

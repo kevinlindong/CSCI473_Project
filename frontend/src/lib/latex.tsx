@@ -418,7 +418,9 @@ type Block =
 function findMatchingEnv(src: string, start: number, name: string): number {
   // Escape regex specials in name — notably '*' for starred envs like equation*.
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const re = new RegExp(`\\\\(begin|end)\\{${escaped}\\}`, 'g')
+  // Tolerate optional whitespace between \begin / \end and the brace-wrapped name,
+  // since LaTeX treats `\begin {tabular}` and `\begin{tabular}` identically.
+  const re = new RegExp(`\\\\(begin|end)\\s*\\{${escaped}\\}`, 'g')
   re.lastIndex = start
   let depth = 0
   let m
@@ -471,13 +473,21 @@ function parseBlocks(body: string): Block[] {
     }
 
     // \begin{env}
-    const envM = src.slice(i).match(/^\\begin\{([a-zA-Z*]+)\}/)
+    const envM = src.slice(i).match(/^\\begin\s*\{([a-zA-Z*]+)\}/)
     if (envM) {
-      flush()
       const name = envM[1]
       const afterBegin = i + envM[0].length
       const endIdx = findMatchingEnv(src, afterBegin, name)
-      if (endIdx < 0) { paragraphBuf += src[i]; i++; continue }
+      if (endIdx < 0) {
+        // Runaway \begin with no matching \end — emit a single synthetic block
+        // for everything up to end of source so the content still renders
+        // instead of leaking as a wall of raw LaTeX.
+        flush()
+        blocks.push({ kind: 'env', env: { name, body: src.slice(afterBegin) } })
+        i = src.length
+        continue
+      }
+      flush()
       // Strip any [optional] and {required} args that follow \begin{env} on
       // the same line (e.g. \begin{tabular}{lrr}, \begin{figure}[h!],
       // \begin{minipage}[t]{0.5\textwidth}). We only consume args on the
@@ -496,7 +506,10 @@ function parseBlocks(body: string): Block[] {
       }
       const content = src.slice(bodyStart, endIdx)
       blocks.push({ kind: 'env', env: { name, body: content } })
-      i = endIdx + `\\end{${name}}`.length
+      // findMatchingEnv tolerates whitespace in "\end  {name}", so walk past
+      // the actual closing brace instead of assuming a fixed length.
+      const closeBrace = src.indexOf('}', endIdx)
+      i = closeBrace >= 0 ? closeBrace + 1 : endIdx + `\\end{${name}}`.length
       continue
     }
 
@@ -516,6 +529,36 @@ function parseBlocks(body: string): Block[] {
 }
 
 // ─── environment renderers ──────────────────────────────────────────────────
+
+// Render a container env's body recursively as blocks. Used by wrapper envs
+// (center, flushleft, quote, theorem, …) so a nested \begin{tabular} or
+// \begin{equation} renders properly instead of leaking as raw LaTeX through
+// parseInline.
+function renderContainerBody(
+  body: string,
+  refs: Refs,
+  figNum: { n: number },
+  key: string,
+  paragraphClass: string,
+): ReactNode[] {
+  const inner = parseBlocks(body)
+  return inner.map((b, idx) => {
+    if (b.kind === 'env') return renderEnv(b.env, refs, figNum, `${key}-x${idx}`)
+    if (b.kind === 'rule') return <hr key={`${key}-x${idx}`} className="my-3 border-forest/15" />
+    if (b.kind === 'section') {
+      return (
+        <h4 key={`${key}-x${idx}`} className="font-[family-name:var(--font-body)] text-forest text-[1.05em] font-medium mt-4 mb-2">
+          {b.text}
+        </h4>
+      )
+    }
+    return (
+      <p key={`${key}-x${idx}`} className={paragraphClass}>
+        {parseInline(b.text, refs, `${key}-xp${idx}`)}
+      </p>
+    )
+  })
+}
 
 function renderEnv(env: Env, refs: Refs, figNum: { n: number }, key: string): ReactNode {
   const n = env.name
@@ -600,15 +643,76 @@ function renderEnv(env: Env, refs: Refs, figNum: { n: number }, key: string): Re
   if (base === 'quote' || base === 'quotation') {
     return (
       <blockquote key={key} className="my-5 pl-6 border-l-2 border-sage/40 text-forest/75 font-[family-name:var(--font-body)] leading-[1.7]">
-        {parseInline(env.body.trim(), refs, `${key}-qt`)}
+        {renderContainerBody(env.body, refs, figNum, key, 'leading-[1.7] my-2')}
       </blockquote>
     )
   }
-  if (base === 'center') {
+  if (base === 'center' || base === 'flushleft' || base === 'flushright') {
+    const align = base === 'flushleft' ? 'text-left' : base === 'flushright' ? 'text-right' : 'text-center'
     return (
-      <div key={key} className="my-5 text-center text-forest/85 leading-[1.75]">
-        {parseInline(env.body.trim(), refs, `${key}-ctr`)}
+      <div key={key} className={`my-5 ${align} text-forest/85 leading-[1.75]`}>
+        {renderContainerBody(env.body, refs, figNum, key, 'leading-[1.75] my-2')}
       </div>
+    )
+  }
+  if (base === 'verbatim' || base === 'lstlisting' || base === 'minted') {
+    return (
+      <pre key={key} className="my-5 p-4 rounded-md bg-forest-deep/95 text-parchment font-[family-name:var(--font-mono)] text-[0.82em] leading-[1.6] overflow-x-auto border border-forest/20">
+        {env.body.replace(/^\n/, '').replace(/\n$/, '')}
+      </pre>
+    )
+  }
+  if (base === 'theorem' || base === 'lemma' || base === 'proposition' || base === 'corollary' || base === 'definition' || base === 'proof' || base === 'remark' || base === 'example') {
+    const label = base.charAt(0).toUpperCase() + base.slice(1)
+    // The most common shape — a single paragraph of italic prose — keeps the
+    // label inline with the text. Anything richer (multiple paragraphs, a
+    // nested equation/tabular) falls back to recursive block rendering so
+    // the nested env actually renders.
+    const inner = parseBlocks(env.body)
+    if (inner.length <= 1 && (inner.length === 0 || inner[0].kind === 'paragraph')) {
+      return (
+        <div key={key} className="my-5 pl-4 border-l-2 border-amber/50">
+          <span className="smcp text-sienna text-[0.82em] mr-2">{label}.</span>
+          <span className="text-forest/85 leading-[1.75] italic">
+            {parseInline(inner[0]?.kind === 'paragraph' ? inner[0].text : env.body.trim(), refs, `${key}-thm`)}
+          </span>
+        </div>
+      )
+    }
+    return (
+      <div key={key} className="my-5 pl-4 border-l-2 border-amber/50 text-forest/85">
+        <div className="mb-1"><span className="smcp text-sienna text-[0.82em]">{label}.</span></div>
+        {renderContainerBody(env.body, refs, figNum, key, 'leading-[1.75] my-2 italic')}
+      </div>
+    )
+  }
+  // \begin{table}[h] is a float wrapper — its body is typically another
+  // environment (tabular / tabularx / longtable) plus \caption and \label.
+  // Render the children by re-running the block parser on the body so the
+  // inner tabular gets its proper table rendering instead of paragraph text.
+  if (base === 'table' || base === 'table*') {
+    const captionMatch = env.body.match(/\\caption\{([\s\S]*?)\}(?=\s*(?:\\label|\\end|$))/)
+    const innerSource = env.body
+      .replace(/\\caption\{[\s\S]*?\}/g, '')
+      .replace(/\\label\{[^}]+\}/g, '')
+      .replace(/\\centering\b/g, '')
+    const innerBlocks = parseBlocks(innerSource)
+    const inner: ReactNode[] = innerBlocks.map((b, idx) => {
+      if (b.kind === 'env') return renderEnv(b.env, refs, figNum, `${key}-t${idx}`)
+      if (b.kind === 'paragraph') return <p key={`${key}-t${idx}`} className="text-forest/80 leading-[1.7] my-2">{parseInline(b.text, refs, `${key}-tp${idx}`)}</p>
+      if (b.kind === 'rule') return <hr key={`${key}-t${idx}`} className="my-3 border-forest/15" />
+      return null
+    })
+    return (
+      <figure key={key} className="my-8">
+        {inner}
+        {captionMatch && (
+          <figcaption className="mt-2 text-[0.88em] text-forest/65 text-center">
+            <span className="smcp text-[0.82em] text-sienna mr-2">Table.</span>
+            {parseInline(captionMatch[1].trim(), refs, `${key}-tcap`)}
+          </figcaption>
+        )}
+      </figure>
     )
   }
   if (base === 'tabular' || base === 'array') {
@@ -658,13 +762,28 @@ function renderEnv(env: Env, refs: Refs, figNum: { n: number }, key: string): Re
       </div>
     )
   }
-  // Fallback: render body as paragraph
-  return (
-    <div key={key} className="my-3 text-forest/80 leading-[1.75] opacity-75">
-      <span className="font-mono text-[10px] text-forest/30 mr-2">[{n}]</span>
-      {parseInline(env.body.trim(), refs, `${key}-def`)}
-    </div>
-  )
+  // Fallback: recursively parse the inner body as blocks so unknown wrappers
+  // (\begin{document}, custom float envs, …) still render their contents
+  // instead of dumping raw LaTeX or a dim `[env-name]` tag into the page.
+  const innerBlocks = parseBlocks(env.body)
+  const innerNodes: ReactNode[] = innerBlocks.map((b, idx) => {
+    if (b.kind === 'env') return renderEnv(b.env, refs, figNum, `${key}-f${idx}`)
+    if (b.kind === 'section') {
+      const common = 'font-[family-name:var(--font-body)] text-forest tracking-tight mt-6 mb-3'
+      return <h3 key={`${key}-f${idx}`} className={`${common} text-[1.2em] font-medium`}>{b.text}</h3>
+    }
+    if (b.kind === 'rule') return <hr key={`${key}-f${idx}`} className="my-3 border-forest/15" />
+    return <p key={`${key}-f${idx}`} className="text-forest/80 leading-[1.75] my-3 font-[family-name:var(--font-body)]">{parseInline(b.text, refs, `${key}-fp${idx}`)}</p>
+  })
+  // If the recursion produced nothing (empty body), show a quiet placeholder.
+  if (innerNodes.length === 0) {
+    return (
+      <div key={key} className="my-3 text-forest/60 leading-[1.75] text-[0.9em]">
+        {parseInline(env.body.trim(), refs, `${key}-def`)}
+      </div>
+    )
+  }
+  return <div key={key} className="my-2">{innerNodes}</div>
 }
 
 // ─── top-level renderer ─────────────────────────────────────────────────────

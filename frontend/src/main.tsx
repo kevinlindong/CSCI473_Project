@@ -43,7 +43,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const showFab = !hideOn.has(location.pathname) && (!isEditor || isLegacyEditor)
   return (
     <>
-      {children}
+      {/* keyed by pathname so each route mount replays the .page-enter stagger.
+          display:contents keeps the wrapper transparent to layout — pages
+          relying on h-screen on their root still get the viewport. */}
+      <div key={location.pathname} className="page-enter" style={{ display: 'contents' }}>
+        {children}
+      </div>
       {showFab && <AIAgentFab bottomClass={isEditor ? 'bottom-12' : 'bottom-6'} />}
     </>
   )
