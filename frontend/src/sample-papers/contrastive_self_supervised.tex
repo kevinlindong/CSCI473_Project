@@ -1,0 +1,96 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb}
+
+\title{Contrastive Self-Supervised Pretraining without Negative Pairs}
+\author{C. Aydin \and B. Hollander \and S. Park}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Most contrastive frameworks for visual representation learning rely on a
+large pool of negative samples, requiring either huge batches or a memory
+bank of stale features. We show that a stop-gradient asymmetric Siamese
+network, trained only on positive pairs, matches or exceeds the linear-probe
+accuracy of much larger contrastive baselines on ImageNet. The key
+ingredient is the asymmetry itself: a predictor MLP attached to the online
+network and a stop-gradient on the target.
+\end{abstract}
+
+\section{Setup}
+Given an image $x$, two augmented views $x_1, x_2$ are produced by a stochastic
+augmentation $\mathcal{T}$. An encoder $f$ maps each view to a representation,
+and a small projector $g$ embeds it. The asymmetric branch additionally applies
+a predictor $h$:
+\begin{align}
+p_1 &= h(g(f(x_1))), \\
+z_2 &= \mathrm{sg}(g(f(x_2))),
+\end{align}
+where $\mathrm{sg}(\cdot)$ denotes the stop-gradient operator.
+
+\section{Objective}
+We minimise the negative cosine similarity, symmetrised over the two views:
+\begin{equation}
+\mathcal{L} = -\frac{1}{2}\!\left( \frac{p_1 \cdot z_2}{\|p_1\| \|z_2\|}
+                                  + \frac{p_2 \cdot z_1}{\|p_2\| \|z_1\|}
+                            \right).
+\end{equation}
+There are no explicit negatives, no temperature, no memory bank. Collapse to
+a constant representation is prevented entirely by the asymmetry: gradients
+flow through the predictor branch but not the target branch, and the
+predictor cannot reach the trivial solution because the target it must match
+is itself a non-stationary moving function of the input.
+
+\section{Why doesn't it collapse?}
+We analyse the gradient near the collapsed solution. Linearising around
+$f \equiv c$ for constant $c$, the predictor $h$ must learn a non-trivial
+mapping to compensate for the target's variance under augmentation. As long
+as $h$ has finite capacity and is updated by gradient descent, the system
+has a non-trivial fixed point. In practice, removing the predictor or the
+stop-gradient causes immediate collapse within a few epochs.
+
+\section{Augmentations}
+We use a strong augmentation policy: random resized crop, colour jitter,
+Gaussian blur, horizontal flip. Removing colour jitter is the most damaging
+single ablation, costing $9\%$ linear-probe accuracy. The intuition is that
+without colour jitter, the network can solve the task by learning a
+colour-histogram fingerprint that ignores higher-level content.
+
+\section{Results}
+\begin{tabular}{lcc}
+\hline
+Method & Batch & Linear probe \\
+\hline
+SimCLR     & 4096 & 69.3\% \\
+MoCo v2    & 256  & 71.1\% \\
+BYOL       & 4096 & 74.3\% \\
+SimSiam (ours) & 256 & 71.3\% \\
+\hline
+\end{tabular}
+
+The headline is not raw accuracy but compute: matching MoCo at the same batch
+size with substantially fewer moving parts (no momentum encoder, no negative
+queue) suggests the negative-pool machinery may be doing less work than the
+literature implied.
+
+\section{Transfer}
+We fine-tune on PASCAL VOC detection and COCO instance segmentation. Pretraining
+gains transfer cleanly: $+1.4$ AP on VOC, $+0.9$ on COCO over a supervised
+ImageNet initialisation. Self-supervised features are now the better starting
+point for most downstream tasks where label noise dominates.
+
+\section{Discussion}
+The contrastive learning literature has been slowly converging on the view
+that "negative pairs" are a sufficient but not necessary anti-collapse
+mechanism. The deeper question --- what minimum structural assumption forces
+representations to be informative --- remains open. Our results put another
+data point on the side of architectural rather than loss-based regularisation.
+
+\bibliographystyle{plain}
+\begin{thebibliography}{9}
+\bibitem{chen2021exploring} X. Chen, K. He. \emph{Exploring Simple Siamese Representation Learning.} CVPR, 2021.
+\bibitem{grill2020bootstrap} J.-B. Grill et al. \emph{Bootstrap Your Own Latent.} NeurIPS, 2020.
+\end{thebibliography}
+
+\end{document}

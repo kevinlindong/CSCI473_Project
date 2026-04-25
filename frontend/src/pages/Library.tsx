@@ -4,6 +4,7 @@ import { Navbar } from '../components/Navbar'
 import { useLibrary } from '../hooks/useLibrary'
 import { useDrafts, writeDraftSource, readDraftSource, type DraftMeta } from '../hooks/useDrafts'
 import { extractMeta } from '../lib/latex'
+import { SAMPLE_PAPERS } from '../sample-papers'
 
 /* ==========================================================================
    Library — "papers you're working on". Grid of Google-Docs-style tiles,
@@ -83,6 +84,20 @@ export default function Library() {
       setImportingTex(false)
     }
   }, [createDraft, navigate])
+
+  // Seed the workshop with example papers on first visit. Flag is set
+  // immediately to keep StrictMode's double-invocation from double-seeding,
+  // and so a user who deletes them later doesn't get them back.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const SEED_KEY = 'folio_samples_seeded_v1'
+    if (window.localStorage.getItem(SEED_KEY)) return
+    window.localStorage.setItem(SEED_KEY, '1')
+    for (const sample of SAMPLE_PAPERS) {
+      const id = createDraft(sample.title)
+      writeDraftSource(id, sample.source)
+    }
+  }, [createDraft])
 
   const [papers, setPapers] = useState<PaperSummary[]>([])
   const [clusterById, setClusterById] = useState<Record<string, number>>({})

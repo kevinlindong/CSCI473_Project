@@ -1,0 +1,93 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb}
+
+\title{Progressive Growing GANs for High-Fidelity Image Synthesis}
+\author{D. Karlsson \and A. Mehta \and P. Lefevre}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We describe a training procedure that grows generator and discriminator
+symmetrically from $4\times4$ to $1024\times1024$ resolution by smoothly
+fading in new layers. The schedule decouples the difficulty of capturing
+coarse structure from the difficulty of resolving fine texture, and yields
+the first generative model to produce uncurated megapixel face images that
+are routinely confused with photographs in side-by-side trials.
+\end{abstract}
+
+\section{Motivation}
+End-to-end GAN training at high resolution is unstable: the discriminator
+finds high-frequency artifacts long before the generator has settled the
+underlying composition, and the resulting gradient is noisy and adversarial
+in the worst sense. Progressive growing sidesteps this by giving the model
+time to converge at each scale before increasing it.
+
+\section{Method}
+We parameterise the generator $G$ as a sequence of upsampling blocks and the
+discriminator $D$ as the symmetric stack. New layers are introduced with a
+fade weight $\alpha \in [0, 1]$:
+\begin{equation}
+G_\text{out} = \alpha \cdot G_\text{new}(z) + (1 - \alpha) \cdot
+\mathrm{upsample}(G_\text{old}(z)).
+\end{equation}
+$\alpha$ ramps linearly from $0$ to $1$ over a fixed number of iterations,
+after which the lower-resolution path is discarded. Two further stabilisers
+matter: equalised learning rates (rescaling weights at runtime so all layers
+have effectively unit variance updates) and pixelwise feature normalisation
+in the generator.
+
+\section{Loss}
+We use the Wasserstein-GP loss for its calmer gradient landscape:
+\begin{equation}
+\mathcal{L} = \mathbb{E}_{\tilde{x} \sim p_g}[D(\tilde{x})] -
+              \mathbb{E}_{x \sim p_r}[D(x)] +
+              \lambda \, \mathbb{E}_{\hat{x}}\!\left[(\|\nabla_{\hat{x}} D(\hat{x})\|_2 - 1)^2 \right],
+\end{equation}
+with $\lambda = 10$ and $\hat{x}$ sampled along straight lines between real
+and fake batches.
+
+\section{Implementation}
+Eight V100 GPUs train each resolution stage for 600k images. Batch size halves
+with each doubling: 256 at $4\times4$, down to 8 at $1024\times1024$. The full
+schedule on FFHQ takes about nine days of wall-clock time.
+
+\section{Evaluation}
+\begin{tabular}{lcc}
+\hline
+Resolution & FID & Hours/stage \\
+\hline
+$128^2$  & 4.1  & 8 \\
+$256^2$  & 5.6  & 14 \\
+$512^2$  & 6.9  & 32 \\
+$1024^2$ & 7.7  & 96 \\
+\hline
+\end{tabular}
+
+FID degrades only mildly with resolution, contrasting with the typical
+collapse seen when models are trained at the target resolution from scratch.
+A user study with $N=200$ participants finds 47\% accuracy at distinguishing
+$1024^2$ samples from real FFHQ photographs --- statistically indistinguishable
+from chance.
+
+\section{Failure Modes}
+Mode collapse on rare attributes (eyeglasses, hats) persists; truncation tricks
+trade fidelity for diversity at sampling time. We also see characteristic
+checkerboard patterns when the upsampling kernel size and stride disagree ---
+a known consequence of transpose convolution that nearest-neighbour
+upsampling avoids.
+
+\section{Discussion}
+Progressive growing was eventually subsumed by style-based generators, but its
+core insight --- that curriculum on resolution is curriculum on frequency
+content --- carries over directly. The right way to think about generative
+training is in the spectrum, not in the pixel grid.
+
+\bibliographystyle{plain}
+\begin{thebibliography}{9}
+\bibitem{karras2018progressive} T. Karras et al. \emph{Progressive Growing of GANs.} ICLR, 2018.
+\bibitem{gulrajani2017improved} I. Gulrajani et al. \emph{Improved Training of Wasserstein GANs.} NeurIPS, 2017.
+\end{thebibliography}
+
+\end{document}

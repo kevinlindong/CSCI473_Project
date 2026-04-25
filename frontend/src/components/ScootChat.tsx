@@ -21,7 +21,11 @@ interface Props {
 
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? '/api'
 const PANEL_WIDTH = 640
+const PANEL_CHAT_HEIGHT = 360
+const MIN_WIDTH = 360
+const MIN_CHAT_HEIGHT = 160
 const POSITION_KEY = 'scoot_chat_pos_v1'
+const SIZE_KEY = 'scoot_chat_size_v1'
 
 const apiUrl = (path: string) => {
   const base = API_BASE.replace(/\/$/, '')
@@ -107,6 +111,21 @@ function defaultPos(): { x: number; y: number } {
   }
 }
 
+function loadSize(): { w: number; h: number } | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(SIZE_KEY)
+    if (!raw) return null
+    const s = JSON.parse(raw)
+    if (typeof s?.w === 'number' && typeof s?.h === 'number') return s
+  } catch { /* ignore */ }
+  return null
+}
+
+function defaultSize(): { w: number; h: number } {
+  return { w: PANEL_WIDTH, h: PANEL_CHAT_HEIGHT }
+}
+
 export function ScootChat({ open, onClose }: Props) {
   const navigate = useNavigate()
   const editorBridge = useEditorBridge()
@@ -116,7 +135,9 @@ export function ScootChat({ open, onClose }: Props) {
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   const [pos, setPos] = useState<{ x: number; y: number }>(() => loadPos() ?? defaultPos())
+  const [size, setSize] = useState<{ w: number; h: number }>(() => loadSize() ?? defaultSize())
   const [dragging, setDragging] = useState(false)
+  const [resizing, setResizing] = useState(false)
 
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
@@ -147,6 +168,11 @@ export function ScootChat({ open, onClose }: Props) {
     try { window.localStorage.setItem(POSITION_KEY, JSON.stringify(pos)) } catch { /* ignore */ }
   }, [pos])
 
+  // Persist size across sessions.
+  useEffect(() => {
+    try { window.localStorage.setItem(SIZE_KEY, JSON.stringify(size)) } catch { /* ignore */ }
+  }, [size])
+
   // ── Drag handling ──────────────────────────────────────────────────────
 
   const onDragStart = (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -174,6 +200,35 @@ export function ScootChat({ open, onClose }: Props) {
     setDragging(false)
     dragOffset.current = null
     try { e.currentTarget.releasePointerCapture(e.pointerId) } catch { /* ignore */ }
+  }
+
+  // ── Resize handling ────────────────────────────────────────────────────
+  const onResizeStart = (e: ReactPointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    e.stopPropagation()
+    const sx = e.clientX, sy = e.clientY
+    const sw = size.w, sh = size.h
+    const target = e.currentTarget
+    target.setPointerCapture(e.pointerId)
+    setResizing(true)
+
+    const onMove = (ev: PointerEvent) => {
+      const maxW = Math.max(MIN_WIDTH, window.innerWidth - 32)
+      const maxH = Math.max(MIN_CHAT_HEIGHT, window.innerHeight - 200)
+      setSize({
+        w: Math.max(MIN_WIDTH, Math.min(maxW, sw + ev.clientX - sx)),
+        h: Math.max(MIN_CHAT_HEIGHT, Math.min(maxH, sh + ev.clientY - sy)),
+      })
+    }
+    const onUp = (ev: PointerEvent) => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      setResizing(false)
+      try { target.releasePointerCapture(ev.pointerId) } catch { /* ignore */ }
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
   }
 
   // ── Action dispatchers ─────────────────────────────────────────────────
@@ -332,10 +387,10 @@ export function ScootChat({ open, onClose }: Props) {
   return (
     <div
       ref={panelRef}
-      className={`fixed z-[60] w-[640px] max-w-[92vw] flex flex-col rounded-2xl bg-cream
+      className={`fixed z-[60] flex flex-col rounded-2xl bg-cream
                   border border-forest/15 shadow-[0_28px_72px_-18px_rgba(26,47,38,0.5)]
-                  animate-palette-pop ${dragging ? 'select-none' : ''}`}
-      style={{ left: pos.x, top: pos.y }}
+                  animate-palette-pop ${dragging || resizing ? 'select-none' : ''}`}
+      style={{ left: pos.x, top: pos.y, width: size.w, maxWidth: 'calc(100vw - 32px)' }}
       role="dialog"
       aria-label="scoot research agent"
     >
@@ -408,7 +463,8 @@ export function ScootChat({ open, onClose }: Props) {
       {hasMessages && (
         <div
           ref={scrollRef}
-          className="overflow-y-auto px-5 py-4 space-y-3 max-h-[55vh]"
+          className="overflow-y-auto px-5 py-4 space-y-3"
+          style={{ maxHeight: size.h }}
         >
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -428,6 +484,20 @@ export function ScootChat({ open, onClose }: Props) {
           )}
         </div>
       )}
+
+      {/* Resize handle (bottom-right corner) */}
+      <div
+        onPointerDown={onResizeStart}
+        className="absolute bottom-0 right-0 w-5 h-5 cursor-se-resize flex items-end justify-end p-1.5 touch-none"
+        aria-label="Resize"
+        role="button"
+      >
+        <svg className="w-2.5 h-2.5 text-forest/35" viewBox="0 0 10 10" fill="currentColor" aria-hidden>
+          <circle cx="8.5" cy="8.5" r="1" />
+          <circle cx="5"   cy="8.5" r="1" />
+          <circle cx="8.5" cy="5"   r="1" />
+        </svg>
+      </div>
     </div>
   )
 }

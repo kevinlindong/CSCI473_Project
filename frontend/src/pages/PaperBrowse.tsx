@@ -1076,7 +1076,7 @@ function DetailDrawer({
   const figures = detail?.figures ?? []
 
   return (
-    <div className="fixed inset-0 z-40 flex justify-end">
+    <div className="fixed inset-0 z-[60] flex justify-end">
       <div className="absolute inset-0 bg-forest/45 backdrop-blur-sm" onClick={onClose} />
       <div
         ref={drawerRef}
