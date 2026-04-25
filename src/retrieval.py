@@ -15,6 +15,7 @@ The retrieval pipeline:
 """
 
 from collections import defaultdict
+from typing import Protocol
 
 import numpy as np
 
@@ -222,3 +223,49 @@ def retrieve(
         "passages":  passages,
         "captions":  captions_out,
     }
+
+
+class Retriever(Protocol):
+    """Anything that takes a query and returns ranked passages + captions."""
+
+    def retrieve(self, query, k: int = 5) -> dict: ...
+
+
+class BruteForceRetriever:
+    """Numpy cosine over the full abstract matrix.
+
+    Right at N <= ~30k. Past that, swap for an ANN-backed Retriever
+    (FAISS / hnswlib) with the same .retrieve() surface — only this
+    module changes.
+    """
+
+    def __init__(
+        self,
+        abstracts: np.ndarray,
+        chunks: np.ndarray,
+        captions: np.ndarray,
+        paper_index: dict,
+        encoder=None,
+        top_chunks_per_paper: int = 3,
+        top_captions_per_paper: int = 2,
+    ):
+        self.abstracts = abstracts
+        self.chunks = chunks
+        self.captions = captions
+        self.paper_index = paper_index
+        self.encoder = encoder
+        self.top_chunks_per_paper = top_chunks_per_paper
+        self.top_captions_per_paper = top_captions_per_paper
+
+    def retrieve(self, query, k: int = 5) -> dict:
+        return retrieve(
+            query,
+            abstract_embeddings=self.abstracts,
+            chunk_embeddings=self.chunks,
+            caption_embeddings=self.captions,
+            paper_index=self.paper_index,
+            k=k,
+            model=self.encoder,
+            top_chunks_per_paper=self.top_chunks_per_paper,
+            top_captions_per_paper=self.top_captions_per_paper,
+        )
