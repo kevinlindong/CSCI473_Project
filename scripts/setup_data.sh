@@ -26,38 +26,43 @@ for cmd in curl tar zstd; do
   }
 done
 
-ASSET="data-snapshot.tar.zst"
-SHA="${ASSET}.sha256"
-
 echo "Downloading data snapshot from $REPO release $TAG ..."
+
+# Clear any prior partials so the discovery glob below is unambiguous
+rm -f data-snapshot-*.tar.zst data-snapshot-*.tar.zst.sha256
 
 if command -v gh >/dev/null 2>&1 && gh auth status >/dev/null 2>&1; then
   echo "  using gh CLI (authenticated)"
-  gh release download "$TAG" --repo "$REPO" --pattern "*.tar.zst" --output "$ASSET" --clobber
-  gh release download "$TAG" --repo "$REPO" --pattern "*.sha256" --output "$SHA"  --clobber
+  gh release download "$TAG" --repo "$REPO" --pattern "*.tar.zst" --clobber
+  gh release download "$TAG" --repo "$REPO" --pattern "*.sha256"  --clobber
 else
   echo "  using curl (gh not authenticated; works for public repos only)"
-  if [[ "$TAG" == "latest" ]]; then
-    BASE="https://github.com/$REPO/releases/latest/download"
-  else
-    BASE="https://github.com/$REPO/releases/download/$TAG"
-  fi
-  # The asset filename inside the release is date-stamped; resolve via the API
-  # and fall back to a glob fetch if jq isn't available.
-  if command -v jq >/dev/null 2>&1; then
-    API="https://api.github.com/repos/$REPO/releases/${TAG#v}"
-    [[ "$TAG" == "latest" ]] && API="https://api.github.com/repos/$REPO/releases/latest"
-    URL=$(curl -sL "$API" | jq -r '.assets[] | select(.name | endswith(".tar.zst")) | .browser_download_url')
-    URL_SHA=$(curl -sL "$API" | jq -r '.assets[] | select(.name | endswith(".sha256")) | .browser_download_url')
-    curl -L -o "$ASSET" "$URL"
-    curl -L -o "$SHA"   "$URL_SHA"
-  else
+  # Resolve the date-stamped asset URLs via the GitHub API
+  if ! command -v jq >/dev/null 2>&1; then
     echo "  jq not available — install jq, or use 'gh auth login' for the gh path" >&2
     exit 1
   fi
+  if [[ "$TAG" == "latest" ]]; then
+    API="https://api.github.com/repos/$REPO/releases/latest"
+  else
+    API="https://api.github.com/repos/$REPO/releases/tags/$TAG"
+  fi
+  URL=$(curl -sL "$API"     | jq -r '.assets[] | select(.name | endswith(".tar.zst")) | .browser_download_url')
+  URL_SHA=$(curl -sL "$API" | jq -r '.assets[] | select(.name | endswith(".sha256"))  | .browser_download_url')
+  # -O (capital) saves with the URL's filename, preserving the date-stamped name
+  curl -L -O "$URL"
+  curl -L -O "$URL_SHA"
 fi
 
-echo "Verifying sha256 ..."
+# Discover what got downloaded — the SHA file's content references this name
+ASSET=$(ls data-snapshot-*.tar.zst 2>/dev/null | head -1)
+SHA="${ASSET}.sha256"
+if [[ -z "$ASSET" ]] || [[ ! -f "$ASSET" ]] || [[ ! -f "$SHA" ]]; then
+  echo "error: download failed — expected data-snapshot-*.tar.zst + .sha256" >&2
+  exit 1
+fi
+
+echo "Verifying sha256 (against $ASSET) ..."
 sha256sum -c "$SHA"
 
 echo "Extracting ..."
