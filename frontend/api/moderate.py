@@ -5,7 +5,7 @@ import urllib.error
 from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 
-MODERATION_PROMPT_PATH = Path(__file__).parent.parent / "gpt_prompts" / "moderation_prompt.txt"
+MODERATION_PROMPT_PATH = Path(__file__).parent.parent.parent / "src" / "qwen_prompt" / "moderation_prompt.txt"
 
 def _load_moderation_prompt() -> str:
     try:

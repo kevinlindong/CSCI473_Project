@@ -712,3 +712,620 @@ INFO:     127.0.0.1:59131 - "GET /api/papers HTTP/1.1" 200 OK
 INFO:     127.0.0.1:59132 - "GET /api/topic-map HTTP/1.1" 200 OK
 INFO:     127.0.0.1:59135 - "GET /api/papers HTTP/1.1" 200 OK
 INFO:     127.0.0.1:59138 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59156 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59157 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59160 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59163 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59167 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59169 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59172 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59175 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59179 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59181 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59184 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59187 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59246 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59248 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59253 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59254 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59259 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59260 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59263 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59266 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59292 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59293 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59295 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59297 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59300 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59301 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59304 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59307 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59312 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59313 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59316 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59319 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59323 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59325 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59328 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59331 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59337 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59338 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59341 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59344 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59348 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59350 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59353 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59356 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59361 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59362 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59365 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59368 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59372 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59375 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59377 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59380 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59385 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59386 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59389 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59392 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59397 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59398 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59401 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59404 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59433 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59434 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59437 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59440 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59445 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59447 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59452 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59453 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59458 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59459 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59462 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59465 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59470 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59471 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59474 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59477 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59482 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59483 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59486 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59489 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59493 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59495 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59498 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59501 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59537 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59538 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59540 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59542 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59545 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59546 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59549 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59552 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59557 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59558 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59561 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59564 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59569 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59570 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59573 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59576 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59581 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59582 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59585 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59588 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59593 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59594 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59597 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59600 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59605 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59606 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59609 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59612 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59617 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59620 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59621 - "GET /api/papers?limit=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59624 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59628 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59630 - "GET /api/papers?limit=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59635 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59636 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59639 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59642 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59647 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59648 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59651 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59654 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59659 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59660 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59663 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59666 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59671 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59672 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59676 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59678 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59683 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59684 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59687 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59690 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59695 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59696 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59699 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59702 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59731 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59732 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59734 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59737 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59828 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59829 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59831 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59833 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59838 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59840 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59843 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59846 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59855 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59856 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59859 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59862 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59867 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59868 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59871 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59874 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59879 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59880 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59883 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59886 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59891 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59892 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59895 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59898 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59904 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59906 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59909 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59913 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59918 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59919 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59922 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59925 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59930 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59931 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59934 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59937 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59942 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59943 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59946 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59949 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59954 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59955 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59958 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59961 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59966 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59967 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59970 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59973 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59978 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59979 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59982 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59985 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59990 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59991 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59994 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59997 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60002 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60003 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60006 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60009 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60016 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60018 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60019 - "GET /api/papers?limit=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60022 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60026 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60028 - "GET /api/papers?limit=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60034 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60036 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60039 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60045 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60050 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60051 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60054 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60057 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60083 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60084 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60086 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60089 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60190 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60191 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60194 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60197 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60397 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60399 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60401 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60404 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60461 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60462 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60464 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60467 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60525 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60526 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60529 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60532 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60550 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60552 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60554 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60556 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60558 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60560 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60563 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60566 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60570 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60572 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60575 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60578 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60583 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60584 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60587 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60590 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60595 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60596 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60599 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60602 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60607 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60608 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60611 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60614 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60619 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60620 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60623 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60626 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60631 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60632 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60635 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60638 - "GET /api/topic-map HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in 'frontend/api/moderate.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [52545]
+INFO:     Started server process [6360]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'src/llm.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [6360]
+INFO:     Started server process [6505]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'src/llm.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [6505]
+INFO:     Started server process [6539]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'app.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [6539]
+INFO:     Started server process [6557]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'app.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [6557]
+INFO:     Started server process [6597]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:60712 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60714 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60719 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60720 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60726 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60728 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60732 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60734 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60739 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60740 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60743 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60746 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60753 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60754 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60757 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60760 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60765 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60766 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60769 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60772 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60779 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60780 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60783 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60786 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60791 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60792 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60795 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60798 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60803 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60804 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60807 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60810 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60821 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60822 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60824 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60826 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     Will watch for changes in these directories: ['/Users/kevin/projects/CSCI473_Project']
+INFO:     Uvicorn running on http://0.0.0.0:3001 (Press CTRL+C to quit)
+INFO:     Started reloader process [11122] using WatchFiles
+INFO:     Started server process [11124]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     127.0.0.1:61050 - "GET /api/health HTTP/1.1" 200 OK
+Sliding Window Attention is enabled but not implemented for `sdpa`; unexpected results may be encountered.
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:631: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `0.7` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
+  warnings.warn(
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:636: UserWarning: `do_sample` is set to `False`. However, `top_p` is set to `0.8` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_p`.
+  warnings.warn(
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:653: UserWarning: `do_sample` is set to `False`. However, `top_k` is set to `20` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_k`.
+  warnings.warn(
+WARNING:  WatchFiles detected changes in 'src/llm.py'. Reloading...
+INFO:     Started server process [12660]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+Sliding Window Attention is enabled but not implemented for `sdpa`; unexpected results may be encountered.
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:631: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `0.7` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
+  warnings.warn(
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:636: UserWarning: `do_sample` is set to `False`. However, `top_p` is set to `0.8` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_p`.
+  warnings.warn(
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:653: UserWarning: `do_sample` is set to `False`. However, `top_k` is set to `20` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_k`.
+  warnings.warn(
+WARNING:  WatchFiles detected changes in 'src/llm.py'. Reloading...
+INFO:     Started server process [13851]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+Sliding Window Attention is enabled but not implemented for `sdpa`; unexpected results may be encountered.
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:631: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `0.7` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
+  warnings.warn(
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:636: UserWarning: `do_sample` is set to `False`. However, `top_p` is set to `0.8` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_p`.
+  warnings.warn(
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:653: UserWarning: `do_sample` is set to `False`. However, `top_k` is set to `20` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_k`.
+  warnings.warn(
+INFO:     127.0.0.1:61125 - "POST /api/scoot HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61130 - "POST /api/scoot HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61136 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61137 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61139 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61142 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61147 - "POST /api/scoot HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in 'src/llm.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [13851]
+INFO:     Started server process [14647]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+Sliding Window Attention is enabled but not implemented for `sdpa`; unexpected results may be encountered.
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:631: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `0.7` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
+  warnings.warn(
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:636: UserWarning: `do_sample` is set to `False`. However, `top_p` is set to `0.8` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_p`.
+  warnings.warn(
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:653: UserWarning: `do_sample` is set to `False`. However, `top_k` is set to `20` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_k`.
+  warnings.warn(
+INFO:     127.0.0.1:61152 - "POST /api/scoot HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61158 - "POST /api/scoot HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61160 - "POST /api/scoot HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61188 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61189 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61191 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61194 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61277 - "POST /api/scoot HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61285 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61288 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61289 - "GET /api/papers?limit=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61292 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61295 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61298 - "GET /api/papers?limit=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61302 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61304 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61307 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61310 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61314 - "POST /api/scoot HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61321 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61322 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61323 - "GET /api/papers?limit=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61331 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61332 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61333 - "GET /api/papers?limit=1 HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in 'src/llm.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [14647]
+INFO:     Started server process [15587]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+Sliding Window Attention is enabled but not implemented for `sdpa`; unexpected results may be encountered.
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:631: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `0.7` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
+  warnings.warn(
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:636: UserWarning: `do_sample` is set to `False`. However, `top_p` is set to `0.8` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_p`.
+  warnings.warn(
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:653: UserWarning: `do_sample` is set to `False`. However, `top_k` is set to `20` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_k`.
+  warnings.warn(
+INFO:     127.0.0.1:61338 - "POST /api/scoot HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61343 - "POST /api/scoot HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61347 - "POST /api/scoot HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61349 - "POST /api/scoot HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61367 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61368 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61369 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61370 - "GET /api/papers?limit=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61371 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61372 - "GET /api/papers?limit=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61378 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61380 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61383 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61386 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61393 - "POST /api/scoot HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61399 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61401 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61402 - "GET /api/papers?limit=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61409 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61410 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61411 - "GET /api/papers?limit=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61416 - "POST /api/scoot HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in 'src/llm.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [15587]
+INFO:     Started server process [16875]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'src/llm.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [16875]
+INFO:     Started server process [16900]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'src/llm.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [16900]
+INFO:     Started server process [16947]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+Sliding Window Attention is enabled but not implemented for `sdpa`; unexpected results may be encountered.
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:631: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `0.7` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
+  warnings.warn(
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:636: UserWarning: `do_sample` is set to `False`. However, `top_p` is set to `0.8` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_p`.
+  warnings.warn(
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:653: UserWarning: `do_sample` is set to `False`. However, `top_k` is set to `20` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_k`.
+  warnings.warn(
+INFO:     127.0.0.1:61467 - "POST /api/scoot HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61478 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61481 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61482 - "GET /api/papers?limit=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61485 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61489 - "POST /api/scoot HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61493 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61502 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61503 - "GET /api/papers?limit=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61504 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61506 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61519 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61520 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61521 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61522 - "GET /api/papers?limit=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61523 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61524 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61527 - "GET /api/papers?limit=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61536 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61537 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61538 - "GET /api/papers?limit=1 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61541 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61544 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61547 - "GET /api/papers?limit=1 HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in 'src/llm.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [16947]
+INFO:     Started server process [17161]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'src/llm.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [17161]
+INFO:     Started server process [17184]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+Sliding Window Attention is enabled but not implemented for `sdpa`; unexpected results may be encountered.
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:631: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `0.7` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
+  warnings.warn(
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:636: UserWarning: `do_sample` is set to `False`. However, `top_p` is set to `0.8` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_p`.
+  warnings.warn(
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:653: UserWarning: `do_sample` is set to `False`. However, `top_k` is set to `20` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_k`.
+  warnings.warn(
+INFO:     127.0.0.1:61551 - "POST /api/scoot HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61556 - "POST /api/scoot HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61558 - "POST /api/scoot HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in 'src/llm.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [17184]
+INFO:     Started server process [17418]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'src/llm.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [17418]
+INFO:     Started server process [17443]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+WARNING:  WatchFiles detected changes in 'src/llm.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [17443]
+INFO:     Started server process [17456]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+Sliding Window Attention is enabled but not implemented for `sdpa`; unexpected results may be encountered.
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:631: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `0.7` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
+  warnings.warn(
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:636: UserWarning: `do_sample` is set to `False`. However, `top_p` is set to `0.8` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_p`.
+  warnings.warn(
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:653: UserWarning: `do_sample` is set to `False`. However, `top_k` is set to `20` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_k`.
+  warnings.warn(
+INFO:     127.0.0.1:61560 - "POST /api/scoot HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61571 - "POST /api/scoot HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61580 - "POST /api/scoot HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61582 - "POST /api/scoot HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61584 - "POST /api/scoot HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61586 - "POST /api/scoot HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61591 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61592 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61596 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61598 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61607 - "POST /api/scoot HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61625 - "POST /api/scoot HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61633 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61635 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61639 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61641 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61646 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61648 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61651 - "GET /api/papers HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61654 - "GET /api/topic-map HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61656 - "POST /api/scoot HTTP/1.1" 200 OK
+WARNING:  WatchFiles detected changes in 'src/llm.py'. Reloading...
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [17456]
+INFO:     Started server process [18474]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+Sliding Window Attention is enabled but not implemented for `sdpa`; unexpected results may be encountered.
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:631: UserWarning: `do_sample` is set to `False`. However, `temperature` is set to `0.7` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `temperature`.
+  warnings.warn(
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:636: UserWarning: `do_sample` is set to `False`. However, `top_p` is set to `0.8` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_p`.
+  warnings.warn(
+/Library/Frameworks/Python.framework/Versions/3.11/lib/python3.11/site-packages/transformers/generation/configuration_utils.py:653: UserWarning: `do_sample` is set to `False`. However, `top_k` is set to `20` -- this flag is only used in sample-based generation modes. You should set `do_sample=True` or unset `top_k`.
+  warnings.warn(
+INFO:     127.0.0.1:61676 - "POST /api/scoot HTTP/1.1" 200 OK

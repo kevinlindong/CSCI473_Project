@@ -295,7 +295,7 @@ export default function AuraStore() {
               <span className="font-mono text-[9px] text-sage/50 tracking-[0.3em] uppercase block mb-3">SUBSCRIPTION</span>
               <h2 className="font-[family-name:var(--font-display)] text-3xl text-forest mb-2">Premium Plan</h2>
               <p className="font-[family-name:var(--font-body)] text-sm text-forest/40 mb-8 max-w-md">
-                Unlock the full Scholar experience. All features, unlimited AI tools, priority everything.
+                Unlock the full scholar experience. All features, unlimited AI tools, priority everything.
               </p>
 
               {/* Pricing cards */}

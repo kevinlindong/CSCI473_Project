@@ -80,7 +80,7 @@ export default function Login() {
           <Link to="/" className="inline-flex items-center gap-3 mb-14 group">
             <LogoLeafDark />
             <span className="font-[family-name:var(--font-display)] text-[32px] text-parchment leading-none">
-              Scholar
+              scholar
             </span>
           </Link>
 

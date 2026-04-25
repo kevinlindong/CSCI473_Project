@@ -19,7 +19,7 @@ const profileDropdownLinks = [
   { path: '/profile',  label: 'profile'  },
   { path: '/settings', label: 'settings' },
 ]
-const BRAND_WORDMARK = 'Scholar'
+const BRAND_WORDMARK = 'scholar'
 const GUEST_LABEL = 'guest'
 
 export function Navbar({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
@@ -55,7 +55,7 @@ export function Navbar({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
         >
           <img
             src="/logoCB.png"
-            alt="Scholar logo"
+            alt="scholar logo"
             className="w-9 h-9 object-contain shrink-0"
           />
           <span className={`font-[family-name:var(--font-display)] text-[24px] leading-none translate-y-[1px] ${inkStrong}`}>

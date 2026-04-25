@@ -255,6 +255,20 @@ class HealthResponse(BaseModel):
     llm_enabled: bool
 
 
+class ScootMessage(BaseModel):
+    role: str       # 'user' | 'assistant'
+    content: str
+
+
+class ScootRequest(BaseModel):
+    message: str
+    history: Optional[list[ScootMessage]] = None
+
+
+class ScootResponse(BaseModel):
+    reply: str
+
+
 # --------------------------------------------------------------------------- #
 # Endpoints
 # --------------------------------------------------------------------------- #
@@ -452,6 +466,22 @@ async def get_paper(paper_id: str):
 async def topic_map():
     """Serve the precomputed k-means + k-NN topic graph artifact."""
     return _load_topic_graph()
+
+
+@app.post("/api/scoot", response_model=ScootResponse)
+async def scoot(req: ScootRequest):
+    """Generate a chat reply from the local Qwen model with the scoot system prompt."""
+    if not req.message.strip():
+        raise HTTPException(status_code=400, detail="message is required")
+    if not ENABLE_LLM:
+        raise HTTPException(status_code=503, detail="LLM disabled (ENABLE_LLM=0)")
+    try:
+        from src.llm import generate_scoot_reply
+        history = [m.dict() for m in (req.history or [])]
+        reply = generate_scoot_reply(req.message, history=history)
+        return ScootResponse(reply=reply)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {e}")
 
 
 @app.get("/api/query-projection", response_model=QueryProjectionResponse)

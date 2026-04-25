@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* ====================================================================
-   Scholar — Bauhaus × Zen × Heytea
+   scholar — Bauhaus × Zen × Heytea
    Palette : GMK Botanical  — #264635 · #A3B18A · #E9E4D4
    Fonts   : Gamja Flower (highlight / notebook) · Venus (body) ·
              JetBrains Mono (code)
@@ -58,6 +58,18 @@
 html, body {
   font-family: var(--font-body);
   font-feature-settings: "ss01", "ss02", "cv01", "cv11";
+}
+/* Force a permanent vertical scrollbar on the viewport. The editor uses
+   h-screen + overflow-hidden (no scrollbar), every other page uses
+   min-h-screen and may scroll — without this rule, body's effective width
+   changes by the scrollbar thickness when navigating to/from the editor,
+   which slides the navbar's right-aligned items.
+   `overflow-y: scroll` works in every browser (including macOS Safari with
+   overlay scrollbars and Firefox); `scrollbar-gutter: stable` is the modern
+   companion that keeps the gutter reserved even when no scroll is required. */
+html {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
 }
 body {
   -webkit-font-smoothing: antialiased;

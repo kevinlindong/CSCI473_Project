@@ -8,6 +8,7 @@ import {
   useDrafts,
   SCRATCH_ID,
 } from '../hooks/useDrafts'
+import { useEditorBridge } from '../contexts/EditorBridgeContext'
 
 /* ==========================================================================
    PaperEditor — "the desk" — minimal zen botanical composer.
@@ -93,8 +94,21 @@ export default function PaperEditor() {
   const { repoId } = useParams<{ repoId: string }>()
   const draftId = repoId ?? SCRATCH_ID
   const { touchDraft } = useDrafts()
+  const editorBridge = useEditorBridge()
 
   const [source, setSource] = useState<string>(() => initialSourceFor(draftId))
+  const sourceRef = useRef<string>(source)
+  useEffect(() => { sourceRef.current = source }, [source])
+
+  // Register with EditorBridge so scoot can append LaTeX into this editor.
+  useEffect(() => {
+    editorBridge.register({
+      mode: 'source',
+      getSource: () => sourceRef.current,
+      setSource: (text: string) => setSource(text),
+    })
+    return () => editorBridge.unregister()
+  }, [editorBridge])
 
   // Re-hydrate when the user navigates between drafts without remounting.
   useEffect(() => {

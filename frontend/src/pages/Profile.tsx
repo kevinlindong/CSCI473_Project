@@ -357,7 +357,7 @@ export default function Profile() {
                           <StatCell label="Aura"      value={profile.aura.toLocaleString()}  color="#C85544" glyph="✦" />
                           <StatCell label="Noots"     value={counts ? String(counts.noots) : '—'}     color="#2C4B70" />
                           <StatCell label="Merges"    value={counts ? String(counts.merges) : '—'}    color="#A3B18A" />
-                          <StatCell label="Scholars"    value={counts ? String(counts.nootbooks) : '—'} color="#E0B13A" />
+                          <StatCell label="scholars"    value={counts ? String(counts.nootbooks) : '—'} color="#E0B13A" />
                         </div>
 
                         {/* Badges */}
