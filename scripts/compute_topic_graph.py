@@ -117,12 +117,39 @@ def compute_topic_graph(
     for j, label in enumerate(labels):
         print(f"  cluster {j} ({sizes[j]:3d} papers): {label}")
 
+    # --- 3D UMAP layout (precomputed positions for the frontend) ---
+    # Cosine-metric UMAP on the same abstract embeddings the clustering used.
+    # Frontend ships these as initial node coords + applies a sine-wave drift
+    # for ambient motion, so we never run d3-force in the browser.
+    print("Computing 3D UMAP layout (n_components=3, n_neighbors=15) ...")
+    import umap
+    reducer = umap.UMAP(
+        n_components=3,
+        n_neighbors=15,
+        min_dist=0.1,
+        metric="cosine",
+        random_state=seed,
+        verbose=False,
+    )
+    positions = reducer.fit_transform(abstracts).astype(float)
+    print(
+        "  bounds: x=[%.2f,%.2f] y=[%.2f,%.2f] z=[%.2f,%.2f]"
+        % (
+            positions[:, 0].min(), positions[:, 0].max(),
+            positions[:, 1].min(), positions[:, 1].max(),
+            positions[:, 2].min(), positions[:, 2].max(),
+        )
+    )
+
     # --- Assemble artifact ---
     nodes = [
         {
             "paper_id": p.paper_id,
             "title":    p.title,
             "cluster":  int(assignments[i]),
+            "x":        float(positions[i, 0]),
+            "y":        float(positions[i, 1]),
+            "z":        float(positions[i, 2]),
         }
         for i, p in enumerate(papers)
     ]
@@ -146,8 +173,12 @@ def compute_topic_graph(
             "n_init":       n_init,
             "max_iter":     max_iter,
             "encoder":      index.get("encoder_model", config.ENCODER_MODEL_NAME),
-            "llm":          config.LLM_MODEL_NAME if use_llm else None,
-            "inertia":      inertia,
+            "llm":           config.LLM_MODEL_NAME if use_llm else None,
+            "inertia":       inertia,
+            "layout":        "umap-3d",
+            "umap_n_neighbors": 15,
+            "umap_min_dist": 0.1,
+            "umap_metric":   "cosine",
         },
     }
 

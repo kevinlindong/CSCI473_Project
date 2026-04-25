@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ForceGraph3D, { type ForceGraphMethods } from 'react-force-graph-3d'
+import { useAmbientDrift } from '../hooks/useAmbientDrift'
 
 /* ==========================================================================
    CorpusGraph3D — themed botanical 3D topic graph for the corpus page.
@@ -13,6 +14,11 @@ export interface CorpusGraphNode {
   paper_id: string
   title: string
   cluster: number
+  // UMAP-precomputed 3D coordinates (added by scripts/compute_topic_graph.py).
+  // Optional for back-compat with older topic_graph.json.
+  x?: number
+  y?: number
+  z?: number
 }
 
 export interface CorpusGraphEdge {
@@ -140,6 +146,9 @@ export default function CorpusGraph3D({
 
     return { nodes: vizNodes, links: vizLinks }
   }, [nodes, edges, queryText, queryNeighbors, clusterColor])
+
+  // ── Ambient sine-wave drift over UMAP positions (no client-side sim) ─────
+  useAmbientDrift(fgRef as React.MutableRefObject<ForceGraphMethods | undefined>, graphData)
 
   // ── Adjacency for hover highlights ──────────────────────────────────────
   const adjacency = useMemo(() => {
@@ -300,8 +309,12 @@ export default function CorpusGraph3D({
           linkDirectionalParticleSpeed={0.006}
           linkDirectionalParticleWidth={1.6}
           linkDirectionalParticleColor={() => QUERY_GLOW}
+          // ── Layout: UMAP-precomputed positions, no client-side simulation.
+          //    Ambient sine drift via useAmbientDrift gives the "living" feel.
+          cooldownTicks={0}
+          warmupTicks={0}
           // ── Interaction ──
-          enableNodeDrag={true}
+          enableNodeDrag={false}
           onNodeClick={handleNodeClick}
           onNodeHover={(n: object | null) => setHovered(n as VizNode | null)}
           nodeVisibility={(n: object) => {

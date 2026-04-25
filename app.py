@@ -227,6 +227,11 @@ class GraphNode(BaseModel):
     paper_id: str
     title: str
     cluster: int
+    # UMAP-precomputed 3D coordinates. Optional for back-compat with older
+    # topic_graph.json artifacts that lack a layout step.
+    x: Optional[float] = None
+    y: Optional[float] = None
+    z: Optional[float] = None
 
 
 class GraphEdge(BaseModel):
