@@ -108,11 +108,20 @@ export default function CorpusGraph3D({
   }, [])
 
   // ── Build graph data ─────────────────────────────────────────────────────
+  // UMAP coords land in a ~7–8 unit span; node spheres render at radius ~5,
+  // so without scaling every node overlaps every other. Multiply by
+  // COORD_SCALE to match the extent d3-force-3d would produce naturally for
+  // 10k nodes (~hundreds of units), and so ambient-drift amplitude (0.5% of
+  // span) becomes a visible fraction of a node radius.
+  const COORD_SCALE = 100
   const graphData = useMemo(() => {
     const vizNodes: VizNode[] = nodes.map(n => ({
       ...n,
       id: n.paper_id,
       color: clusterColor(n.cluster),
+      x: n.x !== undefined ? n.x * COORD_SCALE : undefined,
+      y: n.y !== undefined ? n.y * COORD_SCALE : undefined,
+      z: n.z !== undefined ? n.z * COORD_SCALE : undefined,
     }))
 
     const vizLinks: VizLink[] = edges

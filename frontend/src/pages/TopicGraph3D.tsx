@@ -169,6 +169,13 @@ export default function TopicGraph3D() {
 
   // ── Build the graph data consumed by ForceGraph3D ──
   // Injects the virtual query node + its edges when projection is available.
+  //
+  // UMAP gives coordinates with span ~7–8 units. Node spheres render at
+  // radius ≈ nodeRelSize·√nodeVal ≈ 5 units, so at native scale every node
+  // overlaps every other node. Multiply by COORD_SCALE so the layout extent
+  // matches what nodeRelSize expects (and so the ambient-drift amplitude,
+  // 0.5% of span, becomes a visible fraction of a node radius).
+  const COORD_SCALE = 100
   const graphData = useMemo(() => {
     if (!data) return { nodes: [] as VizNode[], links: [] as VizLink[] }
 
@@ -176,6 +183,9 @@ export default function TopicGraph3D() {
       ...n,
       id: n.paper_id,
       color: clusterColor(n.cluster, data.clusters.length),
+      x: n.x !== undefined ? n.x * COORD_SCALE : undefined,
+      y: n.y !== undefined ? n.y * COORD_SCALE : undefined,
+      z: n.z !== undefined ? n.z * COORD_SCALE : undefined,
     }))
 
     const links: VizLink[] = data.edges
