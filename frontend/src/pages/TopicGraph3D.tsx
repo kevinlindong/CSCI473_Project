@@ -1,12 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import ForceGraph3D, { type ForceGraphMethods } from 'react-force-graph-3d'
 import { useClusterLabels, type ClusterInfo } from '../hooks/useClusterLabels'
+import { useAmbientDrift } from '../hooks/useAmbientDrift'
 
 // ─── Types from the backend ─────────────────────────────────────────────────
 interface GraphNode {
   paper_id: string
   title: string
   cluster: number
+  // UMAP-precomputed 3D coordinates (added by scripts/compute_topic_graph.py).
+  // Optional for back-compat with older topic_graph.json.
+  x?: number
+  y?: number
+  z?: number
 }
 
 interface GraphEdge {
@@ -203,6 +209,10 @@ export default function TopicGraph3D() {
     return { nodes, links }
   }, [data, projection])
 
+  // ── Ambient sine-wave drift on top of UMAP positions ─────────────────────
+  // O(N) per frame, ~0.5% bbox amplitude, ~6s period. Safe at 10k nodes.
+  useAmbientDrift(fgRef as React.MutableRefObject<ForceGraphMethods | undefined>, graphData)
+
   // ── Adjacency map for fast hover highlighting ──
   const adjacency = useMemo(() => {
     const map = new Map<string, Set<string>>()
@@ -397,8 +407,12 @@ export default function TopicGraph3D() {
           }
           linkDirectionalParticleSpeed={0.006}
           linkDirectionalParticleWidth={1.6}
+          // ── Layout: UMAP-precomputed positions, no client-side simulation.
+          //    Ambient sine drift via useAmbientDrift below gives the "living" feel.
+          cooldownTicks={0}
+          warmupTicks={0}
           // ── Interaction ──
-          enableNodeDrag={true}
+          enableNodeDrag={false}
           onNodeClick={handleNodeClick}
           onNodeHover={(n: object | null) => setHovered(n as VizNode | null)}
           onBackgroundClick={() => { setSelected(null); setSelectedDetail(null) }}
