@@ -4,9 +4,10 @@ import { ScootChat } from './ScootChat'
 /* ------------------------------------------------------------------ */
 /* ScootFab                                                            */
 /* Bottom-right circular button. Click or ⌘K opens the scoot chat.    */
+/* Position is fixed across all pages — never shifts.                  */
 /* ------------------------------------------------------------------ */
 
-export function ScootFab({ bottomClass = 'bottom-6' }: { bottomClass?: string }) {
+export function ScootFab() {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
@@ -24,7 +25,7 @@ export function ScootFab({ bottomClass = 'bottom-6' }: { bottomClass?: string })
     <>
       <ScootChat open={open} onClose={() => setOpen(false)} />
 
-      <div className={`fixed ${bottomClass} right-6 z-50 group`}>
+      <div className="fixed bottom-6 right-6 z-50 group">
         <div className="absolute bottom-full right-1/2 translate-x-1/2 mb-2.5 pointer-events-none
           opacity-0 group-hover:opacity-100 translate-y-1 group-hover:translate-y-0
           transition-all duration-150">

@@ -42,8 +42,13 @@ type SourcePayload = {
 type RegisterPayload = BlockPayload | SourcePayload
 
 // Pick the offset in the LaTeX source where new content should be inserted.
-// Handles "end" / "start" / "after:section" / "before:section". Falls back to
+// Handles "end" / "start" / "after:<anchor>" / "before:<anchor>". Falls back to
 // just before \end{document} (or end-of-source if it's missing).
+//
+// Anchors recognized for after/before:
+//   - any \section{...} whose name contains the target
+//   - common metadata commands: \title, \author, \date, \maketitle, \today
+//   - environments: abstract, thebibliography, references
 function findInsertOffset(source: string, position?: string): number {
   const endDocMatch = source.match(/\\end\{document\}/)
   const defaultOffset = endDocMatch ? endDocMatch.index! : source.length
@@ -62,18 +67,49 @@ function findInsertOffset(source: string, position?: string): number {
   }
 
   if ((op === 'after' || op === 'before') && target) {
-    // Match any \section{...} whose name contains the target substring.
+    // 1. Try matching a \section{...} containing the target.
     const sectionRe = /\\section\*?\{([^}]*)\}/g
     let m: RegExpExecArray | null
     while ((m = sectionRe.exec(source)) !== null) {
       if (m[1].toLowerCase().includes(target)) {
         if (op === 'before') return m.index
-        // 'after': insert before the *next* \section, \begin{thebibliography}, or \end{document}.
+        // After: insert before the next \section, \begin{thebibliography}, or \end{document}.
         const startIdx = m.index + m[0].length
         const tailRe = /\\section\*?\{|\\begin\{thebibliography\}|\\end\{document\}/g
         tailRe.lastIndex = startIdx
         const next = tailRe.exec(source)
         return next ? next.index : defaultOffset
+      }
+    }
+
+    // 2. Environments by name: abstract, thebibliography, references.
+    //    Treat "references" / "bibliography" as aliases for thebibliography.
+    const envName = target === 'references' || target === 'bibliography'
+      ? 'thebibliography'
+      : target
+    const envBeginRe = new RegExp(`\\\\begin\\{${envName}\\}`)
+    const envBegin = source.match(envBeginRe)
+    if (envBegin) {
+      if (op === 'before') return envBegin.index!
+      const envEndRe = new RegExp(`\\\\end\\{${envName}\\}`)
+      const envEnd = source.match(envEndRe)
+      if (envEnd) {
+        const eolAfter = source.indexOf('\n', envEnd.index! + envEnd[0].length)
+        return eolAfter === -1 ? envEnd.index! + envEnd[0].length : eolAfter + 1
+      }
+    }
+
+    // 3. Single-line metadata commands: \title{...}, \author{...}, \date{...}, \maketitle.
+    const cmdNames = ['title', 'author', 'date', 'maketitle']
+    if (cmdNames.includes(target)) {
+      const cmdRe = target === 'maketitle'
+        ? /\\maketitle\b/
+        : new RegExp(`\\\\${target}\\b(?:\\s*\\{[^}]*\\})?`)
+      const cmd = source.match(cmdRe)
+      if (cmd) {
+        if (op === 'before') return cmd.index!
+        const eolAfter = source.indexOf('\n', cmd.index! + cmd[0].length)
+        return eolAfter === -1 ? cmd.index! + cmd[0].length : eolAfter + 1
       }
     }
   }

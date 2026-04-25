@@ -250,23 +250,63 @@ _RAW_LATEX_RE = re.compile(
 _MD_FENCE_RE = re.compile(r"```(?:latex|tex)?\n?([\s\S]*?)```", re.IGNORECASE)
 _INSERT_INTENT_RE = re.compile(r"\b(insert|add|write|paste|put|append)\b", re.IGNORECASE)
 _HEADING_INTENT_RE = re.compile(r"\b(heading|section\s+title|section\s+called|section\s+named)\b", re.IGNORECASE)
-# Placement phrases: "after the conclusion section", "before references", "at the top", etc.
+# Placement phrases: "after the conclusion section", "before references", "at the top",
+# "under the date section", "below the abstract", etc.
 _POSITION_AFTER_RE = re.compile(
-    r"\bafter\s+(?:the\s+)?([\w\-]+(?:\s+[\w\-]+){0,3}?)\s+section\b",
+    r"\b(?:after|under|below|underneath|right\s+after|right\s+below|right\s+under)"
+    r"\s+(?:the\s+)?"
+    r"([\w\-]+(?:\s+[\w\-]+){0,3}?)"
+    r"(?:\s+(?:section|block|part|heading))?\b",
     re.IGNORECASE,
 )
 _POSITION_BEFORE_RE = re.compile(
-    r"\bbefore\s+(?:the\s+)?([\w\-]+(?:\s+[\w\-]+){0,3}?)\s+section\b",
+    r"\b(?:before|above|right\s+before|right\s+above)"
+    r"\s+(?:the\s+)?"
+    r"([\w\-]+(?:\s+[\w\-]+){0,3}?)"
+    r"(?:\s+(?:section|block|part|heading))?\b",
     re.IGNORECASE,
 )
 _POSITION_END_RE = re.compile(r"\bat\s+the\s+(?:very\s+)?(?:end|bottom)\b", re.IGNORECASE)
 _POSITION_START_RE = re.compile(r"\bat\s+the\s+(?:very\s+)?(?:top|start|beginning)\b", re.IGNORECASE)
+
+
+# A small library of common formulas used when the small model fails to produce
+# any raw LaTeX. Keys are matched as substrings against the user's message.
+_FORMULA_LIBRARY: list[tuple[tuple[str, ...], str]] = [
+    (("navier-stokes", "navier stokes"),
+     r"\frac{\partial \mathbf{u}}{\partial t} + (\mathbf{u} \cdot \nabla) \mathbf{u} = -\frac{1}{\rho} \nabla p + \nu \nabla^2 \mathbf{u} + \mathbf{f}"),
+    (("quadratic formula", "quadratic equation"),
+     r"x = \frac{-b \pm \sqrt{b^2 - 4ac}}{2a}"),
+    (("pythagorean",),
+     r"a^2 + b^2 = c^2"),
+    (("euler's identity", "eulers identity", "euler identity"),
+     r"e^{i\pi} + 1 = 0"),
+    (("mass-energy", "e=mc", "e = mc", "einstein's", "einsteins"),
+     r"E = mc^2"),
+    (("schrödinger", "schrodinger"),
+     r"i\hbar \frac{\partial}{\partial t} \Psi = \hat{H} \Psi"),
+    (("maxwell",),
+     r"\nabla \cdot \mathbf{E} = \frac{\rho}{\varepsilon_0}"),
+    (("fourier transform",),
+     r"\hat{f}(\xi) = \int_{-\infty}^{\infty} f(x) e^{-2\pi i x \xi}\,dx"),
+    (("bayes",),
+     r"P(A \mid B) = \frac{P(B \mid A)\,P(A)}{P(B)}"),
+    (("attention", "self-attention", "scaled dot-product"),
+     r"\mathrm{Attention}(Q, K, V) = \mathrm{softmax}\!\left(\frac{QK^\top}{\sqrt{d_k}}\right) V"),
+]
+# Hallucinated wrapper tags the model emits when confused (e.g. [user]...[/user]).
+_HALLUCINATED_TAG_RE = re.compile(
+    r"\[/?(?:user|assistant|system|human|response|answer)\]",
+    re.IGNORECASE,
+)
 _OPEN_INTENT_RE = re.compile(
     r"^\s*(?:please\s+|can\s+you\s+|could\s+you\s+)?"
     r"(?:open|load|show|pull\s+up|bring\s+up)\s+"
     r"(?:my\s+|the\s+)?"
     r"(.+?)"
-    r"(?:\s+(?:paper|draft|document|file))?"
+    # Trailing noun phrase like "paper", "research paper", "draft", etc. — stripped.
+    r"(?:\s+(?:research|academic|conference|journal|seminar|review)\s+(?:paper|draft|document|file|article|manuscript|thesis))?"
+    r"(?:\s+(?:paper|draft|document|file|article|manuscript|thesis))?"
     r"\s*[\.\?!]*\s*$",
     re.IGNORECASE,
 )
@@ -299,6 +339,20 @@ def _strip_md_fences(text: str) -> str:
     def repl(m: re.Match) -> str:
         return m.group(1).strip()
     return _MD_FENCE_RE.sub(repl, text)
+
+
+def _strip_hallucinated_tags(text: str) -> str:
+    """Remove fake role tags like [user]...[/user] the small model sometimes emits."""
+    return _HALLUCINATED_TAG_RE.sub("", text).strip()
+
+
+def _lookup_formula(user_message: str) -> Optional[str]:
+    """Return canonical LaTeX for a known formula name mentioned in the user message."""
+    msg = user_message.lower()
+    for keys, latex in _FORMULA_LIBRARY:
+        if any(k in msg for k in keys):
+            return latex
+    return None
 
 
 def _has_action_tag(text: str) -> bool:
@@ -379,6 +433,9 @@ def _postprocess_scoot_reply(reply: str, user_message: str) -> str:
     one of the three actions, wrap the appropriate target here regardless of
     what the model produced.
     """
+    # Strip any hallucinated [user]/[assistant] wrapper tags first.
+    reply = _strip_hallucinated_tags(reply)
+
     insert_intent = bool(_INSERT_INTENT_RE.search(user_message))
     heading_intent = bool(_HEADING_INTENT_RE.search(user_message))
     open_match = _OPEN_INTENT_RE.match(user_message)
@@ -399,15 +456,10 @@ def _postprocess_scoot_reply(reply: str, user_message: str) -> str:
         if query:
             return f"[SEARCH_CORPUS]{query}[/SEARCH_CORPUS]"
 
-    # Already has tags — clean LaTeX content and optionally inject position.
-    if _has_action_tag(reply):
-        cleaned = _clean_latex_tags(reply)
-        if position and "[INSERT_BLOCK" in cleaned:
-            cleaned = _inject_position_attr(cleaned, position)
-        return cleaned
-
-    # Wrap raw LaTeX as an INSERT_BLOCK if the user asked for one. Also handles
-    # the case where the model wrapped its LaTeX in a ```latex ... ``` fence.
+    # When the user's intent is to insert LaTeX, prefer producing a clean
+    # INSERT_BLOCK type="latex" tag from raw LaTeX in the reply — even if the
+    # model already emitted some tags (it often emits a confused mix of a
+    # markdown fence + a half-formed type="text" block when nervous).
     if insert_intent:
         cleaned_reply = _strip_md_fences(reply)
         match = _RAW_LATEX_RE.search(cleaned_reply)
@@ -415,6 +467,19 @@ def _postprocess_scoot_reply(reply: str, user_message: str) -> str:
             latex = _normalize_inline_math(match.group(0))
             pos_attr = f' position="{position}"' if position else ""
             return f'[INSERT_BLOCK type="latex"{pos_attr}]{latex}[/INSERT_BLOCK]'
+        # No raw LaTeX — fall back to the canonical formula library.
+        canonical = _lookup_formula(user_message)
+        if canonical:
+            pos_attr = f' position="{position}"' if position else ""
+            latex = f"\\begin{{equation}}{canonical}\\end{{equation}}"
+            return f'[INSERT_BLOCK type="latex"{pos_attr}]{latex}[/INSERT_BLOCK]'
+
+    # Already has tags — clean LaTeX content and optionally inject position.
+    if _has_action_tag(reply):
+        cleaned = _clean_latex_tags(reply)
+        if position and "[INSERT_BLOCK" in cleaned:
+            cleaned = _inject_position_attr(cleaned, position)
+        return cleaned
 
     # Heading intent: wrap a short non-LaTeX reply as a heading block.
     if heading_intent and not _RAW_LATEX_RE.search(reply):

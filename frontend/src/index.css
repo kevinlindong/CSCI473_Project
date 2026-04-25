@@ -316,13 +316,16 @@ html.compact-mode .mb-8  { margin-bottom: 1rem; }
 .tok-env   { color: #A3B18A; }
 .tok-arg   { color: #E9E4D4; }
 
-/* old tex-hl used by PaperEditor: harmonise with new palette */
-.tex-hl .tex-cmd     { color: #C85544; }
-.tex-hl .tex-env     { color: #4A6741; font-weight: 500; }
-.tex-hl .tex-math    { color: #8B4513; }
-.tex-hl .tex-brace   { color: #264635; opacity: 0.35; }
-.tex-hl .tex-comment { color: #264635; opacity: 0.28; }
-.tex-hl .tex-arg     { color: #264635; opacity: 0.75; }
+/* tex-hl tokens for the editor source pane. The pane has a fixed dark
+   "garden of code" background (#0E1F18) regardless of theme, so these
+   colors are tuned for legibility on that dark surface — every token
+   exceeds ~4.5:1 contrast against #0E1F18 (WCAG AA for body text). */
+.tex-hl .tex-cmd     { color: #E89070; }                        /* warm coral - commands */
+.tex-hl .tex-env     { color: #A3B18A; font-weight: 500; }      /* sage - environments */
+.tex-hl .tex-math    { color: #E0B13A; }                        /* warm amber - math */
+.tex-hl .tex-brace   { color: rgba(233, 228, 212, 0.55); }      /* parchment 55% - braces */
+.tex-hl .tex-comment { color: rgba(163, 177, 138, 0.7); font-style: italic; }  /* dim sage italic - comments */
+.tex-hl .tex-arg     { color: rgba(233, 228, 212, 0.95); }      /* parchment - args */
 
 .latex-frame {
   background: var(--color-milk);
@@ -337,16 +340,6 @@ html.compact-mode .mb-8  { margin-bottom: 1rem; }
   padding: 0 .6rem;
   font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .28em;
   color: var(--color-forest); opacity: .6;
-}
-
-.drop-cap::first-letter {
-  font-family: var(--font-editorial);
-  font-size: 3.4em;
-  line-height: 0.82;
-  float: left;
-  padding: 0.05em 0.1em 0 0;
-  font-weight: 600;
-  color: var(--color-forest);
 }
 
 .smcp {

@@ -67,14 +67,35 @@ const groupTint: Record<Snippet['group'], string> = {
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
+// Count words across the entire document — including \title/\author/\date
+// in the preamble. Strips math, comments, and non-textual commands
+// (\cite, \ref, \usepackage, \documentclass, \includegraphics) but PRESERVES
+// textual brace content (\section{Title} → "Title", \textbf{word} → "word")
+// so the counter reflects what the reader will see.
 function wordCount(src: string): number {
-  const stripped = src
-    .replace(/%[^\n]*/g, '')
-    .replace(/\\[a-zA-Z@]+\*?(\[[^\]]*\])?(\{[^}]*\})?/g, ' ')
-    .replace(/[{}]/g, ' ')
-    .replace(/\$[^$]*\$/g, ' ')
+  const body = src
+    // line comments (% to EOL, but not escaped \%)
+    .replace(/(^|[^\\])%[^\n]*/g, '$1')
+    // display math environments
+    .replace(/\\begin\{(equation|align|gather|multline|displaymath|eqnarray)\*?\}[\s\S]*?\\end\{\1\*?\}/g, ' ')
+    // verbatim / code / floats
+    .replace(/\\begin\{(verbatim|lstlisting|tikzpicture|figure|table)\*?\}[\s\S]*?\\end\{\1\*?\}/g, ' ')
+    // inline / display math delimiters
+    .replace(/\\\[[\s\S]*?\\\]/g, ' ')
+    .replace(/\\\([\s\S]*?\\\)/g, ' ')
     .replace(/\$\$[\s\S]*?\$\$/g, ' ')
-  return stripped.trim().split(/\s+/).filter(Boolean).length
+    .replace(/\$[^$\n]*\$/g, ' ')
+    // commands whose brace content is NOT prose — drop both the command and braces
+    .replace(/\\(cite|citep|citet|ref|eqref|pageref|label|includegraphics|input|include|bibliography|bibliographystyle|usepackage|documentclass|pagestyle|setlength|setcounter|hypersetup|geometry|today|maketitle|tableofcontents|newcommand|renewcommand|definecolor)\*?(\[[^\]]*\])?(\{[^}]*\})?/g, ' ')
+    // \begin{env} / \end{env} markers — keep their inner content
+    .replace(/\\(begin|end)\{[^}]*\}/g, ' ')
+    // any remaining command — drop the backslash name + optional [opts] but
+    // leave its brace content for the next pass to expose
+    .replace(/\\[a-zA-Z@]+\*?(\[[^\]]*\])?/g, ' ')
+    // strip remaining braces
+    .replace(/[{}]/g, ' ')
+
+  return body.trim().split(/\s+/).filter(Boolean).length
 }
 
 function lineCount(src: string): number {
@@ -100,19 +121,81 @@ export default function PaperEditor() {
   const sourceRef = useRef<string>(source)
   useEffect(() => { sourceRef.current = source }, [source])
 
+  // ── undo / redo history ────────────────────────────────────────────────
+  // We maintain our own snapshot stack instead of relying on the textarea's
+  // native undo, because controlled inputs lose native undo grouping after
+  // setSource is called externally (snippets, scoot writes, imports). Typing
+  // is debounced into snapshots; programmatic changes push immediately so
+  // there's a clean undo step at the boundary.
+  const historyRef = useRef<{ stack: string[]; idx: number }>({
+    stack: [sourceRef.current],
+    idx: 0,
+  })
+  const snapTimerRef = useRef<number | null>(null)
+  const HISTORY_LIMIT = 200
+
+  const pushImmediate = useCallback((value: string) => {
+    if (snapTimerRef.current !== null) {
+      clearTimeout(snapTimerRef.current)
+      snapTimerRef.current = null
+    }
+    const h = historyRef.current
+    if (h.stack[h.idx] === value) return
+    h.stack = h.stack.slice(0, h.idx + 1)
+    h.stack.push(value)
+    if (h.stack.length > HISTORY_LIMIT) h.stack.shift()
+    else h.idx = h.stack.length - 1
+  }, [])
+
+  const queueSnapshot = useCallback((value: string) => {
+    if (snapTimerRef.current !== null) clearTimeout(snapTimerRef.current)
+    snapTimerRef.current = window.setTimeout(() => {
+      pushImmediate(value)
+      snapTimerRef.current = null
+    }, 350)
+  }, [pushImmediate])
+
+  const undo = useCallback(() => {
+    if (snapTimerRef.current !== null) pushImmediate(sourceRef.current)
+    const h = historyRef.current
+    if (h.idx <= 0) return false
+    h.idx -= 1
+    setSource(h.stack[h.idx])
+    return true
+  }, [pushImmediate])
+
+  const redo = useCallback(() => {
+    if (snapTimerRef.current !== null) pushImmediate(sourceRef.current)
+    const h = historyRef.current
+    if (h.idx >= h.stack.length - 1) return false
+    h.idx += 1
+    setSource(h.stack[h.idx])
+    return true
+  }, [pushImmediate])
+
   // Register with EditorBridge so scoot can append LaTeX into this editor.
   useEffect(() => {
     editorBridge.register({
       mode: 'source',
       getSource: () => sourceRef.current,
-      setSource: (text: string) => setSource(text),
+      setSource: (text: string) => {
+        pushImmediate(sourceRef.current)
+        setSource(text)
+        pushImmediate(text)
+      },
     })
     return () => editorBridge.unregister()
-  }, [editorBridge])
+  }, [editorBridge, pushImmediate])
 
   // Re-hydrate when the user navigates between drafts without remounting.
   useEffect(() => {
-    setSource(initialSourceFor(draftId))
+    const fresh = initialSourceFor(draftId)
+    setSource(fresh)
+    historyRef.current = { stack: [fresh], idx: 0 }
+    if (snapTimerRef.current !== null) {
+      clearTimeout(snapTimerRef.current)
+      snapTimerRef.current = null
+    }
   }, [draftId])
   const [splitRatio, setSplitRatio] = useState(0.48)
   const [isDragging, setIsDragging] = useState(false)
@@ -127,6 +210,7 @@ export default function PaperEditor() {
   const containerRef = useRef<HTMLDivElement>(null)
   const toolbarStripRef = useRef<HTMLDivElement>(null)
   const toolbarMeasureRef = useRef<HTMLDivElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // How many pills fit inline at the current toolbar width. Remaining pills
   // are only reachable through the palette. Measured via an offscreen layer
@@ -222,13 +306,34 @@ export default function PaperEditor() {
     const before = source.slice(0, start)
     const after = source.slice(end)
     const next = before + snippet.insert + after
+    pushImmediate(source)
     setSource(next)
+    pushImmediate(next)
     const caretPos = start + (snippet.cursor ?? snippet.insert.length)
     requestAnimationFrame(() => {
       ta.focus()
       ta.setSelectionRange(caretPos, caretPos)
     })
-  }, [source])
+  }, [source, pushImmediate])
+
+  // ── file import ────────────────────────────────────────────────────────
+  const handleImportClick = useCallback(() => {
+    fileInputRef.current?.click()
+  }, [])
+
+  const handleImportFile = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      const text = typeof reader.result === 'string' ? reader.result : ''
+      pushImmediate(sourceRef.current)
+      setSource(text)
+      pushImmediate(text)
+    }
+    reader.readAsText(file)
+  }, [pushImmediate])
 
   // ── keyboard shortcuts ─────────────────────────────────────────────────
   useEffect(() => {
@@ -357,6 +462,25 @@ export default function PaperEditor() {
             ))}
           </div>
 
+          {/* Import */}
+          <button
+            onClick={handleImportClick}
+            className="bau-btn bau-btn--ghost shrink-0 !py-2 !px-4 !text-[10.5px] !tracking-[0.22em]"
+            title="Open a .tex file from your machine"
+          >
+            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M17 14l-5-5m0 0l-5 5m5-5v11" />
+            </svg>
+            import .tex
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".tex,text/x-tex,text/plain"
+            className="hidden"
+            onChange={handleImportFile}
+          />
+
           {/* Export */}
           <button
             onClick={() => {
@@ -458,11 +582,11 @@ export default function PaperEditor() {
         </button>
 
         <div className="flex items-center gap-3 shrink-0 pl-4 ml-2 border-l border-forest/12">
-          <span className="font-[family-name:var(--font-mono)] text-[10px] text-forest/55">
-            <span className="text-forest font-medium">{words}</span>
-            <span className="text-forest/35"> w</span>
+          <span className="font-[family-name:var(--font-mono)] text-[11px] text-forest/70 tabular-nums">
+            <span className="text-forest font-semibold">{words}</span>
+            <span className="text-forest/45"> w</span>
           </span>
-          <span className="font-[family-name:var(--font-mono)] text-[10px] text-forest/40">
+          <span className="font-[family-name:var(--font-mono)] text-[10px] text-forest/50 tabular-nums">
             {lines} ln · {chars} ch
           </span>
         </div>
@@ -593,7 +717,7 @@ export default function PaperEditor() {
                   source · main.tex
                 </span>
                 <div className="flex-1" />
-                <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.2em] uppercase text-parchment/35">
+                <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.2em] uppercase text-parchment/55">
                   utf-8 · LF
                 </span>
               </div>
@@ -601,7 +725,7 @@ export default function PaperEditor() {
               {/* Line gutter */}
               <div
                 ref={gutterRef}
-                className="overflow-hidden pt-9 pb-6 pr-3 pl-3 shrink-0 font-[family-name:var(--font-mono)] text-[11.5px] leading-[1.7] text-right text-parchment/25 select-none tabular-nums bg-[#0a1812] border-r border-[#ffffff08]"
+                className="overflow-hidden pt-9 pb-6 pr-3 pl-3 shrink-0 font-[family-name:var(--font-mono)] text-[11.5px] leading-[1.7] text-right text-parchment/45 select-none tabular-nums bg-[#0a1812] border-r border-[#ffffff10]"
                 style={{ minWidth: 44 }}
                 aria-hidden
               >
@@ -621,7 +745,23 @@ export default function PaperEditor() {
                 <textarea
                   ref={textareaRef}
                   value={source}
-                  onChange={e => setSource(e.target.value)}
+                  onChange={e => {
+                    const next = e.target.value
+                    setSource(next)
+                    queueSnapshot(next)
+                  }}
+                  onKeyDown={e => {
+                    const mod = e.metaKey || e.ctrlKey
+                    if (!mod) return
+                    const k = e.key.toLowerCase()
+                    if (k === 'z' && !e.shiftKey) {
+                      e.preventDefault()
+                      undo()
+                    } else if ((k === 'z' && e.shiftKey) || k === 'y') {
+                      e.preventDefault()
+                      redo()
+                    }
+                  }}
                   onScroll={syncScroll}
                   spellCheck={false}
                   autoCapitalize="off"

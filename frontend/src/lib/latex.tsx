@@ -826,11 +826,10 @@ export function RenderPaper({ source, showLineNumbers = false }: { source: strin
     } else if (b.kind === 'rule') {
       elements.push(<hr key={`b${idx}`} className="my-6 border-forest/15" />)
     } else {
-      const isFirstAfterSection = idx > 0 && blocks[idx - 1]?.kind === 'section'
       elements.push(
         <p
           key={`b${idx}`}
-          className={`text-forest/88 leading-[1.8] text-justify hyphens-auto mb-3 font-[family-name:var(--font-body)] text-[1.02em] ${isFirstAfterSection ? 'drop-cap' : ''}`}
+          className="text-forest/88 leading-[1.8] text-justify hyphens-auto mb-3 font-[family-name:var(--font-body)] text-[1.02em]"
         >
           {parseInline(b.text, refs, `b${idx}`)}
         </p>

@@ -15,8 +15,8 @@
   </head>
   <body>
     <div id="root"></div>
-    <div id="boot-diag" style="position:fixed;inset:0;z-index:99999;background:#F5F2EA;color:#264635;font:14px ui-monospace,monospace;padding:24px;overflow:auto;">
-      <div id="boot-status">⏳ boot: HTML loaded. waiting for React…</div>
+    <div id="boot-diag" style="display:none;position:fixed;inset:0;z-index:99999;background:#F5F2EA;color:#264635;font:14px ui-monospace,monospace;padding:24px;overflow:auto;">
+      <div id="boot-status"></div>
       <pre id="boot-errors" style="white-space:pre-wrap;color:#C85544;margin-top:12px;"></pre>
     </div>
     <script>
@@ -24,22 +24,31 @@
         var diag = document.getElementById('boot-diag');
         var errBox = document.getElementById('boot-errors');
         var status = document.getElementById('boot-status');
+        var mounted = false;
+        function show(msg) { diag.style.display = 'block'; status.textContent = msg; }
         window.addEventListener('error', function (e) {
-          status.textContent = '❌ boot: script error';
+          show('❌ boot: script error');
           errBox.textContent += '\n' + (e.error && e.error.stack ? e.error.stack : (e.message + ' @ ' + e.filename + ':' + e.lineno));
         });
         window.addEventListener('unhandledrejection', function (e) {
-          status.textContent = '❌ boot: unhandled rejection';
+          show('❌ boot: unhandled rejection');
           errBox.textContent += '\n' + (e.reason && e.reason.stack ? e.reason.stack : String(e.reason));
         });
-        setTimeout(function () {
-          var root = document.getElementById('root');
-          if (root && root.children.length > 0) {
+        var root = document.getElementById('root');
+        var mo = new MutationObserver(function () {
+          if (root.children.length > 0) {
+            mounted = true;
+            mo.disconnect();
             diag.remove();
-          } else if (!errBox.textContent) {
-            status.textContent = '⚠ boot: root is still empty after 2s. No JS errors caught. Check Network tab for failed imports.';
           }
-        }, 2000);
+        });
+        mo.observe(root, { childList: true });
+        setTimeout(function () {
+          if (mounted || root.children.length > 0) return;
+          if (!errBox.textContent) {
+            show('⚠ boot: root is still empty after 6s. No JS errors caught. Check Network tab for failed imports.');
+          }
+        }, 6000);
       })();
     </script>
     <script type="module" src="/src/main.tsx"></script>
