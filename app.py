@@ -25,6 +25,7 @@ Env vars:
 import json
 import os
 import re
+from functools import lru_cache
 from typing import Optional
 
 import numpy as np
@@ -57,11 +58,9 @@ _CHUNK_EMBS:    Optional[np.ndarray] = None
 _CAPTION_EMBS:  Optional[np.ndarray] = None
 _PAPER_INDEX:   Optional[dict]       = None
 
-_PAPERS_BY_ID: Optional[dict] = None
-_PAPERS_LIST:  Optional[list] = None
-
-_ENCODER  = None  # SentenceTransformer
-_RERANKER = None  # CrossEncoder
+_ENCODER   = None  # SentenceTransformer
+_RERANKER  = None  # CrossEncoder
+_RETRIEVER = None  # src.retrieval.BruteForceRetriever
 
 _TOPIC_GRAPH: Optional[dict] = None
 
@@ -99,26 +98,22 @@ def _load_matrices():
     return _ABSTRACT_EMBS, _CHUNK_EMBS, _CAPTION_EMBS, _PAPER_INDEX
 
 
-def _load_corpus():
-    """Load data/processed/papers.json into memory. Returns (list, by_id)."""
-    global _PAPERS_BY_ID, _PAPERS_LIST
-    if _PAPERS_BY_ID is not None:
-        return _PAPERS_LIST, _PAPERS_BY_ID
+@lru_cache(maxsize=2048)
+def _load_paper(paper_id: str) -> Optional[dict]:
+    """Look up a single paper from data/papers.db. LRU-cached so popular
+    papers stay hot. Returns None if the paper_id isn't present.
 
-    papers_path = os.path.join(config.PROCESSED_DIR, "papers.json")
-    if not os.path.exists(papers_path):
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                f"{papers_path} missing. "
-                f"Run: python scripts/compute_topic_graph.py"
-            ),
-        )
-    with open(papers_path) as f:
-        raw = json.load(f)
-    _PAPERS_LIST = raw
-    _PAPERS_BY_ID = {p["paper_id"]: p for p in raw}
-    return _PAPERS_LIST, _PAPERS_BY_ID
+    Backed by src/papers_db.py. Build the database with
+    `python scripts/build_papers_db.py` after fetching new papers.
+    """
+    from src import papers_db
+    return papers_db.load_paper(paper_id)
+
+
+def _iter_paper_ids():
+    """Yield every paper_id present in the SQLite store."""
+    from src import papers_db
+    yield from papers_db.iter_paper_ids()
 
 
 def _get_encoder():
@@ -137,6 +132,21 @@ def _get_reranker():
         from src.reranker import load_reranker
         _RERANKER = load_reranker()
     return _RERANKER
+
+
+def _get_retriever():
+    """Lazy-construct the retriever and cache for the life of the process.
+
+    Today's impl: BruteForceRetriever (numpy cosine over all abstracts).
+    Past N ~= 30k, swap for a FAISS-backed Retriever in src/retrieval.py
+    with the same .retrieve() surface and only this helper changes.
+    """
+    global _RETRIEVER
+    if _RETRIEVER is None:
+        from src.retrieval import BruteForceRetriever
+        a, c, cap, idx = _load_matrices()
+        _RETRIEVER = BruteForceRetriever(a, c, cap, idx, encoder=_get_encoder())
+    return _RETRIEVER
 
 
 def _load_topic_graph() -> dict:
@@ -271,12 +281,13 @@ async def health():
             "chunks_npy":    os.path.exists(os.path.join(emb_dir, "chunks.npy")),
             "captions_npy":  os.path.exists(os.path.join(emb_dir, "captions.npy")),
             "index_json":    os.path.exists(os.path.join(emb_dir, "index.json")),
-            "papers_json":   os.path.exists(os.path.join(proc_dir, "papers.json")),
+            "papers_db":     os.path.exists(os.path.join(config.DATA_DIR, "papers.db")),
             "topic_graph":   os.path.exists(os.path.join(proc_dir, "topic_graph.json")),
             "matrices_cached": _ABSTRACT_EMBS is not None,
-            "corpus_cached":   _PAPERS_BY_ID is not None,
+            "papers_cached":   _load_paper.cache_info().currsize,
             "encoder_loaded":  _ENCODER is not None,
             "reranker_loaded": _RERANKER is not None,
+            "retriever_loaded": _RETRIEVER is not None,
         },
         llm_enabled=ENABLE_LLM,
     )
@@ -296,26 +307,13 @@ async def query(req: QueryRequest):
     stub answer and the top-k passages as citations so the frontend still
     renders something useful.
     """
-    from src.retrieval import retrieve
     from src.reranker import rerank_passages, should_rerank
 
     if not req.question.strip():
         raise HTTPException(status_code=400, detail="question is required")
 
-    abstract_embs, chunk_embs, caption_embs, paper_index = _load_matrices()
-    _, papers_by_id = _load_corpus()
-    encoder = _get_encoder()
-
     k = req.k or config.N_RETRIEVAL_RESULTS
-    result = retrieve(
-        req.question,
-        abstract_embeddings=abstract_embs,
-        chunk_embeddings=chunk_embs,
-        caption_embeddings=caption_embs,
-        paper_index=paper_index,
-        k=k,
-        model=encoder,
-    )
+    result = _get_retriever().retrieve(req.question, k=k)
 
     passages = result["passages"]
     captions = result["captions"]
@@ -332,7 +330,7 @@ async def query(req: QueryRequest):
     # Assemble aligned source list: position i <-> citation marker [i+1].
     sources: list[dict] = []
     for p in passages:
-        meta = papers_by_id.get(p["paper_id"], {})
+        meta = _load_paper(p["paper_id"]) or {}
         sources.append({
             "paper_id": p["paper_id"],
             "title":    p.get("paper_title") or meta.get("title", ""),
@@ -342,7 +340,7 @@ async def query(req: QueryRequest):
             "score":    float(p.get("score", 0.0)),
         })
     for c in captions:
-        meta = papers_by_id.get(c["paper_id"], {})
+        meta = _load_paper(c["paper_id"]) or {}
         sources.append({
             "paper_id": c["paper_id"],
             "title":    c.get("title") or meta.get("title", ""),
@@ -402,18 +400,24 @@ async def list_papers(
     cluster: Optional[int] = Query(None, description="Filter by cluster id"),
     limit: Optional[int] = Query(None, ge=1, le=2000),
 ):
-    """List all papers in the corpus. Optionally filter by cluster id."""
-    papers_list, _ = _load_corpus()
+    """List all papers in the corpus. Optionally filter by cluster id.
 
-    # Cluster filter uses the topic graph's assignments (computed offline).
-    cluster_by_id: dict[str, int] = {}
+    Lazy: only the papers that pass the cluster/limit filters are read from
+    disk. Cluster filter uses the topic graph's assignments to narrow the
+    candidate paper_id list before any file reads.
+    """
     if cluster is not None:
         tg = _load_topic_graph()
-        cluster_by_id = {n["paper_id"]: n["cluster"] for n in tg.get("nodes", [])}
+        candidate_ids = [
+            n["paper_id"] for n in tg.get("nodes", []) if n["cluster"] == cluster
+        ]
+    else:
+        candidate_ids = list(_iter_paper_ids())
 
     out: list[PaperSummary] = []
-    for p in papers_list:
-        if cluster is not None and cluster_by_id.get(p["paper_id"]) != cluster:
+    for pid in candidate_ids:
+        p = _load_paper(pid)
+        if p is None:
             continue
         out.append(PaperSummary(
             paper_id=p["paper_id"],
@@ -431,8 +435,7 @@ async def list_papers(
 @app.get("/api/papers/{paper_id}", response_model=PaperDetail)
 async def get_paper(paper_id: str):
     """Full paper detail — title, authors, abstract, sections, figures."""
-    _, by_id = _load_corpus()
-    p = by_id.get(paper_id)
+    p = _load_paper(paper_id)
     if p is None:
         raise HTTPException(status_code=404, detail=f"paper {paper_id} not found")
 

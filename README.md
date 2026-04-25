@@ -15,22 +15,24 @@ Built for CSCI-UA 473 (Fundamentals of Machine Learning) at NYU, Spring 2026.
 - React + Vite + `react-force-graph-3d` frontend with FastAPI backend
 - Self-contained Jupyter notebook for exploring the graph without running the web stack
 
-## Quick Start
+## Quick Start (teammate setup, ~2 min)
+
+Pulls a pre-built data snapshot from GitHub Releases — saves ~7 hr of regeneration.
 
 ```bash
-# Backend
+git clone https://github.com/kevinlindong/CSCI473_Project.git
+cd CSCI473_Project
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-uvicorn app:app --reload
-
-# Frontend (in a separate terminal)
-cd frontend
-bun install
-bun run dev
+./scripts/setup_data.sh        # downloads ~1.4 GB tarball, extracts to data/
+./start.sh                     # FastAPI on :3001, Vite on :5173
 ```
 
-Open http://localhost:5173 in your browser. The Vite dev server proxies `/api` requests to the FastAPI backend on port 8000.
+Open http://localhost:5173. The Vite dev server proxies `/api` requests to the FastAPI backend on port 3001.
 
-## Full Setup (from scratch)
+## Full Setup (from scratch, ~7 hr)
+
+Use this if you want to regenerate the corpus instead of downloading the snapshot.
 
 ```bash
 # 1. Install backend dependencies
@@ -46,7 +48,10 @@ python scripts/fetch_papers.py
 # 4. Build embedding matrices
 python scripts/build_embeddings.py
 
-# 5. Build the topic-graph artifact (k-means + k-NN + LLM labels)
+# 5. Build the SQLite paper store (used by app.py for fast metadata lookup)
+python scripts/build_papers_db.py
+
+# 6. Build the topic-graph artifact (k-means + k-NN + LLM labels)
 python scripts/compute_topic_graph.py          # full pipeline with Qwen2.5-1.5B-Instruct (~3GB first-run download)
 # python scripts/compute_topic_graph.py --no-llm   # fast iteration, closest-paper-title fallback
 

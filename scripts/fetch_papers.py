@@ -1,9 +1,14 @@
 """
 fetch_papers.py — Download papers from the Arxiv API and enrich via ar5iv.
 
-Phase 1: Query arXiv API for recent papers in configured categories.
+Target-seeking: walks backward in one-month slices from AR5IV_END_DATE and
+keeps enriching until `config.ARXIV_TARGET_ENRICHED` papers exist on disk
+(or `config.ARXIV_FETCH_MAX_MONTHS_BACK` months is exhausted). Resumable —
+skips any paper whose JSON is already on disk.
+
+Phase 1: Query arXiv API for a given (category, month) slice.
 Phase 2: Fetch ar5iv HTML for each paper to extract sections and figures.
-Saves one JSON file per paper to data/raw/.
+Saves one JSON file per paper to data/raw/enriched/.
 
 Usage:
     python scripts/fetch_papers.py
@@ -31,32 +36,35 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def discover_papers() -> list[dict]:
-    """Query arXiv API for papers in the last week of ar5iv coverage.
+def _month_floor(dt: datetime) -> datetime:
+    return dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-    Uses AR5IV_END_DATE as the upper bound and ARXIV_FETCH_DAYS to compute
-    the lower bound, since ar5iv's corpus has a fixed cutoff.
+
+def discover_papers_in_month(
+    start_date: datetime, end_date: datetime
+) -> list[dict]:
+    """Query arXiv API for papers in a single [start_date, end_date] slice.
+
+    end_date is clamped at AR5IV_END_DATE upstream; start_date is typically
+    the first day of the month containing end_date (or the month before).
 
     Returns a de-duplicated list of metadata dicts sorted by date descending.
     """
-    end_date = datetime.fromisoformat(config.AR5IV_END_DATE).replace(
-        tzinfo=timezone.utc
-    )
-    start_date = end_date - timedelta(days=config.ARXIV_FETCH_DAYS)
-
-    # Build query with date range so the API only returns papers in our window.
-    # arXiv submittedDate format: YYYYMMDDHHMM
     date_from = start_date.strftime("%Y%m%d0000")
     date_to = end_date.strftime("%Y%m%d2359")
     cat_query = " OR ".join(f"cat:{cat}" for cat in config.ARXIV_CATEGORIES)
     query = f"({cat_query}) AND submittedDate:[{date_from} TO {date_to}]"
     logger.info(
-        "arXiv query: %s (%s to %s)", query, start_date.date(), end_date.date()
+        "arXiv query (%s to %s): %d cats, max %d results",
+        start_date.date(),
+        end_date.date(),
+        len(config.ARXIV_CATEGORIES),
+        config.ARXIV_MAX_RESULTS_PER_QUERY,
     )
 
     search = arxiv.Search(
         query=query,
-        max_results=config.MAX_PAPERS,
+        max_results=config.ARXIV_MAX_RESULTS_PER_QUERY,
         sort_by=arxiv.SortCriterion.SubmittedDate,
         sort_order=arxiv.SortOrder.Descending,
     )
@@ -68,15 +76,11 @@ def discover_papers() -> list[dict]:
     for result in client.results(search):
         published = result.published.replace(tzinfo=timezone.utc)
 
-        # Skip papers newer than ar5iv's coverage cutoff
         if published > end_date:
             continue
-
-        # Early termination once we pass the start of our window
         if published < start_date:
             break
 
-        # Strip version suffix: "2310.06825v1" -> "2310.06825"
         short_id = result.get_short_id()
         paper_id = short_id.rsplit("v", 1)[0]
 
@@ -100,7 +104,12 @@ def discover_papers() -> list[dict]:
             }
         )
 
-    logger.info("Discovered %d papers from arXiv API", len(papers))
+    logger.info(
+        "Discovered %d papers in %s to %s",
+        len(papers),
+        start_date.date(),
+        end_date.date(),
+    )
     return papers
 
 
@@ -126,8 +135,10 @@ def enrich_paper(paper: dict) -> dict:
 
         sections, figures = parse_ar5iv_html(resp.text, paper_id)
 
-        if not sections and not figures:
-            logger.warning("%s: ar5iv returned HTML but no parseable content", paper_id)
+        # Require section text — figures-only papers contribute nothing to
+        # text chunking / retrieval / RAG
+        if not sections:
+            logger.warning("%s: ar5iv returned HTML but no parseable sections", paper_id)
             return paper
 
         paper["sections"] = [
@@ -150,50 +161,216 @@ def enrich_paper(paper: dict) -> dict:
     return paper
 
 
-def fetch_papers():
-    """Fetch papers from Arxiv API, enrich via ar5iv, and save to data/raw/."""
+class Ar5ivSource:
+    """Discover via the arXiv API, enrich via ar5iv HTML scraping.
+
+    Today's only Source. Future ArxivS3Source / SemanticScholarSource would
+    implement the same .discover(start, end) -> list[dict] and .enrich(paper)
+    -> dict surface, so fetch_papers() can swap them via --source.
+    """
+
+    name = "ar5iv"
+
+    def discover(self, start_date, end_date) -> list[dict]:
+        return discover_papers_in_month(start_date, end_date)
+
+    def enrich(self, paper: dict) -> dict:
+        return enrich_paper(paper)
+
+
+SOURCES = {Ar5ivSource.name: Ar5ivSource}
+
+
+def _count_enriched_on_disk() -> int:
+    if not os.path.isdir(config.RAW_DIR):
+        return 0
+    return sum(1 for f in os.listdir(config.RAW_DIR) if f.endswith(".json"))
+
+
+def _invalidate_papers_json() -> None:
+    """Remove stale processed/papers.json so compute_topic_graph.py rebuilds it."""
+    papers_json = os.path.join(config.PROCESSED_DIR, "papers.json")
+    if os.path.exists(papers_json):
+        os.remove(papers_json)
+        logger.info(
+            "Removed stale %s; compute_topic_graph.py will rebuild it.",
+            papers_json,
+        )
+
+
+def fetch_papers(source_name: str = "ar5iv"):
+    """Fetch broad-ML arXiv papers, enrich via the chosen source, save to
+    data/raw/enriched/.
+
+    Walks backward in one-month slices from AR5IV_END_DATE, streaming each
+    discovered paper through the source's enrich() and saving successes to
+    disk. Stops when ARXIV_TARGET_ENRICHED JSONs exist on disk, or when
+    ARXIV_FETCH_MAX_MONTHS_BACK months have been exhausted.
+    """
+    if source_name not in SOURCES:
+        raise SystemExit(
+            f"Unknown source '{source_name}'. Available: {sorted(SOURCES)}"
+        )
+    source = SOURCES[source_name]()
+    logger.info("Using source: %s", source.name)
+
     os.makedirs(config.RAW_DIR, exist_ok=True)
 
-    papers = discover_papers()
-    if not papers:
-        logger.info("No papers found in the date range.")
+    starting_count = _count_enriched_on_disk()
+    target = config.ARXIV_TARGET_ENRICHED
+    logger.info(
+        "Starting fetch: %d enriched on disk, target=%d, max_months_back=%d",
+        starting_count,
+        target,
+        config.ARXIV_FETCH_MAX_MONTHS_BACK,
+    )
+
+    if starting_count >= target:
+        logger.info("Target already met — nothing to do.")
         return
 
-    enriched_count = 0
-    skipped_count = 0
+    end_cursor = datetime.fromisoformat(config.AR5IV_END_DATE).replace(
+        tzinfo=timezone.utc, hour=23, minute=59, second=59
+    )
+    # ar5iv indexes by arxiv YYMM announcement prefix; anything later than
+    # AR5IV_END_DATE's month is guaranteed to redirect. Pre-filter to avoid
+    # burning 3s per paper on certain-failure fetches.
+    ar5iv_yymm_cutoff = end_cursor.strftime("%y%m")
 
-    for i, paper in enumerate(papers):
-        save_path = os.path.join(config.RAW_DIR, f"{paper['paper_id']}.json")
+    run_start = time.time()
+    attempted = 0
+    successes = 0
+    skipped_future_yymm = 0
+    months_walked = 0
 
-        # Incremental: skip papers already fetched
-        if os.path.exists(save_path):
-            skipped_count += 1
-            continue
-
+    for _ in range(config.ARXIV_FETCH_MAX_MONTHS_BACK):
+        month_start = _month_floor(end_cursor)
+        slice_start = month_start
+        slice_end = end_cursor
         logger.info(
-            "Enriching %d/%d: %s", i + 1, len(papers), paper["paper_id"]
+            "=== Month slice %d/%d: %s to %s ===",
+            months_walked + 1,
+            config.ARXIV_FETCH_MAX_MONTHS_BACK,
+            slice_start.date(),
+            slice_end.date(),
         )
-        time.sleep(config.FETCH_DELAY_SECONDS)
-        paper = enrich_paper(paper)
 
-        if not paper["ar5iv_success"]:
-            logger.info("Skipping %s (not enriched)", paper["paper_id"])
-            continue
+        try:
+            candidates = source.discover(slice_start, slice_end)
+        except Exception as exc:
+            logger.warning(
+                "Discovery failed for %s to %s — %s",
+                slice_start.date(),
+                slice_end.date(),
+                exc,
+            )
+            candidates = []
 
-        with open(save_path, "w") as f:
-            json.dump(paper, f, indent=2)
+        for paper in candidates:
+            on_disk = _count_enriched_on_disk()
+            if on_disk >= target:
+                break
 
-        enriched_count += 1
+            save_path = os.path.join(
+                config.RAW_DIR, f"{paper['paper_id']}.json"
+            )
+            if os.path.exists(save_path):
+                continue
 
-    total_new = len(papers) - skipped_count
+            # Skip papers whose announcement YYMM is beyond ar5iv's coverage
+            if paper["paper_id"][:4] > ar5iv_yymm_cutoff:
+                skipped_future_yymm += 1
+                continue
+
+            time.sleep(config.FETCH_DELAY_SECONDS)
+            attempted += 1
+            paper = source.enrich(paper)
+
+            if not paper["ar5iv_success"]:
+                if attempted % 50 == 0:
+                    _log_progress(
+                        run_start, attempted, successes, on_disk, target
+                    )
+                continue
+
+            with open(save_path, "w") as f:
+                json.dump(paper, f, indent=2)
+            successes += 1
+
+            if attempted % 50 == 0:
+                _log_progress(
+                    run_start, attempted, successes, on_disk + 1, target
+                )
+
+        months_walked += 1
+        if _count_enriched_on_disk() >= target:
+            logger.info("Target %d reached; stopping.", target)
+            break
+
+        # Step to the last second of the previous month
+        end_cursor = month_start - timedelta(seconds=1)
+    else:
+        logger.info(
+            "Max-months-back (%d) reached without hitting target.",
+            config.ARXIV_FETCH_MAX_MONTHS_BACK,
+        )
+
+    final_count = _count_enriched_on_disk()
+    added = final_count - starting_count
+    _log_progress(run_start, attempted, successes, final_count, target, final=True)
     logger.info(
-        "Done. %d papers total, %d skipped (cached), %d new, %d enriched via ar5iv",
-        len(papers),
-        skipped_count,
-        total_new,
-        enriched_count,
+        "Done. %d attempted, %d enriched this run, %d total on disk (%+d), "
+        "%d skipped (YYMM > %s)",
+        attempted,
+        successes,
+        final_count,
+        added,
+        skipped_future_yymm,
+        ar5iv_yymm_cutoff,
+    )
+
+    if added > 0:
+        _invalidate_papers_json()
+
+
+def _log_progress(
+    run_start: float,
+    attempted: int,
+    successes: int,
+    on_disk: int,
+    target: int,
+    final: bool = False,
+) -> None:
+    elapsed = time.time() - run_start
+    rate = (successes / attempted) if attempted else 0.0
+    remaining = max(0, target - on_disk)
+    # ETA assumes we keep hitting the observed success rate at current delay
+    secs_per_try = config.FETCH_DELAY_SECONDS
+    eta_secs = (remaining / rate) * secs_per_try if rate > 0 else float("inf")
+    tag = "FINAL" if final else "progress"
+    logger.info(
+        "[%s] attempted=%d enriched_run=%d on_disk=%d/%d "
+        "ar5iv_rate=%.1f%% elapsed=%.0fs eta=%s",
+        tag,
+        attempted,
+        successes,
+        on_disk,
+        target,
+        100 * rate,
+        elapsed,
+        f"{eta_secs/3600:.1f}h" if eta_secs != float("inf") else "n/a",
     )
 
 
 if __name__ == "__main__":
-    fetch_papers()
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--source",
+        default="ar5iv",
+        choices=sorted(SOURCES),
+        help="Which Source implementation to use for discover + enrich.",
+    )
+    args = parser.parse_args()
+    fetch_papers(source_name=args.source)

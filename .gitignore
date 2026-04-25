@@ -14,9 +14,16 @@ venv/
 # Environment
 .env
 
-# Data (large files)
+# Data (large files — distributed via GitHub Releases asset, see README)
 data/embeddings/*.npy
 data/embeddings/*.pt
+data/embeddings/index.json
+data/processed/papers.json
+data/raw/enriched/
+data/papers.db
+*.tar.zst
+*.tar.zst.sha256
+.logs/*.log
 
 # IDE
 .vscode/
