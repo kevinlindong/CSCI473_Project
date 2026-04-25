@@ -59,7 +59,7 @@ const QUERY_NODE_ID = '__query__'
 export default function CorpusGraph3D({
   nodes,
   edges,
-  activeCluster,
+  activeClusters,
   selectedPaperId,
   queryText,
   queryNeighbors,
@@ -71,7 +71,7 @@ export default function CorpusGraph3D({
   nodes: CorpusGraphNode[]
   edges: CorpusGraphEdge[]
   clusters: CorpusCluster[]
-  activeCluster: number | 'all'
+  activeClusters: Set<number>
   selectedPaperId: string | null
   queryText: string
   queryNeighbors: CorpusGraphNeighbor[] | null
@@ -80,6 +80,10 @@ export default function CorpusGraph3D({
   onSelectPaper: (paperId: string) => void
   height?: number
 }) {
+  const isolationActive = activeClusters.size > 0
+  const soloCluster = activeClusters.size === 1
+    ? (activeClusters.values().next().value as number)
+    : null
   const containerRef = useRef<HTMLDivElement>(null)
   const fgRef = useRef<ForceGraphMethods | undefined>(undefined)
   const [size, setSize] = useState({ w: 800, h: height })
@@ -203,15 +207,34 @@ export default function CorpusGraph3D({
       )}
 
       {/* Top-right — cluster isolate state */}
-      {activeCluster !== 'all' && (
+      {isolationActive && (
         <div className="absolute top-4 right-4 z-10 pointer-events-none flex items-center gap-2 bg-milk/90 backdrop-blur border border-forest/15 rounded-full px-3.5 py-1.5">
-          <span
-            className="w-2 h-2 rounded-full"
-            style={{ background: clusterColor(activeCluster as number) }}
-          />
-          <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.22em] uppercase text-forest/65">
-            {clusterLabel(activeCluster as number) || `cluster ${activeCluster}`}
-          </span>
+          {soloCluster !== null ? (
+            <>
+              <span
+                className="w-2 h-2 rounded-full"
+                style={{ background: clusterColor(soloCluster) }}
+              />
+              <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.22em] uppercase text-forest/65">
+                {clusterLabel(soloCluster) || `cluster ${soloCluster}`}
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="flex items-center -space-x-1">
+                {[...activeClusters].slice(0, 4).map(id => (
+                  <span
+                    key={id}
+                    className="w-2 h-2 rounded-full ring-1 ring-milk"
+                    style={{ background: clusterColor(id) }}
+                  />
+                ))}
+              </span>
+              <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.22em] uppercase text-forest/65 tabular-nums">
+                {activeClusters.size} constellations
+              </span>
+            </>
+          )}
         </div>
       )}
 
@@ -242,8 +265,8 @@ export default function CorpusGraph3D({
           nodeColor={(n: object) => {
             const nn = n as VizNode
             if (nn.isQuery) return nn.color
-            if (activeCluster === 'all') return nn.color
-            return nn.cluster === activeCluster ? nn.color : DIM_NODE
+            if (!isolationActive) return nn.color
+            return activeClusters.has(nn.cluster) ? nn.color : DIM_NODE
           }}
           nodeOpacity={0.95}
           nodeLabel={(n: object) => {
@@ -283,18 +306,20 @@ export default function CorpusGraph3D({
           onNodeHover={(n: object | null) => setHovered(n as VizNode | null)}
           nodeVisibility={(n: object) => {
             const nn = n as VizNode
-            if (activeCluster === 'all') return true
-            return nn.isQuery || nn.cluster === activeCluster
+            if (!isolationActive) return true
+            return nn.isQuery || activeClusters.has(nn.cluster)
           }}
           linkVisibility={(l: object) => {
-            if (activeCluster === 'all') return true
+            if (!isolationActive) return true
             const ll = l as VizLink
             if (ll.isQueryEdge) return true
             const s = typeof ll.source === 'object' ? (ll.source as VizNode).id : ll.source
             const t = typeof ll.target === 'object' ? (ll.target as VizNode).id : ll.target
             const sNode = graphData.nodes.find(nn => nn.id === s)
             const tNode = graphData.nodes.find(nn => nn.id === t)
-            return sNode?.cluster === activeCluster && tNode?.cluster === activeCluster
+            return !!sNode && !!tNode
+              && activeClusters.has(sNode.cluster)
+              && activeClusters.has(tNode.cluster)
           }}
         />
       )}

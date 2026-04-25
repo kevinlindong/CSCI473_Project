@@ -2,14 +2,13 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } f
 import { Link, useNavigate } from 'react-router-dom'
 import { Navbar } from '../components/Navbar'
 import { useLibrary } from '../hooks/useLibrary'
-import { useDrafts, writeDraftSource, type DraftMeta } from '../hooks/useDrafts'
+import { useDrafts, writeDraftSource, readDraftSource, type DraftMeta } from '../hooks/useDrafts'
 import { extractMeta } from '../lib/latex'
+import { SAMPLE_PAPERS } from '../sample-papers'
 
 /* ==========================================================================
-   Library — "papers you're working on". localStorage-backed, so each browser
-   keeps its own shelf. Fetches /api/papers once and renders the subset whose
-   paper_id is in the saved list. /api/topic-map enriches each card with a
-   cluster label and accent color.
+   Library — "papers you're working on". Grid of Google-Docs-style tiles,
+   each tile a paper-shaped preview thumbnail + title + last-edited time.
    ========================================================================== */
 
 interface PaperSummary {
@@ -86,6 +85,20 @@ export default function Library() {
     }
   }, [createDraft, navigate])
 
+  // Seed the workshop with example papers on first visit. Flag is set
+  // immediately to keep StrictMode's double-invocation from double-seeding,
+  // and so a user who deletes them later doesn't get them back.
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const SEED_KEY = 'folio_samples_seeded_v1'
+    if (window.localStorage.getItem(SEED_KEY)) return
+    window.localStorage.setItem(SEED_KEY, '1')
+    for (const sample of SAMPLE_PAPERS) {
+      const id = createDraft(sample.title)
+      writeDraftSource(id, sample.source)
+    }
+  }, [createDraft])
+
   const [papers, setPapers] = useState<PaperSummary[]>([])
   const [clusterById, setClusterById] = useState<Record<string, number>>({})
   const [clusterLabels, setClusterLabels] = useState<Record<number, string>>({})
@@ -133,8 +146,6 @@ export default function Library() {
     return m
   }, [papers])
 
-  // Preserve user's save order (most-recently-saved last). Drop IDs that
-  // no longer exist in the corpus (e.g., backend was rebuilt).
   const savedPapers = useMemo(
     () => ids.map(id => paperById.get(id)).filter((p): p is PaperSummary => !!p),
     [ids, paperById],
@@ -169,7 +180,7 @@ export default function Library() {
           </div>
           <h1 className="font-[family-name:var(--font-display)] text-forest leading-[0.94] font-light">
             <span className="block text-[72px] md:text-[104px]">the library<span className="text-sage-deep">.</span></span>
-            <span className="block text-[18px] md:text-[22px] text-forest/60 mt-3 max-w-[58ch]">
+            <span className="block text-[18px] md:text-[22px] text-forest/65 mt-3 max-w-[58ch]">
               — your drafts and the papers set aside for closer reading.
             </span>
           </h1>
@@ -226,33 +237,32 @@ export default function Library() {
           </div>
         )}
 
-        {/* Drafts — always visible when any exist */}
+        {/* Drafts */}
         {drafts.length > 0 && (
           <div>
             <div className="flex items-baseline justify-between mb-6 flex-wrap gap-3">
               <div>
-                <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/50 mb-1">
+                <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/55 mb-1">
                   plate I · your drafts
                 </div>
                 <h2 className="font-[family-name:var(--font-display)] text-[32px] text-forest leading-none">
                   in the workshop.
                 </h2>
               </div>
-              <span className="font-[family-name:var(--font-mono)] text-[10px] text-forest/50 tracking-widest uppercase tabular-nums">
+              <span className="font-[family-name:var(--font-mono)] text-[10px] text-forest/55 tracking-widest uppercase tabular-nums">
                 {draftCount} scholar{draftCount === 1 ? '' : 's'}
               </span>
             </div>
-            <ol className="space-y-4">
-              {drafts.map((d, idx) => (
-                <DraftCard
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-7">
+              {drafts.map(d => (
+                <DraftTile
                   key={d.id}
-                  rank={idx + 1}
                   draft={d}
                   onOpen={() => navigate(`/editor/${d.id}`)}
                   onDelete={() => handleDeleteDraft(d.id, d.title)}
                 />
               ))}
-            </ol>
+            </div>
           </div>
         )}
 
@@ -267,7 +277,7 @@ export default function Library() {
           <div>
             <div className="flex items-baseline justify-between mb-6 flex-wrap gap-3">
               <div>
-                <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/50 mb-1">
+                <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/55 mb-1">
                   plate {drafts.length > 0 ? 'II' : 'I'} · currently reading
                 </div>
                 <h2 className="font-[family-name:var(--font-display)] text-[32px] text-forest leading-none">
@@ -276,7 +286,7 @@ export default function Library() {
               </div>
               <div className="flex items-center gap-3">
                 {missingCount > 0 && (
-                  <span className="font-[family-name:var(--font-mono)] text-[10px] text-forest/50 tracking-widest uppercase">
+                  <span className="font-[family-name:var(--font-mono)] text-[10px] text-forest/55 tracking-widest uppercase">
                     {missingCount} unresolved
                   </span>
                 )}
@@ -288,18 +298,17 @@ export default function Library() {
                 </button>
               </div>
             </div>
-            <ol className="space-y-4">
-              {savedPapers.map((p, idx) => (
-                <LibraryCard
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-7">
+              {savedPapers.map(p => (
+                <PaperTile
                   key={p.paper_id}
-                  rank={idx + 1}
                   paper={p}
                   clusterId={clusterById[p.paper_id]}
                   clusterLabel={clusterLabels[clusterById[p.paper_id]] ?? ''}
                   onRemove={() => remove(p.paper_id)}
                 />
               ))}
-            </ol>
+            </div>
           </div>
         ) : null}
       </section>
@@ -319,7 +328,7 @@ function EmptyState({ onNew }: { onNew: () => void }) {
       <div className="font-[family-name:var(--font-display)] text-[30px] text-forest/70 leading-tight mb-2">
         nothing on the shelf yet.
       </div>
-      <p className="font-[family-name:var(--font-body)] text-[14px] text-forest/55 max-w-[42ch] mx-auto leading-relaxed">
+      <p className="font-[family-name:var(--font-body)] text-[14px] text-forest/65 max-w-[42ch] mx-auto leading-relaxed">
         Start a new paper, or open one from <Link to="/browse" className="text-forest underline decoration-forest/25 underline-offset-4 hover:decoration-forest/60">the corpus</Link> and tap <span className="text-forest">save</span>.
       </p>
       <div className="mt-7 flex items-center justify-center gap-3 flex-wrap">
@@ -344,7 +353,8 @@ function EmptyState({ onNew }: { onNew: () => void }) {
   )
 }
 
-// ─── Draft card ────────────────────────────────────────────────────────────
+// ─── Helpers ───────────────────────────────────────────────────────────────
+
 function formatRelative(ts: number): string {
   const diff = Date.now() - ts
   if (diff < 60_000) return 'just now'
@@ -357,141 +367,241 @@ function formatRelative(ts: number): string {
   return new Date(ts).toLocaleDateString()
 }
 
-function DraftCard({
-  rank, draft, onOpen, onDelete,
+// Pull a few short paragraph snippets out of a LaTeX source so the thumbnail
+// shows real content rather than placeholder lorem. Strips commands, math,
+// and braces — close enough to plain text for a tiny preview.
+function extractBodyLines(source: string, max = 8): string[] {
+  let body = source
+  const beginIdx = body.search(/\\begin\{document\}/)
+  if (beginIdx !== -1) body = body.slice(beginIdx + '\\begin{document}'.length)
+  const endIdx = body.search(/\\end\{document\}/)
+  if (endIdx !== -1) body = body.slice(0, endIdx)
+
+  body = body
+    .replace(/(^|[^\\])%[^\n]*/g, '$1')
+    .replace(/\\begin\{(equation|align|gather|multline|displaymath|eqnarray|abstract|figure|table|verbatim|lstlisting)\*?\}[\s\S]*?\\end\{\1\*?\}/g, ' ')
+    .replace(/\\\[[\s\S]*?\\\]/g, ' ')
+    .replace(/\$\$[\s\S]*?\$\$/g, ' ')
+    .replace(/\$[^$\n]*\$/g, ' ')
+    .replace(/\\(cite|citep|citet|ref|eqref|label|includegraphics|input|include|usepackage|documentclass|maketitle|today|tableofcontents)\*?(\[[^\]]*\])?(\{[^}]*\})?/g, ' ')
+    .replace(/\\(begin|end)\{[^}]*\}/g, ' ')
+    .replace(/\\[a-zA-Z@]+\*?(\[[^\]]*\])?/g, ' ')
+    .replace(/[{}]/g, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n\s*\n+/g, '\n')
+
+  return body
+    .split(/\n+/)
+    .map(l => l.trim())
+    .filter(Boolean)
+    .slice(0, max)
+}
+
+// ─── Paper-shaped thumbnail used by both tiles ────────────────────────────
+function PaperThumbnail({
+  title,
+  lines,
+  hasFormula = false,
+  hasFigure = false,
+  accent = '#264635',
 }: {
-  rank: number
+  title: string
+  lines: string[]
+  hasFormula?: boolean
+  hasFigure?: boolean
+  accent?: string
+}) {
+  return (
+    <div className="relative aspect-[8.5/11] w-full bg-milk border border-forest/15 rounded-md overflow-hidden shadow-[0_2px_10px_-4px_rgba(38,70,53,0.18)]">
+      {/* margin column accent */}
+      <div className="absolute left-0 top-0 bottom-0 w-[3px]" style={{ background: accent, opacity: 0.55 }} />
+
+      <div className="absolute inset-0 px-3 pt-3 pb-2 font-[family-name:var(--font-cm)] text-forest leading-[1.18]">
+        {/* Mini paper title */}
+        <div className="text-[6.5px] font-medium text-center text-forest/85 line-clamp-2 mb-1.5 leading-snug">
+          {title || 'untitled'}
+        </div>
+
+        {/* Author / abstract divider rule */}
+        <div className="h-px bg-forest/15 my-1" />
+
+        {/* Body lines — real text scaled tiny */}
+        <div className="text-[4px] text-forest/65 leading-[1.45] space-y-[1px]">
+          {lines.length === 0 ? (
+            // Placeholder: 6 dashed lines so empty drafts don't look broken
+            Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-[2px] rounded-sm bg-forest/12"
+                style={{ width: `${65 + ((i * 13) % 32)}%` }}
+              />
+            ))
+          ) : (
+            lines.slice(0, 4).map((l, i) => (
+              <p key={i} className="line-clamp-2 break-words">
+                {l}
+              </p>
+            ))
+          )}
+        </div>
+
+        {hasFormula && (
+          <div className="my-1.5 flex items-center justify-center">
+            <span className="font-[family-name:var(--font-cm)] italic text-[7px] text-forest/70">
+              ∫ ∂x · f(x) dx = ∑ aᵢ
+            </span>
+          </div>
+        )}
+
+        {/* More body */}
+        <div className="text-[4px] text-forest/55 leading-[1.45] space-y-[1px] mt-1">
+          {lines.slice(4, 8).length > 0 ? (
+            lines.slice(4, 8).map((l, i) => (
+              <p key={i} className="line-clamp-2 break-words">
+                {l}
+              </p>
+            ))
+          ) : (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div
+                key={i}
+                className="h-[2px] rounded-sm bg-forest/10"
+                style={{ width: `${55 + ((i * 17) % 38)}%` }}
+              />
+            ))
+          )}
+        </div>
+
+        {hasFigure && (
+          <div className="absolute bottom-3 left-3 right-3 h-7 rounded-sm border border-forest/15 bg-sage/10 flex items-center justify-center">
+            <span className="font-[family-name:var(--font-mono)] text-[5px] text-forest/40 tracking-widest uppercase">fig 1</span>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Draft tile ────────────────────────────────────────────────────────────
+function DraftTile({
+  draft, onOpen, onDelete,
+}: {
   draft: DraftMeta
   onOpen: () => void
   onDelete: () => void
 }) {
+  const source = useMemo(() => readDraftSource(draft.id) ?? '', [draft.id, draft.updatedAt])
+  const lines = useMemo(() => extractBodyLines(source), [source])
+  const hasFormula = useMemo(() => /\\begin\{(equation|align|displaymath)\}|\\\[|\$\$/.test(source), [source])
+  const hasFigure = useMemo(() => /\\begin\{figure\}|\\includegraphics/.test(source), [source])
+
   return (
-    <li
-      onClick={onOpen}
-      className="relative bg-milk border border-forest/15 rounded-2xl pl-7 pr-6 py-5 cursor-pointer group hover:-translate-y-0.5 hover:shadow-[0_14px_30px_-18px_rgba(38,70,53,0.22)] transition-all duration-200"
-    >
-      <span className="absolute left-0 top-4 bottom-4 w-[3px] rounded-r-full bg-forest opacity-80" />
-      <div className="absolute -left-3 -top-3 w-7 h-7 rounded-full bg-cream border border-forest/15 flex items-center justify-center font-[family-name:var(--font-body)] text-[12px] text-forest/70 tabular-nums">
-        {rank}
-      </div>
+    <div className="group relative">
+      <button
+        onClick={onOpen}
+        className="block w-full text-left cursor-pointer focus:outline-none"
+        aria-label={`Open ${draft.title || 'untitled scholar'}`}
+      >
+        <div className="transition-transform duration-200 group-hover:-translate-y-0.5">
+          <PaperThumbnail
+            title={draft.title}
+            lines={lines}
+            hasFormula={hasFormula}
+            hasFigure={hasFigure}
+            accent="#264635"
+          />
+        </div>
 
-      <div className="flex items-baseline gap-3 mb-2 flex-wrap">
-        <span className="inline-flex items-center gap-1.5 font-[family-name:var(--font-mono)] text-[10px] tracking-[0.22em] uppercase text-forest/60">
-          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-5m-1.5-9.5a2.121 2.121 0 113 3L12 17l-4 1 1-4 9.5-9.5z" />
-          </svg>
-          draft
-        </span>
-        <span className="text-forest/20">·</span>
-        <span className="font-[family-name:var(--font-mono)] text-[10px] text-forest/50 uppercase tracking-wider">
-          updated {formatRelative(draft.updatedAt)}
-        </span>
-      </div>
+        <div className="mt-3 px-1">
+          <h4 className="font-[family-name:var(--font-body)] text-[14px] text-forest leading-snug truncate">
+            {draft.title || 'untitled scholar'}
+          </h4>
+          <div className="mt-1 flex items-center gap-1.5 font-[family-name:var(--font-mono)] text-[10px] text-forest/55 tracking-wider">
+            <span className="inline-flex items-center gap-1">
+              <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2v-5m-1.5-9.5a2.121 2.121 0 113 3L12 17l-4 1 1-4 9.5-9.5z" />
+              </svg>
+              draft
+            </span>
+            <span className="text-forest/25">·</span>
+            <span>{formatRelative(draft.updatedAt)}</span>
+          </div>
+        </div>
+      </button>
 
-      <h4 className="font-[family-name:var(--font-display)] text-[22px] text-forest leading-[1.22] mb-1.5 tracking-[-0.005em]">
-        {draft.title || 'untitled scholar'}
-      </h4>
-
-      <div className="mt-4 pt-3 border-t border-forest/12 flex items-center gap-4 flex-wrap font-[family-name:var(--font-mono)] text-[10px] text-forest/55 tracking-wider">
-        <span className="inline-flex items-center gap-1.5">
-          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-          </svg>
-          open in editor
-        </span>
-        <button
-          onClick={e => { e.stopPropagation(); onDelete() }}
-          className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-[family-name:var(--font-mono)] text-[10.5px] tracking-[0.18em] uppercase text-forest/55 hover:text-[#C85544] hover:bg-[#C85544]/10 border border-forest/15 hover:border-[#C85544]/30 transition-colors"
-          title="discard draft"
-        >
-          discard
-        </button>
-        <span className="font-[family-name:var(--font-body)] text-[14px] text-forest/65 group-hover:text-forest transition-colors">
-          resume writing ↗
-        </span>
-      </div>
-    </li>
+      {/* Hover-only discard pill, placed top-right of the thumbnail */}
+      <button
+        onClick={onDelete}
+        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity
+                   px-2 h-6 rounded-full font-[family-name:var(--font-mono)] text-[9px] tracking-[0.18em] uppercase
+                   bg-cream/95 backdrop-blur text-forest/65 hover:text-[#C85544] border border-forest/15 hover:border-[#C85544]/40"
+        title="discard draft"
+      >
+        discard
+      </button>
+    </div>
   )
 }
 
-// ─── Library card ──────────────────────────────────────────────────────────
-function LibraryCard({
-  rank, paper, clusterId, clusterLabel, onRemove,
+// ─── arXiv paper tile ──────────────────────────────────────────────────────
+function PaperTile({
+  paper, clusterId, clusterLabel, onRemove,
 }: {
-  rank: number
   paper: PaperSummary
   clusterId: number | undefined
   clusterLabel: string
   onRemove: () => void
 }) {
   const color = colorFor(clusterId)
+  const lines = useMemo(() => {
+    if (!paper.abstract) return []
+    return paper.abstract.split(/(?<=[.!?])\s+/).slice(0, 6)
+  }, [paper.abstract])
+
   return (
-    <li className="relative bg-milk border border-forest/15 rounded-2xl pl-7 pr-6 py-5 group hover:-translate-y-0.5 hover:shadow-[0_14px_30px_-18px_rgba(38,70,53,0.22)] transition-all duration-200">
-      <span className="absolute left-0 top-4 bottom-4 w-[3px] rounded-r-full" style={{ background: color, opacity: 0.7 }} />
-      <div className="absolute -left-3 -top-3 w-7 h-7 rounded-full bg-cream border border-forest/15 flex items-center justify-center font-[family-name:var(--font-body)] text-[12px] text-forest/70 tabular-nums">
-        {rank}
-      </div>
-
-      <div className="flex items-baseline gap-3 mb-2 flex-wrap">
-        <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.18em] text-forest/55">arXiv:{paper.paper_id}</span>
-        {paper.date && (
-          <>
-            <span className="text-forest/20">·</span>
-            <span className="font-[family-name:var(--font-mono)] text-[10px] text-forest/50 uppercase tracking-wider">{paper.date}</span>
-          </>
-        )}
-        {clusterLabel && (
-          <>
-            <span className="text-forest/20">·</span>
-            <span className="flex items-center gap-1.5 font-[family-name:var(--font-body)] text-[12.5px]" style={{ color }}>
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
-              {clusterLabel}
-            </span>
-          </>
-        )}
-      </div>
-
-      <h4 className="font-[family-name:var(--font-display)] text-[22px] text-forest leading-[1.22] mb-1.5 tracking-[-0.005em]">
-        {paper.title}
-      </h4>
-      {paper.authors.length > 0 && (
-        <div className="font-[family-name:var(--font-mono)] text-[11px] text-forest/55 mb-3 tracking-tight line-clamp-1">
-          {paper.authors.join(' · ')}
+    <div className="group relative">
+      <Link
+        to={`/browse?paper=${encodeURIComponent(paper.paper_id)}`}
+        className="block focus:outline-none"
+        aria-label={`Open ${paper.title} in corpus`}
+      >
+        <div className="transition-transform duration-200 group-hover:-translate-y-0.5">
+          <PaperThumbnail
+            title={paper.title}
+            lines={lines}
+            hasFormula
+            accent={color}
+          />
         </div>
-      )}
-      {paper.abstract && (
-        <p className="font-[family-name:var(--font-body)] text-[14px] text-forest/75 leading-[1.75] line-clamp-3">
-          {paper.abstract}
-        </p>
-      )}
 
-      <div className="mt-4 pt-3 border-t border-forest/12 flex items-center gap-4 flex-wrap">
-        <Link
-          to={`/browse?paper=${encodeURIComponent(paper.paper_id)}`}
-          className="inline-flex items-center gap-1.5 font-[family-name:var(--font-body)] text-[13px] text-forest/75 hover:text-forest"
-        >
-          open in corpus
-          <span>↗</span>
-        </Link>
-        <a
-          href={paper.url || `https://arxiv.org/abs/${paper.paper_id}`}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1.5 font-[family-name:var(--font-mono)] text-[11px] tracking-widest uppercase text-forest/55 hover:text-forest"
-        >
-          <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-          </svg>
-          arXiv
-        </a>
-        <button
-          onClick={onRemove}
-          className="ml-auto inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full font-[family-name:var(--font-mono)] text-[10.5px] tracking-[0.18em] uppercase text-forest/55 hover:text-[#C85544] hover:bg-[#C85544]/10 border border-forest/15 hover:border-[#C85544]/30 transition-colors"
-          title="remove from library"
-        >
-          remove
-        </button>
-      </div>
-    </li>
+        <div className="mt-3 px-1">
+          <h4 className="font-[family-name:var(--font-body)] text-[14px] text-forest leading-snug line-clamp-2">
+            {paper.title}
+          </h4>
+          <div className="mt-1 flex items-center gap-1.5 font-[family-name:var(--font-mono)] text-[10px] text-forest/55 tracking-wider flex-wrap">
+            <span className="inline-flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
+              {clusterLabel || `arXiv:${paper.paper_id}`}
+            </span>
+            {paper.date && (
+              <>
+                <span className="text-forest/25">·</span>
+                <span>{paper.date}</span>
+              </>
+            )}
+          </div>
+        </div>
+      </Link>
+
+      <button
+        onClick={(e) => { e.preventDefault(); onRemove() }}
+        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity
+                   px-2 h-6 rounded-full font-[family-name:var(--font-mono)] text-[9px] tracking-[0.18em] uppercase
+                   bg-cream/95 backdrop-blur text-forest/65 hover:text-[#C85544] border border-forest/15 hover:border-[#C85544]/40"
+        title="remove from library"
+      >
+        remove
+      </button>
+    </div>
   )
 }

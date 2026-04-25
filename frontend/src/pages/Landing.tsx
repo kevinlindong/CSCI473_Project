@@ -28,7 +28,7 @@ function TopBar() {
         <Link to="/" className="flex items-center gap-3 group">
           <LogoLeaf />
           <span className="font-[family-name:var(--font-display)] text-[30px] text-forest leading-none tracking-tight">
-            Scholar
+            scholar
           </span>
         </Link>
 
@@ -96,7 +96,7 @@ function Hero() {
           </h1>
 
           <p className="mt-10 font-[family-name:var(--font-body)] text-[18px] leading-[1.75] text-forest/70 max-w-[46ch]">
-            Scholar is a calm place to write mathematics and read the corpus — a
+            scholar is a calm place to write mathematics and read the corpus — a
             LaTeX editor, a library, and a quiet reading room. No compile step,
             no clutter. Just ink and light.
           </p>
@@ -338,7 +338,7 @@ function SpecimenEq({ label, math }: { label: string; math: string }) {
 
 function Pipeline() {
   const steps = [
-    { n: 'one',   title: 'Draft in LaTeX',    body: 'Type the paper you mean to write. Scholar typesets as you type, no compile step, no warnings.' },
+    { n: 'one',   title: 'Draft in LaTeX',    body: 'Type the paper you mean to write. scholar typesets as you type, no compile step, no warnings.' },
     { n: 'two',   title: 'Ask the corpus',    body: 'Mid-sentence, query the library in plain prose. Every claim returns with its source attached.' },
     { n: 'three', title: 'Fork, merge, read', body: 'Others fork your scholar, open merge requests, leave marginalia. The paper breathes with its readers.' },
   ]
@@ -376,7 +376,7 @@ function Colophon() {
           <div className="max-w-[30ch]">
             <div className="flex items-center gap-3 mb-4">
               <LogoLeaf />
-              <span className="font-[family-name:var(--font-display)] text-[26px] text-parchment leading-none">Scholar</span>
+              <span className="font-[family-name:var(--font-display)] text-[26px] text-parchment leading-none">scholar</span>
             </div>
             <p className="font-[family-name:var(--font-body)] text-[14px] leading-[1.75] text-parchment/60">
               A calm place to write mathematics. Built by scholars for scholars.

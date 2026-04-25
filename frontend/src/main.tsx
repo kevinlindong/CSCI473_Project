@@ -6,7 +6,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { EditorBridgeProvider } from './contexts/EditorBridgeContext'
 import { ThemeProvider } from './contexts/ThemeContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
-import { AIAgentFab } from './components/AIAgentFab'
+import { ScootFab } from './components/ScootFab'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import Landing from './pages/Landing.tsx'
 import Home from './pages/Home.tsx'
@@ -18,7 +18,7 @@ import Library from './pages/Library.tsx'
 import TopicGraph3D from './pages/TopicGraph3D.tsx'
 import Repos from './pages/Repos.tsx'
 import MyRepos from './pages/MyRepos.tsx'
-import Profile from './pages/Profile.tsx'
+import GuestProfile from './pages/GuestProfile.tsx'
 import Diff from './pages/Diff.tsx'
 import Chat from './pages/Chat.tsx'
 import AuraStore from './pages/AuraStore.tsx'
@@ -34,17 +34,21 @@ import HomeV3 from './pages/HomeV3.tsx'
 import HomeV4 from './pages/HomeV4.tsx'
 import HomeV5 from './pages/HomeV5.tsx'
 
-// Renders AIAgentFab on all pages except landing, home (inline chatbox), and login
+// Scoot is shown on every page except landing, login, and the legal pages so
+// the user always has the agent within reach. ⌘K opens it from anywhere.
 function AppShell({ children }: { children: React.ReactNode }) {
   const location = useLocation()
-  const hideOn = new Set(['/', '/home', '/login', '/explore', '/how-it-works', '/browse', '/library', '/topic-graph', '/1', '/2', '/3', '/4', '/5'])
-  const isEditor = location.pathname.startsWith('/editor/')
-  const isLegacyEditor = location.pathname.startsWith('/editor/legacy/')
-  const showFab = !hideOn.has(location.pathname) && (!isEditor || isLegacyEditor)
+  const hideOn = new Set(['/', '/login', '/terms', '/privacy', '/1', '/2', '/3', '/4', '/5'])
+  const showFab = !hideOn.has(location.pathname)
   return (
     <>
-      {children}
-      {showFab && <AIAgentFab bottomClass={isEditor ? 'bottom-12' : 'bottom-6'} />}
+      {/* keyed by pathname so each route mount replays the .page-enter stagger.
+          display:contents keeps the wrapper transparent to layout — pages
+          relying on h-screen on their root still get the viewport. */}
+      <div key={location.pathname} className="page-enter" style={{ display: 'contents' }}>
+        {children}
+      </div>
+      {showFab && <ScootFab />}
     </>
   )
 }
@@ -71,7 +75,7 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/explore" element={<PublicRepos />} />
             <Route path="/repos" element={<ProtectedRoute><Repos /></ProtectedRoute>} />
             <Route path="/my-repos" element={<ProtectedRoute><MyRepos /></ProtectedRoute>} />
-            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/profile" element={<GuestProfile />} />
             <Route path="/diff/:repoId" element={<ProtectedRoute><Diff /></ProtectedRoute>} />
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/terms" element={<TermsOfService />} />

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import JSZip from 'jszip'
 import { Navbar } from '../components/Navbar'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
@@ -10,13 +11,12 @@ import { useTheme, THEMES } from '../contexts/ThemeContext'
 /* Account, appearance, notifications, privacy, and danger zone        */
 /* ------------------------------------------------------------------ */
 
-type Section = 'account' | 'appearance' | 'notifications' | 'privacy' | 'danger'
+type Section = 'account' | 'appearance' | 'notifications' | 'danger'
 
 const sections: { id: Section; label: string; icon: string }[] = [
   { id: 'account', label: 'Account', icon: '◉' },
   { id: 'appearance', label: 'Appearance', icon: '◈' },
   { id: 'notifications', label: 'Notifications', icon: '◎' },
-  { id: 'privacy', label: 'Privacy', icon: '⊕' },
   { id: 'danger', label: 'Danger Zone', icon: '⚠' },
 ]
 
@@ -98,15 +98,8 @@ export default function Settings() {
   // Notifications (persisted in localStorage)
   const [notifyMerges, setNotifyMerges] = useState(() => localStorage.getItem('folio-notify-merges') !== 'false')
   const [notifyComments, setNotifyComments] = useState(() => localStorage.getItem('folio-notify-comments') !== 'false')
-  const [notifyAura, setNotifyAura] = useState(() => localStorage.getItem('folio-notify-aura') === 'true')
   const [notifyDigest, setNotifyDigest] = useState(() => localStorage.getItem('folio-notify-digest') !== 'false')
   const [emailNotifications, setEmailNotifications] = useState(() => localStorage.getItem('folio-notify-email') === 'true')
-
-  // Privacy (persisted in localStorage)
-  const [profilePublic, setProfilePublic] = useState(() => localStorage.getItem('folio-privacy-public') !== 'false')
-  const [activityVisible, setActivityVisible] = useState(() => localStorage.getItem('folio-privacy-activity') !== 'false')
-  const [reposPublicDefault, setReposPublicDefault] = useState(() => localStorage.getItem('folio-privacy-repos-public') === 'true')
-  const [showAura, setShowAura] = useState(() => localStorage.getItem('folio-privacy-aura') !== 'false')
 
   // Sync profile fields when profile loads
   useEffect(() => {
@@ -120,15 +113,8 @@ export default function Settings() {
   // Persist notification prefs
   useEffect(() => { localStorage.setItem('folio-notify-merges', String(notifyMerges)) }, [notifyMerges])
   useEffect(() => { localStorage.setItem('folio-notify-comments', String(notifyComments)) }, [notifyComments])
-  useEffect(() => { localStorage.setItem('folio-notify-aura', String(notifyAura)) }, [notifyAura])
   useEffect(() => { localStorage.setItem('folio-notify-digest', String(notifyDigest)) }, [notifyDigest])
   useEffect(() => { localStorage.setItem('folio-notify-email', String(emailNotifications)) }, [emailNotifications])
-
-  // Persist privacy prefs
-  useEffect(() => { localStorage.setItem('folio-privacy-public', String(profilePublic)) }, [profilePublic])
-  useEffect(() => { localStorage.setItem('folio-privacy-activity', String(activityVisible)) }, [activityVisible])
-  useEffect(() => { localStorage.setItem('folio-privacy-repos-public', String(reposPublicDefault)) }, [reposPublicDefault])
-  useEffect(() => { localStorage.setItem('folio-privacy-aura', String(showAura)) }, [showAura])
 
   async function saveProfile() {
     if (!user) return
@@ -409,35 +395,13 @@ export default function Settings() {
                   <SettingRow label="Comments" description="When someone comments on your noots">
                     <Toggle checked={notifyComments} onChange={setNotifyComments} />
                   </SettingRow>
-                  <SettingRow label="Aura milestones" description="Celebrate aura point milestones">
-                    <Toggle checked={notifyAura} onChange={setNotifyAura} />
-                  </SettingRow>
                   <SettingRow label="Weekly digest" description="Summary of your noot activity">
                     <Toggle checked={notifyDigest} onChange={setNotifyDigest} />
                   </SettingRow>
                   <SettingRow label="Email notifications" description="Send notifications to your registered email">
                     <Toggle checked={emailNotifications} onChange={setEmailNotifications} />
                   </SettingRow>
-                  <p className="font-mono text-[9px] text-forest/20 mt-4">Notification preferences are saved locally.</p>
-                </SectionCard>
-              )}
-
-              {/* ── Privacy ── */}
-              {activeSection === 'privacy' && (
-                <SectionCard title="Privacy">
-                  <SettingRow label="Public profile" description="Anyone can view your profile page">
-                    <Toggle checked={profilePublic} onChange={setProfilePublic} />
-                  </SettingRow>
-                  <SettingRow label="Activity visible" description="Show your contribution graph publicly">
-                    <Toggle checked={activityVisible} onChange={setActivityVisible} />
-                  </SettingRow>
-                  <SettingRow label="Public nootbooks by default" description="New nootbooks are public unless changed">
-                    <Toggle checked={reposPublicDefault} onChange={setReposPublicDefault} />
-                  </SettingRow>
-                  <SettingRow label="Show aura score" description="Display your aura points on your profile">
-                    <Toggle checked={showAura} onChange={setShowAura} />
-                  </SettingRow>
-                  <p className="font-mono text-[9px] text-forest/20 mt-4">Privacy preferences are saved locally.</p>
+                  <p className="font-mono text-[10px] text-forest/45 mt-4">Notification preferences are saved locally.</p>
                 </SectionCard>
               )}
 
@@ -460,26 +424,86 @@ export default function Settings() {
 
 function DangerZone({ onSignOut }: { onSignOut?: () => void }) {
   const [exportLoading, setExportLoading] = useState(false)
+  const [exportMsg, setExportMsg] = useState<string | null>(null)
   const [confirmDeactivate, setConfirmDeactivate] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
 
-  function handleExport() {
+  // Bundle every scholar-local key into a ZIP download. The zip contains
+  // `profile.json` (account/settings/index metadata) plus a `papers/` folder
+  // with one .tex per draft so the source files survive as plain LaTeX even
+  // if the JSON is never re-imported.
+  async function handleExport() {
     setExportLoading(true)
-    // Simulate export (would call a real API in production)
-    setTimeout(() => {
-      const data = {
-        exported_at: new Date().toISOString(),
-        note: 'Full data export would be generated server-side.',
+    setExportMsg(null)
+    try {
+      const draftIndex = JSON.parse(localStorage.getItem('folio_drafts_v1') || '{}') as Record<string, { id: string; title: string; createdAt: number; updatedAt: number }>
+      const drafts = Object.values(draftIndex).map(meta => ({
+        ...meta,
+        source: localStorage.getItem(`folio_draft_src_v1:${meta.id}`) ?? '',
+      }))
+
+      const settings: Record<string, string> = {}
+      const otherLocalStorage: Record<string, string> = {}
+      const knownPrefixes = ['folio-', 'folio_', 'scholar', 'noots-']
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i)
+        if (!key) continue
+        if (key === 'folio_drafts_v1' || key.startsWith('folio_draft_src_v1:')) continue
+        const value = localStorage.getItem(key) ?? ''
+        if (key.startsWith('folio-')) settings[key] = value
+        else if (knownPrefixes.some(p => key.startsWith(p))) otherLocalStorage[key] = value
       }
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+
+      const zip = new JSZip()
+      const usedNames = new Set<string>()
+      const fileMap: Array<{ id: string; title: string; file: string }> = []
+      const papersFolder = zip.folder('papers')!
+      for (const d of drafts) {
+        const safe = (d.title || 'untitled')
+          .replace(/[^\w\s-]/g, '')
+          .replace(/\s+/g, '_')
+          .toLowerCase()
+          .slice(0, 60) || 'untitled'
+        let candidate = `${safe}.tex`
+        let n = 2
+        while (usedNames.has(candidate)) candidate = `${safe}_${n++}.tex`
+        usedNames.add(candidate)
+        papersFolder.file(candidate, d.source)
+        fileMap.push({ id: d.id, title: d.title, file: `papers/${candidate}` })
+      }
+
+      const profile = {
+        exported_at: new Date().toISOString(),
+        version: 2,
+        app: 'scholar',
+        counts: {
+          drafts: drafts.length,
+          settings: Object.keys(settings).length,
+        },
+        drafts: drafts.map(({ source: _src, ...meta }) => meta),
+        papers: fileMap,
+        settings,
+        otherLocalStorage,
+      }
+      zip.file('profile.json', JSON.stringify(profile, null, 2))
+
+      const blob = await zip.generateAsync({ type: 'blob' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
+      const stamp = new Date().toISOString().slice(0, 10)
       a.href = url
-      a.download = 'scholar-export.json'
+      a.download = `scholar-export-${stamp}.zip`
+      document.body.appendChild(a)
       a.click()
+      document.body.removeChild(a)
       URL.revokeObjectURL(url)
+      setExportMsg(`Exported ${drafts.length} paper${drafts.length === 1 ? '' : 's'} + settings.`)
+    } catch (err) {
+      setExportMsg(`Export failed: ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
       setExportLoading(false)
-    }, 800)
+      setTimeout(() => setExportMsg(null), 4000)
+    }
   }
 
   return (
@@ -490,12 +514,17 @@ function DangerZone({ onSignOut }: { onSignOut?: () => void }) {
       <div className="flex items-center justify-between py-5 border-b border-rust/[0.08]">
         <div className="flex-1 pr-8">
           <span className="font-[family-name:var(--font-body)] text-sm text-forest/80 font-medium block">Export all data</span>
-          <span className="font-mono text-[10px] text-forest/30 mt-0.5 block">Download a copy of all your noots, nootbooks, and account data.</span>
+          <span className="font-mono text-[10px] text-forest/45 mt-0.5 block">Download a ZIP with profile.json plus every draft saved as a .tex file.</span>
+          {exportMsg && (
+            <span className={`font-mono text-[10px] mt-1.5 block ${exportMsg.startsWith('Export failed') ? 'text-rust' : 'text-sage-deep'}`}>
+              {exportMsg}
+            </span>
+          )}
         </div>
         <button
           onClick={handleExport}
           disabled={exportLoading}
-          className="font-mono text-[10px] px-4 py-2 squircle-sm border border-forest/15 text-forest/50 hover:border-forest/30 hover:text-forest transition-all cursor-pointer shrink-0 disabled:opacity-50"
+          className="font-mono text-[10px] px-4 py-2 squircle-sm border border-forest/15 text-forest/55 hover:border-forest/40 hover:text-forest transition-all cursor-pointer shrink-0 disabled:opacity-50"
         >
           {exportLoading ? 'Preparing…' : 'Export'}
         </button>

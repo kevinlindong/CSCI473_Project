@@ -1,24 +1,0 @@
-INFO:     Started server process [132921]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
-INFO:     127.0.0.1:55978 - "GET /api/health HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55980 - "GET /api/papers/2601.21511 HTTP/1.1" 200 OK
-INFO:     127.0.0.1:55982 - "GET /api/papers?cluster=19&limit=5 HTTP/1.1" 200 OK
-Loading weights:   0%|          | 0/199 [00:00<?, ?it/s]Loading weights:  43%|████▎     | 86/199 [00:00<00:00, 824.05it/s]Loading weights: 100%|██████████| 199/199 [00:00<00:00, 1152.45it/s]
-[1mMPNetModel LOAD REPORT[0m from: sentence-transformers/all-mpnet-base-v2
-Key                     | Status     |  | 
-------------------------+------------+--+-
-embeddings.position_ids | UNEXPECTED |  | 
-
-Notes:
-- UNEXPECTED:	can be ignored when loading from different task/architecture; not ok if you expect identical arch.
-Batches:   0%|          | 0/1 [00:00<?, ?it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.10it/s]Batches: 100%|██████████| 1/1 [00:00<00:00,  3.10it/s]
-Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights:   0%|          | 1/338 [00:00<01:15,  4.47it/s]Loading weights:  22%|██▏       | 75/338 [00:00<00:00, 283.50it/s]Loading weights:  34%|███▍      | 116/338 [00:00<00:00, 262.88it/s]Loading weights:  44%|████▍     | 150/338 [00:00<00:00, 221.68it/s]Loading weights:  53%|█████▎    | 180/338 [00:00<00:00, 240.39it/s]Loading weights:  62%|██████▏   | 208/338 [00:00<00:00, 204.15it/s]Loading weights:  69%|██████▊   | 232/338 [00:01<00:00, 209.21it/s]Loading weights:  76%|███████▌  | 256/338 [00:01<00:00, 199.28it/s]Loading weights:  86%|████████▌ | 291/338 [00:01<00:00, 193.55it/s]Loading weights:  97%|█████████▋| 327/338 [00:01<00:00, 216.74it/s]Loading weights: 100%|██████████| 338/338 [00:01<00:00, 217.65it/s]
-The following generation flags are not valid and may be ignored: ['temperature', 'top_p', 'top_k']. Set `TRANSFORMERS_VERBOSITY=info` for more details.
-INFO:     127.0.0.1:54810 - "POST /api/query HTTP/1.1" 200 OK
-INFO:     127.0.0.1:47266 - "GET /api/health HTTP/1.1" 200 OK
-INFO:     Shutting down
-INFO:     Waiting for application shutdown.
-INFO:     Application shutdown complete.
-INFO:     Finished server process [132921]

@@ -1,0 +1,76 @@
+\documentclass[11pt]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+
+\title{Deep Residual Learning for Image Classification}
+\author{K. Tanaka \and M. Almeida \and S. Rao}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We revisit residual learning for large-scale image classification. By stacking
+identity-skip blocks, gradients propagate cleanly through networks of more than
+one hundred layers. Our 152-layer model attains $4.49\%$ top-5 error on
+ImageNet validation, narrowing the gap to human-level discrimination on the
+1000-way classification task. We further show that residual depth, not width,
+is the main driver of accuracy in this regime.
+\end{abstract}
+
+\section{Introduction}
+Convolutional networks dominate visual recognition, but training them past
+twenty layers traditionally degrades accuracy --- a symptom of vanishing rather
+than overfitting. The residual reformulation $\mathcal{F}(x) + x$ converts the
+optimisation problem into one of learning a perturbation around the identity.
+This change is mild in expression but dramatic in practice: depth becomes a
+free parameter rather than an obstacle.
+
+\section{Architecture}
+Each residual block contains two $3\times3$ convolutions with batch normalisation
+and a ReLU non-linearity:
+\begin{equation}
+y = \sigma\!\left(\mathrm{BN}(W_2 \, \sigma(\mathrm{BN}(W_1 x))) + x\right).
+\end{equation}
+We downsample with strided convolutions rather than pooling, and project the
+shortcut with a $1\times1$ convolution whenever the channel count changes.
+Bottleneck variants compress the inner representation through a $1\times1$
+$\to 3\times3 \to 1\times1$ stack, trading a slim middle dimension for a wider
+input/output.
+
+\section{Training}
+We train for 90 epochs of SGD with momentum 0.9, weight decay $10^{-4}$, and a
+cosine learning-rate schedule beginning at 0.1. Inputs are resized so the
+shorter side is sampled uniformly from $[256, 480]$, then a $224\times224$
+crop is taken with random horizontal flips. Mixed precision halves wall-clock
+time without measurable accuracy loss.
+
+\section{Results}
+\begin{tabular}{lcc}
+\hline
+Model & Layers & Top-5 Error \\
+\hline
+Plain & 34  & $7.40\%$ \\
+ResNet & 34  & $5.71\%$ \\
+ResNet & 152 & $4.49\%$ \\
+\hline
+\end{tabular}
+
+The plain 34-layer network underperforms its 18-layer counterpart, reproducing
+the degradation phenomenon. The residual variant inverts the trend: deeper is
+strictly better up to the point where memory becomes the binding constraint.
+
+\section{Discussion}
+Skip connections are sometimes characterised as ensemble averaging over
+sub-paths. We instead view them as a conditioning device that keeps the
+Jacobian's spectral radius near unity throughout training. Either lens is
+consistent with the observation that residual depth scales gracefully where
+plain depth does not.
+
+\bibliographystyle{plain}
+\begin{thebibliography}{9}
+\bibitem{he2016deep} K. He et al. \emph{Deep Residual Learning for Image Recognition.} CVPR, 2016.
+\bibitem{ioffe2015batch} S. Ioffe, C. Szegedy. \emph{Batch Normalization.} ICML, 2015.
+\end{thebibliography}
+
+\end{document}

@@ -93,7 +93,7 @@ export default function HomeV3() {
                 <blockquote className="font-[family-name:var(--font-display)] text-xl text-forest/40 leading-snug mb-2">
                   "Knowledge shared is knowledge squared."
                 </blockquote>
-                <span className="font-mono text-[7px] text-forest/20 tracking-[0.3em] uppercase">— The Scholar Manifesto</span>
+                <span className="font-mono text-[7px] text-forest/20 tracking-[0.3em] uppercase">— The scholar Manifesto</span>
               </div>
 
               {/* Stats */}
@@ -109,7 +109,7 @@ export default function HomeV3() {
 
             {/* MAIN — Articles */}
             <div className="col-span-6 px-8">
-              <span className="font-mono text-[7px] text-forest/25 tracking-[0.4em] uppercase block mb-4">Featured Scholar</span>
+              <span className="font-mono text-[7px] text-forest/25 tracking-[0.4em] uppercase block mb-4">Featured scholar</span>
 
               {ARTICLES.map((article, i) => (
                 <article

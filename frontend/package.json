@@ -12,6 +12,7 @@
     "@supabase/supabase-js": "^2.97.0",
     "@xyflow/react": "^12.10.1",
     "framer-motion": "^12.34.3",
+    "jszip": "^3.10.1",
     "katex": "^0.16.21",
     "mermaid": "^11.12.3",
     "react": "^19.0.0",

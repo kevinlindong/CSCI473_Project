@@ -118,7 +118,7 @@ export default function Home() {
 
       <footer className="max-w-5xl mx-auto px-8 pb-14 pt-10">
         <div className="flex items-center justify-between flex-wrap gap-4 text-[11px] font-[family-name:var(--font-mono)] tracking-[0.22em] uppercase text-forest/40">
-          <span>Scholar · the study</span>
+          <span>scholar · the study</span>
           <span>set in Gamja Flower, Venus &amp; JetBrains Mono</span>
         </div>
       </footer>

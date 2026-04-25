@@ -18,8 +18,18 @@ def load_reranker(model_name: str = "cross-encoder/ms-marco-MiniLM-L-6-v2"):
     Lazy-imports sentence_transformers so callers that pass `model=...` to
     rerank() never pay the torch import cost.
     """
+    import torch
     from sentence_transformers import CrossEncoder
-    return CrossEncoder(model_name)
+    # Device cascade mirrors src/llm.py. Keep fp32 (default) — model is
+    # ~22M params so fp16 memory savings don't matter, and MPS+fp16 has
+    # numerical quirks on small attention heads.
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif getattr(torch.backends, "mps", None) and torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
+    return CrossEncoder(model_name, device=device)
 
 
 def rerank(query: str, passages: list[str], model=None) -> list[tuple[str, float]]:
