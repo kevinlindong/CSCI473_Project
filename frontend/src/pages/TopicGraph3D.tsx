@@ -96,7 +96,7 @@ export default function TopicGraph3D() {
   // cluster isolates it alongside any already-isolated ones, so users can pull
   // several constellations into the same view.
   const [isolatedClusters, setIsolatedClusters] = useState<Set<number>>(new Set())
-  const isolationActive = isolatedClusters.size > 0
+  const [queryConstellationActive, setQueryConstellationActive] = useState(false)
   const toggleIsolateCluster = useCallback((id: number) => {
     setIsolatedClusters(prev => {
       const next = new Set(prev)
@@ -143,10 +143,22 @@ export default function TopicGraph3D() {
     return () => clearTimeout(h)
   }, [query])
 
+  // ── Constellation isolation: query node + its top-k neighbors ──
+  // Auto-cleared when the query is empty so a stale toggle can't leave the
+  // sidebar in an "active" state with no neighbors to show.
+  const queryConstellationIds = useMemo(() => {
+    if (!queryConstellationActive || !projection) return null
+    const set = new Set<string>([QUERY_NODE_ID])
+    for (const nb of projection.neighbors) set.add(nb.paper_id)
+    return set
+  }, [queryConstellationActive, projection])
+  const isolationActive = isolatedClusters.size > 0 || queryConstellationIds !== null
+
   // ── Project query into the corpus ──
   useEffect(() => {
     if (!debouncedQuery) {
       setProjection(null)
+      setQueryConstellationActive(false)
       return
     }
     const controller = new AbortController()
@@ -222,14 +234,30 @@ export default function TopicGraph3D() {
     }
 
     if (projection && projection.neighbors.length > 0) {
-      nodes.push({
+      // Place the query node at the centroid of its top-k neighbors' coords.
+      // Without this it falls back to (0,0,0) in CustomGraph3D, which is far
+      // outside the UMAP cloud bbox and leaves the query visually detached.
+      let cx = 0, cy = 0, cz = 0, count = 0
+      for (const nb of projection.neighbors) {
+        const node = nodes.find(n => n.paper_id === nb.paper_id)
+        if (node?.x !== undefined && node.y !== undefined && node.z !== undefined) {
+          cx += node.x; cy += node.y; cz += node.z; count++
+        }
+      }
+      const queryNode: VizNode = {
         paper_id: QUERY_NODE_ID,
         id: QUERY_NODE_ID,
         title: projection.query,
         cluster: -1,
         color: QUERY_COLOR,
         isQuery: true,
-      })
+      }
+      if (count > 0) {
+        queryNode.x = cx / count
+        queryNode.y = cy / count
+        queryNode.z = cz / count
+      }
+      nodes.push(queryNode)
       for (const nb of projection.neighbors) {
         links.push({
           source: QUERY_NODE_ID,
@@ -277,8 +305,9 @@ export default function TopicGraph3D() {
     const color = nn.color
     if (!isolationActive) return color
     if (nn.isQuery) return color
+    if (queryConstellationIds && queryConstellationIds.has(nn.id)) return color
     return isolatedClusters.has(nn.cluster) ? color : '#2a2f36'
-  }, [isolationActive, isolatedClusters])
+  }, [isolationActive, isolatedClusters, queryConstellationIds])
 
   const nodeLabelMemo = useCallback((n: object) => {
     const nn = n as VizNode
@@ -290,8 +319,10 @@ export default function TopicGraph3D() {
   const nodeVisibilityMemo = useCallback((n: object) => {
     const nn = n as VizNode
     if (!isolationActive) return true
-    return nn.isQuery || isolatedClusters.has(nn.cluster)
-  }, [isolationActive, isolatedClusters])
+    if (nn.isQuery) return true
+    if (queryConstellationIds && queryConstellationIds.has(nn.id)) return true
+    return isolatedClusters.has(nn.cluster)
+  }, [isolationActive, isolatedClusters, queryConstellationIds])
 
   const linkVisibilityMemo = useCallback((l: object) => {
     if (!isolationActive) return true
@@ -301,12 +332,15 @@ export default function TopicGraph3D() {
     const t = typeof ll.target === 'object' ? (ll.target as VizNode).id : ll.target
     const srcNode = idToNode.get(s)
     const tgtNode = idToNode.get(t)
-    return (
-      srcNode != null && tgtNode != null &&
-      isolatedClusters.has(srcNode.cluster) &&
-      isolatedClusters.has(tgtNode.cluster)
-    )
-  }, [isolationActive, isolatedClusters, idToNode])
+    if (srcNode == null || tgtNode == null) return false
+    const srcInScope =
+      isolatedClusters.has(srcNode.cluster) ||
+      (queryConstellationIds != null && queryConstellationIds.has(srcNode.id))
+    const tgtInScope =
+      isolatedClusters.has(tgtNode.cluster) ||
+      (queryConstellationIds != null && queryConstellationIds.has(tgtNode.id))
+    return srcInScope && tgtInScope
+  }, [isolationActive, isolatedClusters, queryConstellationIds, idToNode])
 
   // Hover-dependent callbacks. We do still depend on [hovered, selected]
   // (changes on every mouseover of a different node), but at least these
@@ -532,18 +566,50 @@ export default function TopicGraph3D() {
           <div className="text-[10px] tracking-widest uppercase opacity-60">
             clusters
             {isolationActive && (
-              <span className="ml-2 opacity-70 tabular-nums">· {isolatedClusters.size} pinned</span>
+              <span className="ml-2 opacity-70 tabular-nums">
+                · {isolatedClusters.size + (queryConstellationActive ? 1 : 0)} pinned
+              </span>
             )}
           </div>
           {isolationActive && (
             <button
-              onClick={() => setIsolatedClusters(new Set())}
+              onClick={() => {
+                setIsolatedClusters(new Set())
+                setQueryConstellationActive(false)
+              }}
               className="text-[10px] tracking-wider uppercase opacity-60 hover:opacity-100 underline"
             >
               show all
             </button>
           )}
         </div>
+        {projection && projection.neighbors.length > 0 && (
+          <div className="mb-2">
+            <div
+              onClick={() => setQueryConstellationActive(v => !v)}
+              className={`group flex items-start gap-2 text-sm px-2 py-1.5 rounded-md cursor-pointer transition-colors ${
+                queryConstellationActive
+                  ? 'bg-white/10'
+                  : isolationActive
+                    ? 'opacity-45 hover:opacity-70'
+                    : 'hover:bg-white/5'
+              }`}
+            >
+              <span
+                className="w-3 h-3 rounded-full mt-1.5 shrink-0"
+                style={{ background: QUERY_COLOR }}
+              />
+              <div className="flex-1 min-w-0">
+                <div className="truncate" title={projection.query}>
+                  your query — “{projection.query}”
+                </div>
+                <div className="text-[10px] opacity-55 mt-0.5">
+                  {projection.neighbors.length} neighbors
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         <ul className="space-y-1">
           {data.clusters.map(c => (
             <LegendRow

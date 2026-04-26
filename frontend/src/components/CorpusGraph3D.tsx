@@ -150,14 +150,30 @@ export default function CorpusGraph3D({
 
     const hasQuery = queryText.trim().length > 0 && queryNeighbors && queryNeighbors.length > 0
     if (hasQuery) {
-      vizNodes.push({
+      // Place the query node at the centroid of its top-k neighbors' coords.
+      // Without this it falls back to (0,0,0) in CustomGraph3D, which is far
+      // outside the UMAP cloud bbox and leaves the query visually detached.
+      let cx = 0, cy = 0, cz = 0, count = 0
+      for (const nb of queryNeighbors!) {
+        const node = vizNodes.find(n => n.paper_id === nb.paper_id)
+        if (node?.x !== undefined && node.y !== undefined && node.z !== undefined) {
+          cx += node.x; cy += node.y; cz += node.z; count++
+        }
+      }
+      const queryNode: VizNode = {
         paper_id: QUERY_NODE_ID,
         id: QUERY_NODE_ID,
         title: queryText,
         cluster: -1,
         color: QUERY_COLOR,
         isQuery: true,
-      })
+      }
+      if (count > 0) {
+        queryNode.x = cx / count
+        queryNode.y = cy / count
+        queryNode.z = cz / count
+      }
+      vizNodes.push(queryNode)
       for (const nb of queryNeighbors!) {
         vizLinks.push({
           source: QUERY_NODE_ID,
