@@ -120,8 +120,15 @@ export default function PaperBrowse() {
   // filters / selection
   // Multi-select cluster filter. Empty set = "all". Clicking a chip toggles it.
   const [activeClusters, setActiveClusters] = useState<Set<number>>(new Set())
+  const [queryConstellationActive, setQueryConstellationActive] = useState(false)
   const [selectedPaperId, setSelectedPaperId] = useState<string | null>(null)
   const [page, setPage] = useState(0)
+
+  // Auto-clear constellation isolation if the query/neighbors disappear so the
+  // toggle can't sit "active" with nothing to show.
+  useEffect(() => {
+    if (!neighbors || neighbors.length === 0) setQueryConstellationActive(false)
+  }, [neighbors])
 
   const toggleCluster = useCallback((id: number) => {
     setActiveClusters(prev => {
@@ -521,6 +528,13 @@ export default function PaperBrowse() {
                 : 'loading constellations…'}
             </p>
 
+            <QueryConstellationCard
+              query={debouncedQuery.trim()}
+              neighborCount={neighbors?.length ?? 0}
+              active={queryConstellationActive}
+              onToggle={() => setQueryConstellationActive(v => !v)}
+            />
+
             <ClusterLegend
               clusters={clusters}
               active={activeClusters}
@@ -554,6 +568,7 @@ export default function PaperBrowse() {
               selectedPaperId={selectedPaperId}
               queryText={debouncedQuery}
               queryNeighbors={neighbors}
+              queryConstellationActive={queryConstellationActive}
               clusterColor={clusterColor}
               clusterLabel={id => clusters.find(c => c.id === id)?.label ?? ''}
               onSelectPaper={setSelectedPaperId}
@@ -749,6 +764,79 @@ function Masthead({ papers, clusters }: { papers: number; clusters: number }) {
         </div>
       </div>
     </header>
+  )
+}
+
+// ─── Query constellation card ──────────────────────────────────────────────
+// Surfaces the virtual query node + its top-k neighbors as a separate
+// togglable scope alongside the cluster filter. Empty state explains the
+// feature so it's discoverable before the user has searched.
+function QueryConstellationCard({
+  query, neighborCount, active, onToggle,
+}: {
+  query: string
+  neighborCount: number
+  active: boolean
+  onToggle: () => void
+}) {
+  const QUERY_COLOR = '#7F9267'
+  const hasQuery = query.length > 0 && neighborCount > 0
+  return (
+    <div className="mb-5">
+      <div className="flex items-baseline justify-between mb-2">
+        <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/50">
+          query constellation
+        </div>
+        {active && (
+          <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.24em] uppercase text-forest/60">
+            active
+          </span>
+        )}
+      </div>
+      {hasQuery ? (
+        <button
+          onClick={onToggle}
+          aria-pressed={active}
+          className={`w-full text-left border rounded-2xl px-5 py-3 flex items-center gap-3 transition-colors ${
+            active
+              ? 'bg-sage/15 border-forest/30'
+              : 'bg-milk border-forest/15 hover:bg-sage/10'
+          }`}
+        >
+          <span
+            className={`w-4 h-4 rounded-full shrink-0 flex items-center justify-center border transition-colors ${
+              active ? 'border-forest/40' : 'border-forest/15'
+            }`}
+            style={{ background: active ? QUERY_COLOR : 'transparent' }}
+          >
+            {!active && (
+              <span className="w-2 h-2 rounded-full" style={{ background: QUERY_COLOR }} />
+            )}
+            {active && (
+              <svg className="w-2.5 h-2.5 text-parchment" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            )}
+          </span>
+          <div className="flex-1 min-w-0">
+            <div className="font-[family-name:var(--font-body)] text-[13.5px] text-forest leading-snug truncate">
+              “{query}”
+            </div>
+            <div className="font-[family-name:var(--font-mono)] text-[10px] text-forest/55 tabular-nums mt-1">
+              {neighborCount} neighbors · click to {active ? 'release' : 'isolate'}
+            </div>
+          </div>
+        </button>
+      ) : (
+        <div className="border border-dashed border-forest/20 rounded-2xl px-5 py-4 bg-milk">
+          <div className="font-[family-name:var(--font-body)] text-[13px] text-forest/55 leading-relaxed">
+            type a search above to project your query onto the field. then
+            isolate it here to see only the query node and its nearest
+            neighbors.
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 

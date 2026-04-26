@@ -68,6 +68,7 @@ export default function CorpusGraph3D({
   selectedPaperId,
   queryText,
   queryNeighbors,
+  queryConstellationActive = false,
   clusterColor,
   clusterLabel,
   onSelectPaper,
@@ -80,12 +81,19 @@ export default function CorpusGraph3D({
   selectedPaperId: string | null
   queryText: string
   queryNeighbors: CorpusGraphNeighbor[] | null
+  queryConstellationActive?: boolean
   clusterColor: (id: number) => string
   clusterLabel: (id: number) => string
   onSelectPaper: (paperId: string) => void
   height?: number
 }) {
-  const isolationActive = activeClusters.size > 0
+  const queryConstellationIds = useMemo(() => {
+    if (!queryConstellationActive || !queryNeighbors || queryNeighbors.length === 0) return null
+    const set = new Set<string>([QUERY_NODE_ID])
+    for (const nb of queryNeighbors) set.add(nb.paper_id)
+    return set
+  }, [queryConstellationActive, queryNeighbors])
+  const isolationActive = activeClusters.size > 0 || queryConstellationIds !== null
   const soloCluster = activeClusters.size === 1
     ? (activeClusters.values().next().value as number)
     : null
@@ -213,8 +221,9 @@ export default function CorpusGraph3D({
     const nn = n as VizNode
     if (nn.isQuery) return nn.color
     if (!isolationActive) return nn.color
+    if (queryConstellationIds && queryConstellationIds.has(nn.id)) return nn.color
     return activeClusters.has(nn.cluster) ? nn.color : DIM_NODE
-  }, [isolationActive, activeClusters])
+  }, [isolationActive, activeClusters, queryConstellationIds])
 
   const nodeLabelMemo = useCallback((n: object) => {
     const nn = n as VizNode
@@ -225,8 +234,10 @@ export default function CorpusGraph3D({
   const nodeVisibilityMemo = useCallback((n: object) => {
     const nn = n as VizNode
     if (!isolationActive) return true
-    return nn.isQuery || activeClusters.has(nn.cluster)
-  }, [isolationActive, activeClusters])
+    if (nn.isQuery) return true
+    if (queryConstellationIds && queryConstellationIds.has(nn.id)) return true
+    return activeClusters.has(nn.cluster)
+  }, [isolationActive, activeClusters, queryConstellationIds])
 
   const linkVisibilityMemo = useCallback((l: object) => {
     if (!isolationActive) return true
@@ -236,10 +247,15 @@ export default function CorpusGraph3D({
     const t = typeof ll.target === 'object' ? (ll.target as VizNode).id : ll.target
     const sNode = idToNode.get(s)
     const tNode = idToNode.get(t)
-    return !!sNode && !!tNode
-      && activeClusters.has(sNode.cluster)
-      && activeClusters.has(tNode.cluster)
-  }, [isolationActive, activeClusters, idToNode])
+    if (!sNode || !tNode) return false
+    const sInScope =
+      activeClusters.has(sNode.cluster) ||
+      (queryConstellationIds != null && queryConstellationIds.has(sNode.id))
+    const tInScope =
+      activeClusters.has(tNode.cluster) ||
+      (queryConstellationIds != null && queryConstellationIds.has(tNode.id))
+    return sInScope && tInScope
+  }, [isolationActive, activeClusters, queryConstellationIds, idToNode])
 
   // Hover-dependent callbacks. They still regen on hover/select changes
   // (unavoidable for visual updates), but no longer regen for unrelated

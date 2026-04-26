@@ -560,9 +560,49 @@ export default function TopicGraph3D() {
         )}
       </div>
 
-      {/* ── Sidebar: cluster legend with filter + rename ──────────── */}
+      {/* ── Sidebar: query constellation + cluster legend ─────────── */}
       <aside className="w-full md:w-80 shrink-0 border-t md:border-t-0 md:border-l border-white/10 bg-neutral-950 p-4 overflow-y-auto">
         <div className="flex items-center justify-between mb-3">
+          <div className="text-[10px] tracking-widest uppercase opacity-60">
+            query constellation
+            {queryConstellationActive && (
+              <span className="ml-2 opacity-70">· active</span>
+            )}
+          </div>
+        </div>
+        {projection && projection.neighbors.length > 0 ? (
+          <div
+            onClick={() => setQueryConstellationActive(v => !v)}
+            className={`group flex items-start gap-2 text-sm px-2 py-1.5 rounded-md cursor-pointer transition-colors ${
+              queryConstellationActive
+                ? 'bg-white/10'
+                : isolationActive
+                  ? 'opacity-45 hover:opacity-70'
+                  : 'hover:bg-white/5'
+            }`}
+          >
+            <span
+              className="w-3 h-3 rounded-full mt-1.5 shrink-0"
+              style={{ background: QUERY_COLOR }}
+            />
+            <div className="flex-1 min-w-0">
+              <div className="truncate" title={projection.query}>
+                “{projection.query}”
+              </div>
+              <div className="text-[10px] opacity-55 mt-0.5">
+                {projection.neighbors.length} neighbors · click to {queryConstellationActive ? 'release' : 'isolate'}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="text-[11px] opacity-45 leading-relaxed px-2 py-1.5">
+            Type a query in the search box to project it onto the graph. The
+            query node + its top-{QUERY_NEIGHBORS} nearest abstracts can then
+            be isolated here.
+          </div>
+        )}
+
+        <div className="mt-6 mb-3 flex items-center justify-between">
           <div className="text-[10px] tracking-widest uppercase opacity-60">
             clusters
             {isolationActive && (
@@ -583,33 +623,6 @@ export default function TopicGraph3D() {
             </button>
           )}
         </div>
-        {projection && projection.neighbors.length > 0 && (
-          <div className="mb-2">
-            <div
-              onClick={() => setQueryConstellationActive(v => !v)}
-              className={`group flex items-start gap-2 text-sm px-2 py-1.5 rounded-md cursor-pointer transition-colors ${
-                queryConstellationActive
-                  ? 'bg-white/10'
-                  : isolationActive
-                    ? 'opacity-45 hover:opacity-70'
-                    : 'hover:bg-white/5'
-              }`}
-            >
-              <span
-                className="w-3 h-3 rounded-full mt-1.5 shrink-0"
-                style={{ background: QUERY_COLOR }}
-              />
-              <div className="flex-1 min-w-0">
-                <div className="truncate" title={projection.query}>
-                  your query — “{projection.query}”
-                </div>
-                <div className="text-[10px] opacity-55 mt-0.5">
-                  {projection.neighbors.length} neighbors
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
         <ul className="space-y-1">
           {data.clusters.map(c => (
             <LegendRow
