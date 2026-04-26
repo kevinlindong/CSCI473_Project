@@ -300,13 +300,22 @@ _HALLUCINATED_TAG_RE = re.compile(
     re.IGNORECASE,
 )
 _OPEN_INTENT_RE = re.compile(
-    r"^\s*(?:please\s+|can\s+you\s+|could\s+you\s+)?"
-    r"(?:open|load|show|pull\s+up|bring\s+up)\s+"
-    r"(?:my\s+|the\s+)?"
+    r"^\s*(?:please\s+|can\s+you\s+|could\s+you\s+|hey\s+)?"
+    # Verbs that mean "find and open". `find` and `look\s+(?:for|up)` get
+    # disambiguated below — they only count as open-intent when the object
+    # of the search is a draft/paper noun. "find papers about contrastive
+    # learning" goes to corpus search instead via _SEARCH_INTENT_RE.
+    r"(?:open|load|show(?:\s+me)?|pull\s+up|bring\s+up|"
+    r"find(?:\s+me)?|locate|look\s+(?:for|up)|"
+    r"go\s+to|jump\s+to|switch\s+to|navigate\s+to|"
+    r"where(?:'s|\s+is)|"
+    r"i\s+want\s+(?:to\s+open\s+|to\s+see\s+)?|"
+    r"let'?s\s+(?:open\s+|look\s+at\s+|see\s+))\s+"
+    r"(?:my\s+|the\s+|that\s+|a\s+|an\s+)?"
     r"(.+?)"
     # Trailing noun phrase like "paper", "research paper", "draft", etc. — stripped.
     r"(?:\s+(?:research|academic|conference|journal|seminar|review)\s+(?:paper|draft|document|file|article|manuscript|thesis))?"
-    r"(?:\s+(?:paper|draft|document|file|article|manuscript|thesis))?"
+    r"(?:\s+(?:paper|draft|document|file|article|manuscript|thesis|note|notebook))?"
     r"\s*[\.\?!]*\s*$",
     re.IGNORECASE,
 )
@@ -442,19 +451,21 @@ def _postprocess_scoot_reply(reply: str, user_message: str) -> str:
     search_match = _SEARCH_INTENT_RE.match(user_message)
     position = _detect_position(user_message)
 
+    # Corpus-search intent fires first: phrases like "find papers about X"
+    # also match the open-paper regex (since it now accepts "find"), and
+    # corpus search is the more specific reading.
+    if search_match and not _has_action_tag(reply):
+        query = search_match.group(1).strip().strip('"\'')
+        if query:
+            return f"[SEARCH_CORPUS]{query}[/SEARCH_CORPUS]"
+
     # Open-paper intent — derive the title directly from the user message.
     # The model frequently hallucinates tags here, so prefer the user's words.
     if open_match and not _has_action_tag(reply):
         title = open_match.group(1).strip().strip('"\'')
         # Ignore overly generic targets like "draft" or "paper" alone.
-        if title and title.lower() not in {"draft", "paper", "document", "file"}:
+        if title and title.lower() not in {"draft", "paper", "document", "file", "note", "notes"}:
             return f"[OPEN_DRAFT]{title}[/OPEN_DRAFT]"
-
-    # Corpus-search intent — likewise prefer the user's stated query.
-    if search_match and not _has_action_tag(reply):
-        query = search_match.group(1).strip().strip('"\'')
-        if query:
-            return f"[SEARCH_CORPUS]{query}[/SEARCH_CORPUS]"
 
     # When the user's intent is to insert LaTeX, prefer producing a clean
     # INSERT_BLOCK type="latex" tag from raw LaTeX in the reply — even if the
