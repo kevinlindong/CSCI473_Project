@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import ForceGraph3D, { type ForceGraphMethods } from 'react-force-graph-3d'
-import { useAmbientDrift } from '../hooks/useAmbientDrift'
+import CustomGraph3D, { type CustomGraphMethods } from './CustomGraph3D'
 
 /* ==========================================================================
    CorpusGraph3D — themed botanical 3D topic graph for the corpus page.
@@ -91,7 +90,7 @@ export default function CorpusGraph3D({
     ? (activeClusters.values().next().value as number)
     : null
   const containerRef = useRef<HTMLDivElement>(null)
-  const fgRef = useRef<ForceGraphMethods | undefined>(undefined)
+  const fgRef = useRef<CustomGraphMethods | null>(null)
   const [size, setSize] = useState({ w: 800, h: height })
   const [hovered, setHovered] = useState<VizNode | null>(null)
 
@@ -108,14 +107,23 @@ export default function CorpusGraph3D({
   }, [])
 
   // ── Build graph data ─────────────────────────────────────────────────────
+  // UMAP coords land in a ~7–8 unit span; node spheres render at radius ~5,
+  // so without scaling every node overlaps every other. Multiply by
+  // COORD_SCALE to match the extent d3-force-3d would produce naturally for
+  // 10k nodes (~hundreds of units), and so ambient-drift amplitude (0.5% of
+  // span) becomes a visible fraction of a node radius.
+  const COORD_SCALE = 100
   const graphData = useMemo(() => {
     const vizNodes: VizNode[] = nodes.map(n => ({
       ...n,
       id: n.paper_id,
       color: clusterColor(n.cluster),
+      x: n.x !== undefined ? n.x * COORD_SCALE : undefined,
+      y: n.y !== undefined ? n.y * COORD_SCALE : undefined,
+      z: n.z !== undefined ? n.z * COORD_SCALE : undefined,
     }))
 
-    const vizLinks: VizLink[] = edges
+    const allLinks: VizLink[] = edges
       .map(e => {
         const src = nodes[e.source]?.paper_id
         const tgt = nodes[e.target]?.paper_id
@@ -123,6 +131,22 @@ export default function CorpusGraph3D({
         return { source: src, target: tgt, weight: e.weight }
       })
       .filter((l): l is VizLink => l !== null)
+
+    // Cap edges to top-K per node (strongest weights first). Cuts ~62k →
+    // ~20k segments, keeps each node's strongest neighbours, and drops the
+    // GPU rasterization cost during rotate/zoom by a factor of ~3.
+    const PER_NODE_CAP = 3
+    const adjCount = new Map<string, number>()
+    const sortedAll = allLinks.slice().sort((a, b) => b.weight - a.weight)
+    const vizLinks: VizLink[] = []
+    for (const l of sortedAll) {
+      const a = adjCount.get(l.source) ?? 0
+      const b = adjCount.get(l.target) ?? 0
+      if (a >= PER_NODE_CAP && b >= PER_NODE_CAP) continue
+      adjCount.set(l.source, a + 1)
+      adjCount.set(l.target, b + 1)
+      vizLinks.push(l)
+    }
 
     const hasQuery = queryText.trim().length > 0 && queryNeighbors && queryNeighbors.length > 0
     if (hasQuery) {
@@ -147,9 +171,6 @@ export default function CorpusGraph3D({
     return { nodes: vizNodes, links: vizLinks }
   }, [nodes, edges, queryText, queryNeighbors, clusterColor])
 
-  // ── Ambient sine-wave drift over UMAP positions (no client-side sim) ─────
-  useAmbientDrift(fgRef as React.MutableRefObject<ForceGraphMethods | undefined>, graphData)
-
   // ── Adjacency for hover highlights ──────────────────────────────────────
   const adjacency = useMemo(() => {
     const m = new Map<string, Set<string>>()
@@ -162,14 +183,100 @@ export default function CorpusGraph3D({
     return m
   }, [graphData.links])
 
+  // ── id → node map for O(1) edge endpoint resolution ──────────────────────
+  const idToNode = useMemo(() => {
+    const m = new Map<string, VizNode>()
+    for (const n of graphData.nodes) m.set(n.id, n)
+    return m
+  }, [graphData.nodes])
+
+  // ── Memoized callback props (stable identity across hover/select state
+  //    changes; prevents react-force-graph from triggering full callback
+  //    re-evaluation passes on every React re-render).
+  const nodeColorMemo = useCallback((n: object) => {
+    const nn = n as VizNode
+    if (nn.isQuery) return nn.color
+    if (!isolationActive) return nn.color
+    return activeClusters.has(nn.cluster) ? nn.color : DIM_NODE
+  }, [isolationActive, activeClusters])
+
+  const nodeLabelMemo = useCallback((n: object) => {
+    const nn = n as VizNode
+    if (nn.isQuery) return `your query — "${nn.title}"`
+    return `${nn.title}\n— ${clusterLabel(nn.cluster) || `cluster ${nn.cluster}`}`
+  }, [clusterLabel])
+
+  const nodeVisibilityMemo = useCallback((n: object) => {
+    const nn = n as VizNode
+    if (!isolationActive) return true
+    return nn.isQuery || activeClusters.has(nn.cluster)
+  }, [isolationActive, activeClusters])
+
+  const linkVisibilityMemo = useCallback((l: object) => {
+    if (!isolationActive) return true
+    const ll = l as VizLink
+    if (ll.isQueryEdge) return true
+    const s = typeof ll.source === 'object' ? (ll.source as VizNode).id : ll.source
+    const t = typeof ll.target === 'object' ? (ll.target as VizNode).id : ll.target
+    const sNode = idToNode.get(s)
+    const tNode = idToNode.get(t)
+    return !!sNode && !!tNode
+      && activeClusters.has(sNode.cluster)
+      && activeClusters.has(tNode.cluster)
+  }, [isolationActive, activeClusters, idToNode])
+
+  // Hover-dependent callbacks. They still regen on hover/select changes
+  // (unavoidable for visual updates), but no longer regen for unrelated
+  // state changes (resize, query input, isolation, etc.).
+  const nodeValMemo = useCallback((n: object) => {
+    const nn = n as VizNode
+    if (nn.isQuery) return 14
+    if (selectedPaperId && nn.id === selectedPaperId) return 4.5
+    if (hovered && nn.id === hovered.id) return 3.2
+    return 1.6
+  }, [selectedPaperId, hovered])
+
+  const linkColorMemo = useCallback((l: object) => {
+    const ll = l as VizLink
+    if (ll.isQueryEdge) return QUERY_COLOR
+    if (hovered) {
+      const s = typeof ll.source === 'object' ? (ll.source as VizNode).id : ll.source
+      const t = typeof ll.target === 'object' ? (ll.target as VizNode).id : ll.target
+      if (s === hovered.id || t === hovered.id) return EDGE_HOVER
+    }
+    return EDGE_COLOR
+  }, [hovered])
+
+  const linkWidthMemo = useCallback((l: object) => {
+    const ll = l as VizLink
+    if (ll.isQueryEdge) return 1.8
+    if (hovered) {
+      const s = typeof ll.source === 'object' ? (ll.source as VizNode).id : ll.source
+      const t = typeof ll.target === 'object' ? (ll.target as VizNode).id : ll.target
+      if (s === hovered.id || t === hovered.id) return 1.1
+    }
+    return Math.max(0.25, (ll.weight ?? 0) * 0.7)
+  }, [hovered])
+
+  const linkParticlesMemo = useCallback(
+    (l: object) => ((l as VizLink).isQueryEdge ? 2 : 0),
+    []
+  )
+
+  // CustomGraph3D handles drag-aware hover suppression + dynamic DPR
+  // internally — no per-page wiring needed.
+  const onNodeHover = useCallback((n: object | null) => {
+    setHovered(n as VizNode | null)
+  }, [])
+
   // ── Focus the camera on the query node when it first appears ───────────
   useEffect(() => {
     if (!queryNeighbors || queryNeighbors.length === 0 || !fgRef.current) return
     const fg = fgRef.current
     const t = setTimeout(() => {
-      const nodeObj = (fg as unknown as { graphData: () => { nodes: Array<VizNode & { x?: number; y?: number; z?: number }> } })
-        .graphData()
-        ?.nodes.find(n => n.id === QUERY_NODE_ID)
+      const nodeObj = fg.graphData().nodes.find(n => n.id === QUERY_NODE_ID) as
+        | (VizNode & { x?: number; y?: number; z?: number })
+        | undefined
       if (nodeObj && typeof nodeObj.x === 'number') {
         const distance = 180
         const dist = Math.hypot(nodeObj.x, nodeObj.y!, nodeObj.z!) || 1
@@ -179,7 +286,7 @@ export default function CorpusGraph3D({
             y: (nodeObj.y! * (dist + distance)) / dist,
             z: (nodeObj.z! * (dist + distance)) / dist,
           },
-          nodeObj as unknown as { x: number; y: number; z: number },
+          { x: nodeObj.x, y: nodeObj.y!, z: nodeObj.z! },
           1200,
         )
       }
@@ -255,85 +362,31 @@ export default function CorpusGraph3D({
           </div>
         </div>
       ) : (
-        <ForceGraph3D
-          ref={fgRef as unknown as React.MutableRefObject<ForceGraphMethods | undefined>}
+        <CustomGraph3D
+          ref={fgRef}
           graphData={graphData}
           width={size.w}
           height={size.h}
           backgroundColor={BG_COLOR}
-          showNavInfo={false}
           // ── Node appearance ──
           nodeRelSize={3.6}
-          nodeVal={(n: object) => {
-            const nn = n as VizNode
-            if (nn.isQuery) return 14
-            if (selectedPaperId && nn.id === selectedPaperId) return 4.5
-            if (hovered && nn.id === hovered.id) return 3.2
-            return 1.6
-          }}
-          nodeColor={(n: object) => {
-            const nn = n as VizNode
-            if (nn.isQuery) return nn.color
-            if (!isolationActive) return nn.color
-            return activeClusters.has(nn.cluster) ? nn.color : DIM_NODE
-          }}
+          nodeVal={nodeValMemo}
+          nodeColor={nodeColorMemo}
           nodeOpacity={0.95}
-          nodeLabel={(n: object) => {
-            const nn = n as VizNode
-            if (nn.isQuery) return `your query — "${nn.title}"`
-            return `${nn.title}\n— ${clusterLabel(nn.cluster) || `cluster ${nn.cluster}`}`
-          }}
+          nodeLabel={nodeLabelMemo}
           // ── Link appearance ──
-          linkColor={(l: object) => {
-            const ll = l as VizLink
-            if (ll.isQueryEdge) return QUERY_COLOR
-            if (hovered) {
-              const s = typeof ll.source === 'object' ? (ll.source as VizNode).id : ll.source
-              const t = typeof ll.target === 'object' ? (ll.target as VizNode).id : ll.target
-              if (s === hovered.id || t === hovered.id) return EDGE_HOVER
-            }
-            return EDGE_COLOR
-          }}
+          linkColor={linkColorMemo}
           linkOpacity={0.18}
-          linkWidth={(l: object) => {
-            const ll = l as VizLink
-            if (ll.isQueryEdge) return 1.8
-            if (hovered) {
-              const s = typeof ll.source === 'object' ? (ll.source as VizNode).id : ll.source
-              const t = typeof ll.target === 'object' ? (ll.target as VizNode).id : ll.target
-              if (s === hovered.id || t === hovered.id) return 1.1
-            }
-            return Math.max(0.25, (ll.weight ?? 0) * 0.7)
-          }}
-          linkDirectionalParticles={(l: object) => ((l as VizLink).isQueryEdge ? 2 : 0)}
+          linkWidth={linkWidthMemo}
+          linkDirectionalParticles={linkParticlesMemo}
           linkDirectionalParticleSpeed={0.006}
           linkDirectionalParticleWidth={1.6}
           linkDirectionalParticleColor={() => QUERY_GLOW}
-          // ── Layout: UMAP-precomputed positions, no client-side simulation.
-          //    Ambient sine drift via useAmbientDrift gives the "living" feel.
-          cooldownTicks={0}
-          warmupTicks={0}
           // ── Interaction ──
-          enableNodeDrag={false}
           onNodeClick={handleNodeClick}
-          onNodeHover={(n: object | null) => setHovered(n as VizNode | null)}
-          nodeVisibility={(n: object) => {
-            const nn = n as VizNode
-            if (!isolationActive) return true
-            return nn.isQuery || activeClusters.has(nn.cluster)
-          }}
-          linkVisibility={(l: object) => {
-            if (!isolationActive) return true
-            const ll = l as VizLink
-            if (ll.isQueryEdge) return true
-            const s = typeof ll.source === 'object' ? (ll.source as VizNode).id : ll.source
-            const t = typeof ll.target === 'object' ? (ll.target as VizNode).id : ll.target
-            const sNode = graphData.nodes.find(nn => nn.id === s)
-            const tNode = graphData.nodes.find(nn => nn.id === t)
-            return !!sNode && !!tNode
-              && activeClusters.has(sNode.cluster)
-              && activeClusters.has(tNode.cluster)
-          }}
+          onNodeHover={onNodeHover}
+          nodeVisibility={nodeVisibilityMemo}
+          linkVisibility={linkVisibilityMemo}
         />
       )}
 

@@ -57,3 +57,37 @@ def iter_paper_ids():
 
 def count_papers() -> int:
     return get_conn().execute("SELECT COUNT(*) FROM papers").fetchone()[0]
+
+
+# Columns surfaced by /api/papers — deliberately omits the heavy
+# sections_json / figures_json so listings don't pay to deserialize text
+# they don't render. ~100× faster than 10k _load_paper() round-trips for
+# the no-filter listing on the home page.
+_SUMMARY_COLUMNS = "paper_id, title, abstract, date, url, authors_json"
+
+
+def list_paper_summaries(
+    paper_ids: Optional[list[str]] = None,
+    limit: Optional[int] = None,
+):
+    """Stream lightweight paper summaries in one SQL query.
+
+    If `paper_ids` is None, returns all papers (optionally limited).
+    If provided, filters to that set (preserves SQLite's natural row order
+    in the result; caller can re-order if needed).
+    """
+    sql = f"SELECT {_SUMMARY_COLUMNS} FROM papers"
+    params: tuple = ()
+    if paper_ids is not None:
+        if not paper_ids:
+            return
+        placeholders = ",".join("?" * len(paper_ids))
+        sql += f" WHERE paper_id IN ({placeholders})"
+        params = tuple(paper_ids)
+    if limit is not None:
+        sql += f" LIMIT {int(limit)}"
+    cur = get_conn().execute(sql, params)
+    for row in cur:
+        d = dict(row)
+        d["authors"] = json.loads(d.pop("authors_json"))
+        yield d
