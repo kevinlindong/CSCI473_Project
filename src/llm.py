@@ -50,7 +50,15 @@ def _get_model(model_name: Optional[str] = None):
             device, dtype = "mps", torch.float16
         else:
             device, dtype = "cpu", torch.float32
-        _MODEL = AutoModelForCausalLM.from_pretrained(name, torch_dtype=dtype)
+        _MODEL = AutoModelForCausalLM.from_pretrained(name, dtype=dtype)
+        # MPS has a 4 GB per-NDArray ceiling; Qwen2.5-1.5B (~3 GB float16)
+        # exceeds it during the attention forward pass and causes SIGABRT.
+        # Check weight bytes after loading and fall back to CPU when unsafe.
+        if device == "mps":
+            param_bytes = sum(p.numel() * p.element_size() for p in _MODEL.parameters())
+            if param_bytes > 2 * 2**30:  # >2 GB weights → too close to the 4 GB limit
+                device = "cpu"
+                _MODEL = _MODEL.float()  # float16 has poor CPU perf; convert in-place
         _MODEL.to(device)
         _MODEL.eval()
     return _TOKENIZER, _MODEL

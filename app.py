@@ -101,6 +101,19 @@ def _load_matrices():
     _CAPTION_EMBS  = np.load(paths["captions.npy"])
     with open(paths["index.json"]) as f:
         _PAPER_INDEX = json.load(f)
+
+    n_embs = len(_ABSTRACT_EMBS)
+    n_ids  = len(_PAPER_INDEX.get("abstracts", []))
+    if n_embs != n_ids:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                f"Embedding artifacts are out of sync: abstracts.npy has {n_embs} rows "
+                f"but index.json has {n_ids} abstract entries. "
+                f"Rebuild with: python scripts/build_embeddings.py"
+            ),
+        )
+
     return _ABSTRACT_EMBS, _CHUNK_EMBS, _CAPTION_EMBS, _PAPER_INDEX
 
 

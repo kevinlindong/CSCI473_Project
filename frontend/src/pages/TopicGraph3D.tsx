@@ -158,6 +158,7 @@ export default function TopicGraph3D() {
   useEffect(() => {
     if (!debouncedQuery) {
       setProjection(null)
+      setProjectionLoading(false)
       setQueryConstellationActive(false)
       return
     }
