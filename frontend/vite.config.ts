@@ -18,4 +18,14 @@ export default defineConfig({
       },
     },
   },
+  // `vite preview` (production-bundled local server) needs its own proxy
+  // block — server.proxy above only applies to `vite dev`.
+  preview: {
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+      },
+    },
+  },
 })

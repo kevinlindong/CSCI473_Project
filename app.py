@@ -31,12 +31,18 @@ from typing import Optional
 import numpy as np
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel
 
 import config
 
 
 app = FastAPI(title="ArXiv Research Assistant API")
+
+# Gzip large responses on the wire. /api/topic-map is ~7 MB raw JSON;
+# gzip drops it to ~2 MB, ~3× faster first-load on home internet.
+# minimum_size avoids overhead on small responses (health, single paper).
+app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=6)
 
 app.add_middleware(
     CORSMiddleware,
@@ -419,25 +425,26 @@ async def list_papers(
     cluster: Optional[int] = Query(None, description="Filter by cluster id"),
     limit: Optional[int] = Query(None, ge=1, le=2000),
 ):
-    """List all papers in the corpus. Optionally filter by cluster id.
+    """List paper summaries. Optionally filter by cluster id.
 
-    Lazy: only the papers that pass the cluster/limit filters are read from
-    disk. Cluster filter uses the topic graph's assignments to narrow the
-    candidate paper_id list before any file reads.
+    Uses a single SQL query over only the summary columns
+    (paper_id, title, abstract, date, url, authors). Critically does NOT
+    deserialize sections_json / figures_json — those are tens of KB per
+    paper and the listing endpoint never renders them. Without this
+    distinction the no-filter listing took ~27s for 10k papers; with it,
+    well under one second.
     """
+    from src import papers_db
+
+    paper_ids: Optional[list[str]] = None
     if cluster is not None:
         tg = _load_topic_graph()
-        candidate_ids = [
+        paper_ids = [
             n["paper_id"] for n in tg.get("nodes", []) if n["cluster"] == cluster
         ]
-    else:
-        candidate_ids = list(_iter_paper_ids())
 
     out: list[PaperSummary] = []
-    for pid in candidate_ids:
-        p = _load_paper(pid)
-        if p is None:
-            continue
+    for p in papers_db.list_paper_summaries(paper_ids=paper_ids, limit=limit):
         out.append(PaperSummary(
             paper_id=p["paper_id"],
             title=p.get("title", ""),
@@ -446,8 +453,6 @@ async def list_papers(
             url=p.get("url", "") or f"https://arxiv.org/abs/{p['paper_id']}",
             date=p.get("date", ""),
         ))
-        if limit and len(out) >= limit:
-            break
     return out
 
 

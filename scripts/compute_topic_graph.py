@@ -142,19 +142,23 @@ def compute_topic_graph(
     )
 
     # --- Assemble artifact ---
+    # Round on serialize: UMAP coords land in ~7-unit span and the frontend
+    # multiplies by 100, so 3 decimals = 0.001-unit native = sub-pixel at any
+    # zoom. Edge weights are cosine similarities; 4 decimals is plenty.
+    # JSON shrinks ~25-30% from this alone (compounds with gzip).
     nodes = [
         {
             "paper_id": p.paper_id,
             "title":    p.title,
             "cluster":  int(assignments[i]),
-            "x":        float(positions[i, 0]),
-            "y":        float(positions[i, 1]),
-            "z":        float(positions[i, 2]),
+            "x":        round(float(positions[i, 0]), 3),
+            "y":        round(float(positions[i, 1]), 3),
+            "z":        round(float(positions[i, 2]), 3),
         }
         for i, p in enumerate(papers)
     ]
     edge_records = [
-        {"source": int(a), "target": int(b), "weight": float(w)}
+        {"source": int(a), "target": int(b), "weight": round(float(w), 4)}
         for (a, b, w) in edges
     ]
     cluster_records = [

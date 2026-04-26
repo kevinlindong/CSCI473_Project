@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import ForceGraph3D, { type ForceGraphMethods } from 'react-force-graph-3d'
+import CustomGraph3D, { type CustomGraphMethods } from '../components/CustomGraph3D'
 import { useClusterLabels, type ClusterInfo } from '../hooks/useClusterLabels'
-import { useAmbientDrift } from '../hooks/useAmbientDrift'
+import { getTopicGraph, getCachedTopicGraphSync } from '../lib/topicGraphCache'
 
 // ─── Types from the backend ─────────────────────────────────────────────────
 interface GraphNode {
@@ -82,7 +82,12 @@ function clusterColor(id: number, total: number): string {
 
 // ─── Component ──────────────────────────────────────────────────────────────
 export default function TopicGraph3D() {
-  const [data, setData] = useState<TopicGraph | null>(null)
+  // Seed synchronously from the topic-graph cache. If there's a fresh entry
+  // in localStorage from a previous session (or this same tab earlier),
+  // first paint already has the full graph — no "Loading…" flash.
+  const [data, setData] = useState<TopicGraph | null>(() =>
+    getCachedTopicGraphSync<TopicGraph>(),
+  )
   const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<VizNode | null>(null)
   const [selectedDetail, setSelectedDetail] = useState<PaperDetail | null>(null)
@@ -106,16 +111,16 @@ export default function TopicGraph3D() {
   const [projectionLoading, setProjectionLoading] = useState(false)
 
   const containerRef = useRef<HTMLDivElement>(null)
-  const fgRef = useRef<ForceGraphMethods | undefined>(undefined)
+  const fgRef = useRef<CustomGraphMethods | null>(null)
   const [size, setSize] = useState({ w: 800, h: 600 })
 
-  // ── Fetch topic map on mount ──
+  // ── Fetch topic map (cache-aware) ──
+  // getTopicGraph returns immediately if cached, otherwise fires the network
+  // request once and shares the inflight promise across all callers. After
+  // any cached hit it also kicks off a background refresh — stale-while-
+  // revalidate keeps the cache warm without blocking first paint.
   useEffect(() => {
-    fetch(`${API_BASE}/api/topic-map`)
-      .then(async r => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text()}`)
-        return r.json()
-      })
+    getTopicGraph<TopicGraph>(API_BASE)
       .then(setData)
       .catch(e => setError(String(e)))
   }, [])
@@ -188,7 +193,7 @@ export default function TopicGraph3D() {
       z: n.z !== undefined ? n.z * COORD_SCALE : undefined,
     }))
 
-    const links: VizLink[] = data.edges
+    const allLinks: VizLink[] = data.edges
       .map(e => {
         const src = data.nodes[e.source]?.paper_id
         const tgt = data.nodes[e.target]?.paper_id
@@ -196,6 +201,25 @@ export default function TopicGraph3D() {
         return { source: src, target: tgt, weight: e.weight }
       })
       .filter((l): l is VizLink => l !== null)
+
+    // Cap edges to PER_NODE_CAP strongest per node. Without this the GPU has
+    // to rasterize ~62k semi-transparent line segments every frame during
+    // rotate/zoom — dominant cost on weak integrated graphics. Cap=3 yields
+    // ~20k edges, still preserves intra-cluster topology since each node
+    // keeps its strongest 3 neighbors. (Sort once, then take the top from
+    // each node's perspective via a tally Set.)
+    const PER_NODE_CAP = 3
+    const adjCount = new Map<string, number>()
+    const sorted = allLinks.slice().sort((a, b) => b.weight - a.weight)
+    const links: VizLink[] = []
+    for (const l of sorted) {
+      const a = adjCount.get(l.source) ?? 0
+      const b = adjCount.get(l.target) ?? 0
+      if (a >= PER_NODE_CAP && b >= PER_NODE_CAP) continue
+      adjCount.set(l.source, a + 1)
+      adjCount.set(l.target, b + 1)
+      links.push(l)
+    }
 
     if (projection && projection.neighbors.length > 0) {
       nodes.push({
@@ -219,10 +243,6 @@ export default function TopicGraph3D() {
     return { nodes, links }
   }, [data, projection])
 
-  // ── Ambient sine-wave drift on top of UMAP positions ─────────────────────
-  // O(N) per frame, ~0.5% bbox amplitude, ~6s period. Safe at 10k nodes.
-  useAmbientDrift(fgRef as React.MutableRefObject<ForceGraphMethods | undefined>, graphData)
-
   // ── Adjacency map for fast hover highlighting ──
   const adjacency = useMemo(() => {
     const map = new Map<string, Set<string>>()
@@ -234,6 +254,105 @@ export default function TopicGraph3D() {
     }
     return map
   }, [graphData.links])
+
+  // ── id → node map for O(1) edge endpoint resolution ───────────────────────
+  // Replaces the O(N) graphData.nodes.find() previously used in
+  // linkVisibility, which was 2 × 10k scans per edge × 62k edges =
+  // 1.24 billion ops per render frame whenever cluster isolation was active.
+  const idToNode = useMemo(() => {
+    const m = new Map<string, VizNode>()
+    for (const n of graphData.nodes) m.set(n.id, n)
+    return m
+  }, [graphData.nodes])
+
+  // ── Memoized callback props ───────────────────────────────────────────────
+  // Inline arrow-function props would get fresh identity on every React
+  // re-render (which fires often during interaction — every hover state flip,
+  // every drag tick), and react-force-graph-3d treats a new prop identity as
+  // "callback changed" → triggers a full ~216k callback re-evaluation pass.
+  // Memoizing with stable deps stops that thrash for the props that don't
+  // depend on hover/select state.
+  const nodeColorMemo = useCallback((n: object) => {
+    const nn = n as VizNode
+    const color = nn.color
+    if (!isolationActive) return color
+    if (nn.isQuery) return color
+    return isolatedClusters.has(nn.cluster) ? color : '#2a2f36'
+  }, [isolationActive, isolatedClusters])
+
+  const nodeLabelMemo = useCallback((n: object) => {
+    const nn = n as VizNode
+    if (nn.isQuery) return `your query — “${nn.title}”`
+    const label = labels[nn.cluster] ?? `Cluster ${nn.cluster}`
+    return `${nn.title}\n— ${label}`
+  }, [labels])
+
+  const nodeVisibilityMemo = useCallback((n: object) => {
+    const nn = n as VizNode
+    if (!isolationActive) return true
+    return nn.isQuery || isolatedClusters.has(nn.cluster)
+  }, [isolationActive, isolatedClusters])
+
+  const linkVisibilityMemo = useCallback((l: object) => {
+    if (!isolationActive) return true
+    const ll = l as VizLink
+    if (ll.isQueryEdge) return true
+    const s = typeof ll.source === 'object' ? (ll.source as VizNode).id : ll.source
+    const t = typeof ll.target === 'object' ? (ll.target as VizNode).id : ll.target
+    const srcNode = idToNode.get(s)
+    const tgtNode = idToNode.get(t)
+    return (
+      srcNode != null && tgtNode != null &&
+      isolatedClusters.has(srcNode.cluster) &&
+      isolatedClusters.has(tgtNode.cluster)
+    )
+  }, [isolationActive, isolatedClusters, idToNode])
+
+  // Hover-dependent callbacks. We do still depend on [hovered, selected]
+  // (changes on every mouseover of a different node), but at least these
+  // closures stay stable across non-hover renders (e.g. resize, isolation,
+  // query input typing) — the lib doesn't refresh callbacks identity hasn't
+  // actually changed.
+  const nodeValMemo = useCallback((n: object) => {
+    const nn = n as VizNode
+    if (nn.isQuery) return 12
+    if (selected && nn.id === selected.id) return 4
+    if (hovered && nn.id === hovered.id) return 3
+    return 1.5
+  }, [hovered, selected])
+
+  const linkColorMemo = useCallback((l: object) => {
+    const ll = l as VizLink
+    if (ll.isQueryEdge) return QUERY_COLOR
+    if (hovered) {
+      const s = typeof ll.source === 'object' ? (ll.source as VizNode).id : ll.source
+      const t = typeof ll.target === 'object' ? (ll.target as VizNode).id : ll.target
+      if (s === hovered.id || t === hovered.id) return '#ffffff'
+    }
+    return '#8ea7c4'
+  }, [hovered])
+
+  const linkWidthMemo = useCallback((l: object) => {
+    const ll = l as VizLink
+    if (ll.isQueryEdge) return 1.6
+    if (hovered) {
+      const s = typeof ll.source === 'object' ? (ll.source as VizNode).id : ll.source
+      const t = typeof ll.target === 'object' ? (ll.target as VizNode).id : ll.target
+      if (s === hovered.id || t === hovered.id) return 1.2
+    }
+    return Math.max(0.25, (ll.weight ?? 0) * 0.8)
+  }, [hovered])
+
+  const linkParticlesMemo = useCallback(
+    (l: object) => ((l as VizLink).isQueryEdge ? 2 : 0),
+    []
+  )
+
+  // CustomGraph3D handles drag-aware hover suppression + dynamic DPR
+  // internally — no per-page wiring needed.
+  const onNodeHover = useCallback((n: object | null) => {
+    setHovered(n as VizNode | null)
+  }, [])
 
   // ── Click handler: fetch full paper detail for the drawer ──
   const handleNodeClick = useCallback((n: object) => {
@@ -360,93 +479,32 @@ export default function TopicGraph3D() {
           </div>
         </div>
 
-        <ForceGraph3D
-          ref={fgRef as any}
+        <CustomGraph3D
+          ref={fgRef}
           graphData={graphData}
           width={size.w}
           height={size.h}
           backgroundColor="#0b0f14"
           // ── Node appearance ──
           nodeRelSize={4}
-          nodeVal={(n: object) => {
-            const nn = n as VizNode
-            if (nn.isQuery) return 12
-            if (selected && nn.id === selected.id) return 4
-            if (hovered && nn.id === hovered.id) return 3
-            return 1.5
-          }}
-          nodeColor={(n: object) => {
-            const nn = n as VizNode
-            const color = nn.color
-            if (!isolationActive) return color
-            if (nn.isQuery) return color
-            return isolatedClusters.has(nn.cluster) ? color : '#2a2f36'
-          }}
+          nodeVal={nodeValMemo}
+          nodeColor={nodeColorMemo}
           nodeOpacity={0.92}
-          nodeLabel={(n: object) => {
-            const nn = n as VizNode
-            if (nn.isQuery) return `your query — “${nn.title}”`
-            const label = labels[nn.cluster] ?? `Cluster ${nn.cluster}`
-            return `${nn.title}\n— ${label}`
-          }}
+          nodeLabel={nodeLabelMemo}
           // ── Link appearance ──
-          linkColor={(l: object) => {
-            const ll = l as VizLink
-            if (ll.isQueryEdge) return QUERY_COLOR
-            // Brighten links adjacent to the hovered node.
-            if (hovered) {
-              const s = typeof ll.source === 'object' ? (ll.source as VizNode).id : ll.source
-              const t = typeof ll.target === 'object' ? (ll.target as VizNode).id : ll.target
-              if (s === hovered.id || t === hovered.id) return '#ffffff'
-            }
-            return '#8ea7c4'
-          }}
+          linkColor={linkColorMemo}
           linkOpacity={0.22}
-          linkWidth={(l: object) => {
-            const ll = l as VizLink
-            if (ll.isQueryEdge) return 1.6
-            if (hovered) {
-              const s = typeof ll.source === 'object' ? (ll.source as VizNode).id : ll.source
-              const t = typeof ll.target === 'object' ? (ll.target as VizNode).id : ll.target
-              if (s === hovered.id || t === hovered.id) return 1.2
-            }
-            return Math.max(0.25, (ll.weight ?? 0) * 0.8)
-          }}
-          linkDirectionalParticles={(l: object) =>
-            (l as VizLink).isQueryEdge ? 2 : 0
-          }
+          linkWidth={linkWidthMemo}
+          linkDirectionalParticles={linkParticlesMemo}
           linkDirectionalParticleSpeed={0.006}
           linkDirectionalParticleWidth={1.6}
-          // ── Layout: UMAP-precomputed positions, no client-side simulation.
-          //    Ambient sine drift via useAmbientDrift below gives the "living" feel.
-          cooldownTicks={0}
-          warmupTicks={0}
           // ── Interaction ──
-          enableNodeDrag={false}
           onNodeClick={handleNodeClick}
-          onNodeHover={(n: object | null) => setHovered(n as VizNode | null)}
+          onNodeHover={onNodeHover}
           onBackgroundClick={() => { setSelected(null); setSelectedDetail(null) }}
-          // Dim non-isolated nodes via opacity filter when any cluster is pinned.
-          nodeVisibility={(n: object) => {
-            const nn = n as VizNode
-            if (!isolationActive) return true
-            return nn.isQuery || isolatedClusters.has(nn.cluster)
-          }}
-          linkVisibility={(l: object) => {
-            if (!isolationActive) return true
-            const ll = l as VizLink
-            if (ll.isQueryEdge) return true
-            // Resolve endpoint ids whether force-graph has mutated them or not
-            const s = typeof ll.source === 'object' ? (ll.source as VizNode).id : ll.source
-            const t = typeof ll.target === 'object' ? (ll.target as VizNode).id : ll.target
-            const srcNode = graphData.nodes.find(n => n.id === s)
-            const tgtNode = graphData.nodes.find(n => n.id === t)
-            return (
-              srcNode != null && tgtNode != null &&
-              isolatedClusters.has(srcNode.cluster) &&
-              isolatedClusters.has(tgtNode.cluster)
-            )
-          }}
+          // Dim non-isolated nodes when any cluster is pinned.
+          nodeVisibility={nodeVisibilityMemo}
+          linkVisibility={linkVisibilityMemo}
         />
 
         {/* Neighbor-count hint when hovering */}
