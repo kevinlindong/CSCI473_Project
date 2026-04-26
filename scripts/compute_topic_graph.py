@@ -8,7 +8,7 @@ Pipeline:
     3. Run k-means clustering in 768-d abstract space (from-scratch, numpy only).
     4. Build an undirected k-NN graph over cosine similarity.
     5. Generate a human-readable topic label per cluster using a small LLM
-       (flan-T5-base by default). Can be skipped with --no-llm for fast iteration.
+       (Qwen2.5-1.5B-Instruct by default). Can be skipped with --no-llm for fast iteration.
     6. Write data/processed/topic_graph.json with nodes, edges, clusters, meta.
 
 Usage:

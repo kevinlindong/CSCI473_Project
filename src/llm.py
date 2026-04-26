@@ -5,9 +5,9 @@ llm.py — LLM text generation for two features.
    titles representative of a cluster and returns a short topic name via a
    small instruction-tuned causal LM (Qwen2.5-1.5B-Instruct by default).
 
-2. RAG answer generation: build_context() / generate_answer() / format_response()
-   compose a minimal retrieval-augmented generation pipeline using the same
-   underlying model.
+2. RAG answer generation: build_context() / generate_answer() compose a
+   minimal retrieval-augmented generation pipeline using the same underlying
+   model.
 
 Both features share a lazy-loaded, module-cached AutoModelForCausalLM + tokenizer
 so imports are free until the first call actually needs the model.
@@ -531,18 +531,3 @@ def generate_scoot_reply(
     messages.append({"role": "user", "content": message})
     raw = _chat_generate(messages, max_new_tokens=max_new_tokens, model_name=model_name)
     return _postprocess_scoot_reply(raw, message)
-
-
-def format_response(answer: str, sources: list[dict]) -> dict:
-    """
-    Package the answer, citation list, and figure references for display.
-    """
-    cited_numbers = sorted({int(m) for m in re.findall(r"\[(\d+)\]", answer)})
-    citations = [
-        sources[n - 1] for n in cited_numbers if 0 < n <= len(sources)
-    ]
-    figures = [
-        s.get("figure") for s in sources
-        if isinstance(s, dict) and s.get("figure")
-    ]
-    return {"answer": answer, "citations": citations, "figures": figures}

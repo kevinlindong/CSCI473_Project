@@ -129,12 +129,6 @@ def _load_paper(paper_id: str) -> Optional[dict]:
     return papers_db.load_paper(paper_id)
 
 
-def _iter_paper_ids():
-    """Yield every paper_id present in the SQLite store."""
-    from src import papers_db
-    yield from papers_db.iter_paper_ids()
-
-
 def _get_encoder():
     """Lazy-load the sentence-transformer. First call pays ~5s + ~400MB RAM."""
     global _ENCODER
@@ -503,7 +497,7 @@ async def scoot(req: ScootRequest):
         raise HTTPException(status_code=503, detail="LLM disabled (ENABLE_LLM=0)")
     try:
         from src.llm import generate_scoot_reply
-        history = [m.dict() for m in (req.history or [])]
+        history = [m.model_dump() for m in (req.history or [])]
         reply = generate_scoot_reply(req.message, history=history)
         return ScootResponse(reply=reply)
     except Exception as e:
@@ -523,15 +517,17 @@ async def query_projection(
 
     Cheaper than /api/query: one encode + one cosine pass, no LLM, no rerank.
     """
-    from src.retrieval import cosine_similarity, nearest_neighbors
+    from src.retrieval import cosine_similarity, top_k_indices
 
     abstract_embs, _, _, paper_index = _load_matrices()
     encoder = _get_encoder()
     from src import encoder as _enc
     q_vec = _enc.encode([q], encoder)[0]
 
+    # One cosine pass — derive top-k from the precomputed scores instead of
+    # calling nearest_neighbors() (which would recompute cosine internally).
     scores = cosine_similarity(q_vec, abstract_embs)
-    top_rows = nearest_neighbors(q_vec, abstract_embs, k)
+    top_rows = top_k_indices(scores, k)
     abstract_ids = paper_index.get("abstracts", [])
 
     neighbors = [

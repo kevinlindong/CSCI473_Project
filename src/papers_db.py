@@ -48,17 +48,6 @@ def load_paper(paper_id: str) -> Optional[dict]:
     return d
 
 
-def iter_paper_ids():
-    """Stream every paper_id in the database. Used by /api/papers listing."""
-    cur = get_conn().execute("SELECT paper_id FROM papers")
-    for row in cur:
-        yield row["paper_id"]
-
-
-def count_papers() -> int:
-    return get_conn().execute("SELECT COUNT(*) FROM papers").fetchone()[0]
-
-
 # Columns surfaced by /api/papers — deliberately omits the heavy
 # sections_json / figures_json so listings don't pay to deserialize text
 # they don't render. ~100× faster than 10k _load_paper() round-trips for

@@ -51,9 +51,6 @@ KMEANS_SEED = 42
 # --- k-NN graph ---
 KNN_NEIGHBORS = 8
 
-# --- PCA ---
-N_PCA_COMPONENTS = 2
-
 # --- LLM ---
 # Instruction-tuned causal LM used for (a) cluster topic labeling at pipeline
 # time and (b) RAG answer generation. Qwen2.5-1.5B-Instruct was chosen after
@@ -61,7 +58,6 @@ N_PCA_COMPONENTS = 2
 # few-shot prompting; the 6× param bump plus a modern chat template gives
 # coherent 2-5 word topic phrases.
 LLM_MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"
-MAX_CONTEXT_LENGTH = 2048
 
 # --- Arxiv Fetch ---
 ARXIV_CATEGORIES = ["cs.LG", "cs.AI", "cs.CV", "cs.CL", "cs.NE", "stat.ML"]
@@ -78,4 +74,3 @@ FETCH_DELAY_SECONDS = 3.0
 # ar5iv coverage ends 2026-03-31; fetcher walks backward from here one month
 # at a time until ARXIV_TARGET_ENRICHED is reached or the max-months ceiling hits
 AR5IV_END_DATE = "2026-03-31"
-FIGURE_DIR = os.path.join(RAW_DIR, "figures")
