@@ -105,10 +105,11 @@ function lineCount(src: string): number {
 // ─── component ──────────────────────────────────────────────────────────────
 
 function initialSourceFor(draftId: string): string {
+  // Scratch always shows the presentation deck — saved drafts under
+  // /editor/:repoId still hydrate from localStorage as before.
+  if (draftId === SCRATCH_ID) return DEFAULT_LATEX
   const stored = readDraftSource(draftId)
-  if (stored !== null) return stored
-  // brand-new draft — scratch gets the showcase doc, others start blank
-  return draftId === SCRATCH_ID ? DEFAULT_LATEX : ''
+  return stored !== null ? stored : ''
 }
 
 export default function PaperEditor() {

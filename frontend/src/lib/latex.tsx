@@ -947,75 +947,106 @@ export function highlightTeX(src: string): string {
 }
 
 export const DEFAULT_LATEX = `\\documentclass[11pt]{article}
+\\usepackage[margin=1in]{geometry}
+\\usepackage{amsmath, amssymb}
+\\usepackage{hyperref}
+\\usepackage{enumitem}
 
-\\title{Efficient Attention Mechanisms\\\\ for Long-Context Transformers}
-\\author{Ada Kovalenko \\and Mirra Chen \\and R.~Okonkwo}
-\\affiliation{Department of Computer Science, Example University}
-\\date{\\today}
-\\keywords{attention mechanisms, transformers, long-context modeling, sparse attention, linear attention, efficient deep learning}
+\\title{ArXiv Research Assistant \\\\ \\large CSCI-UA 473 --- Spring 2026}
+\\author{Kevin Pei, Kevin Dong, Ian Tang, Xan Carey, Vivek Kondapalli}
+\\date{}
 
 \\begin{document}
 \\maketitle
 
-\\begin{abstract}
-Transformer models have revolutionised natural language processing, yet their
-quadratic attention complexity remains a bottleneck for long-context
-applications. We survey recent proposals---sparse, linear, and recurrent
-attention variants---and benchmark their trade-offs on retrieval-heavy tasks.
-Our experiments suggest that hybrid schemes combining local windowing with
-low-rank global tokens \\cite{child2019sparse} offer the best quality-latency
-frontier for sequences beyond 32k tokens.
-\\end{abstract}
+\\section{Motivation}
 
-\\section{Introduction}
-The self-attention mechanism \\cite{vaswani2017attention} computes, for each
-query $q_i$, a weighted sum over all keys:
-\\begin{equation}
-\\mathrm{Attn}(Q, K, V) = \\mathrm{softmax}\\!\\left(\\frac{QK^{\\top}}{\\sqrt{d_k}}\\right) V.
-\\label{eq:attention}
-\\end{equation}
-While expressive, equation~\\ref{eq:attention} scales as $\\mathcal{O}(n^2)$ in
-sequence length $n$, which prohibits direct application to book-length
-documents. Recent work proposes several remedies, summarised in
-figure~\\ref{fig:taxonomy}.
+ArXiv ingests thousands of new papers a day across cs.LG, cs.AI, cs.CV, cs.CL, cs.NE, and stat.ML.
+For a researcher trying to map a subfield, lexical search is a hammer when you need a microscope ---
+the query \`\`models that reduce transformer memory'' will miss a paper titled
+\`\`efficient attention via low-rank projections'' even though that is exactly the right hit.
 
-\\begin{figure}[h]
-\\includegraphics[width=0.8\\textwidth]{taxonomy.pdf}
-\\caption{A taxonomy of efficient attention methods, organised along the axes of
-\\textit{sparsity pattern} and \\textit{approximation type}.}
-\\label{fig:taxonomy}
-\\end{figure}
+We built three things on top of a curated 10{,}000-paper corpus:
 
-\\section{Methods}
+\\begin{enumerate}[noitemsep]
+    \\item Semantic question answering with grounded $[n]$ citations.
+    \\item An interactive 3D topic map where spatial neighborhoods correspond to research themes.
+    \\item A live \`\`Query Constellation'' that drops your query into the map and lights up its
+          $k$ closest papers across the entire cloud.
+\\end{enumerate}
 
-\\subsection{Sparse attention}
-Sparse methods restrict each query to attend to a learned or fixed subset of
-keys. Representative schemes include \\textbf{block-sparse} patterns
-\\cite{child2019sparse} and \\textbf{strided} windows.
+\\section{Algorithms}
 
-\\subsection{Linear attention}
-Linearised variants rewrite the softmax using kernel feature maps $\\phi(\\cdot)$:
+Every algorithm in the retrieval, clustering, and graph layers is implemented from scratch in NumPy.
+No \\texttt{sklearn}, no \\texttt{faiss}, no \\texttt{scipy.spatial}.
+
+\\subsection*{From-scratch}
+
+\\paragraph{Cosine similarity \\& nearest-neighbor search} (\\texttt{src/retrieval.py}).
+For a query vector $\\mathbf{q}$ and corpus matrix $X \\in \\mathbb{R}^{N \\times D}$:
 \\[
-\\mathrm{Attn}(Q,K,V) \\approx \\phi(Q)\\,\\bigl(\\phi(K)^{\\top} V\\bigr),
+\\mathrm{sim}(\\mathbf{q}, X_i) \\;=\\; \\frac{\\mathbf{q} \\cdot X_i}{\\|\\mathbf{q}\\|\\,\\|X_i\\|}
 \\]
-reducing cost to $\\mathcal{O}(n d^2)$.
+Top-$k$ selection uses \\texttt{np.argpartition} for an $\\mathcal{O}(N)$ partial selection
+followed by an $\\mathcal{O}(k \\log k)$ sort over just the $k$ winners --- strictly better than
+a full $\\mathcal{O}(N \\log N)$ sort when $k \\ll N$. Two-stage retrieval drills from abstracts
+into chunks/captions for the LLM context.
 
-\\section{Results}
-We evaluate on three long-document benchmarks. Our findings are summarised in
-the table below.
+\\paragraph{$k$-Means clustering} (\\texttt{src/clustering.py}).
+Lloyd's iteration with $k$-means$++$ initialization, $n\\_\\text{init}$ multi-restart keeping
+best inertia, empty-cluster reseed-to-farthest-point, and a \\emph{spherical} variant that
+re-normalizes centroids after every update --- the right default on the unit sphere where
+L2-normalized sentence-transformer embeddings live.
 
-\\begin{tabular}{lrr}
-Method & Throughput & Recall@5 \\\\
-Dense baseline & 1.00$\\times$ & 0.62 \\\\
-Block-sparse & 2.4$\\times$ & 0.61 \\\\
-Linear attention & 3.8$\\times$ & 0.54 \\\\
-Hybrid (ours) & 2.9$\\times$ & 0.66
-\\end{tabular}
+\\paragraph{$k$-NN graph} (\\texttt{src/graph.py}).
+A symmetric undirected graph over cosine similarity:
+\\[
+(i, j) \\in E \\iff j \\in \\mathrm{top}_k(i) \\;\\lor\\; i \\in \\mathrm{top}_k(j),
+\\qquad
+w_{ij} = \\max\\bigl(\\mathrm{sim}(i,j),\\ \\mathrm{sim}(j,i)\\bigr).
+\\]
+Self-loops excluded via \\texttt{np.fill\\_diagonal(sim, $-\\infty$)} before \\texttt{argpartition}.
+$k = 8$, chosen so the layout stays connected without becoming a hairball.
 
-\\section{Conclusion}
-We showed that carefully combining local and global attention yields robust
-long-context recall at a fraction of the dense cost. Future work should
-integrate retrieval directly into the attention pathway.
+\\paragraph{External cluster validation.}
+Adjusted Rand Index and Normalized Mutual Information against arXiv \\texttt{primary\\_category},
+both implemented from scratch and used to pick $k = 26$ clusters. Silhouette is uninformative
+on 768-d embeddings; NMI peaks at $k=26$ then plateaus.
+
+\\subsection*{Pre-trained components (intentionally not from-scratch)}
+
+\\begin{itemize}[noitemsep]
+    \\item \\textbf{Sentence encoder:} \\texttt{all-mpnet-base-v2} (768-d, L2-normalized).
+    \\item \\textbf{Cross-encoder reranker:} \\texttt{ms-marco-MiniLM-L-6-v2}, fired conditionally
+          when bi-encoder scores are weak (top-1 $< 0.5$) or bunched (spread $< 0.15$).
+          Bi-encoder owns recall; cross-encoder owns precision.
+    \\item \\textbf{Cluster labeler:} local Qwen2.5-1.5B-Instruct, 3-shot chat prompt over
+          the 5 papers nearest each centroid.
+    \\item \\textbf{Answer synthesis:} Claude Haiku 4.5 via OpenRouter, with a system prompt
+          that forces $[n]$ citations to land at end-of-sentence.
+    \\item \\textbf{Layout:} UMAP 3D, precomputed offline. A from-scratch Fruchterman-Reingold
+          reference lives in the notebook --- it just doesn't scale to 10k nodes interactively.
+\\end{itemize}
+
+\\section{Tech Stack}
+
+\\begin{itemize}[noitemsep]
+    \\item \\textbf{Backend:} FastAPI $+$ uvicorn. NumPy for every retrieval/clustering/graph
+          primitive. \\texttt{sentence-transformers} for encoding. SQLite for paper metadata
+          with an LRU cache on top.
+    \\item \\textbf{Frontend:} React $+$ Vite $+$ a \\emph{custom} Three.js renderer.
+          10k nodes and $\\sim 20$k edges collapse into $\\sim 3$ draw calls via
+          \\texttt{InstancedMesh} $+$ \\texttt{LineSegments}, holding 60 fps on integrated GPUs.
+    \\item \\textbf{LLM routing:} \\texttt{LLM\\_PROVIDER} env var swaps between local Qwen
+          and OpenRouter Haiku per request. Cluster labeling stays pinned to the local model.
+    \\item \\textbf{Data pipeline:} arXiv API $\\to$ \\texttt{ar5iv} HTML scrape $\\to$ chunker
+          $\\to$ encoder $\\to$ \\texttt{abstracts.npy}, \\texttt{chunks.npy}, \\texttt{captions.npy}.
+          $\\sim 7$ hours from scratch, or 2 minutes from a cached release snapshot.
+\\end{itemize}
+
+\\section{References}
+\\begin{itemize}[noitemsep]
+\\end{itemize}
 
 \\end{document}
 `
