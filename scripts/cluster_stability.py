@@ -84,8 +84,6 @@ def main():
     # with its modal cluster's most-common co-members
     from collections import Counter
     co_assign = np.zeros((X.shape[0],), dtype=np.float64)
-    base_seed = seeds[0]
-    base = assignments[base_seed]
     for i in range(X.shape[0]):
         # cluster id of paper i in each run; build a mapping seed→its cluster id
         my_clusters = {s: int(assignments[s][i]) for s in seeds}

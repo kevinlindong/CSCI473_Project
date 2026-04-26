@@ -128,10 +128,12 @@ Rolling log of what has landed on the project, in reverse chronological order. G
 ## Outstanding items
 
 ### Still open
-- **PCA** — `src/pca.py` is still `raise NotImplementedError` and unused by the live pipeline. UMAP took its place in `compute_topic_graph.py`, so PCA is currently a paper-required deliverable rather than a runtime dependency. Owner: TBD.
-- **CLIP figure fallback** — `src/figures.py` still has `NotImplementedError` stubs. Owner: Kevin Pei.
 - **Pre-existing test flake:** `tests/test_retrieval.py::test_string_query_routes_through_encoder` fails when `test_encoder.py` runs before it in the same pytest invocation. Import-caching gotcha — `from src import encoder` inside `retrieve()` reads the cached `src.encoder` attribute, bypassing the monkeypatched `sys.modules` entry. Passes in isolation (`pytest tests/test_retrieval.py` → 20/20). Owner: Xan.
 - **`app.py` startup wiring** — still uses lazy module-level caching (`_get_encoder`, `_get_reranker`, `_load_matrices`) instead of FastAPI `lifespan`. First request after boot pays the encoder + LLM load. Acceptable for dev; should switch to `lifespan` for prod.
+
+### Recently closed
+- ~~PCA stub~~ — `src/pca.py` was never implemented; UMAP replaced it in `compute_topic_graph.py`. File and `tests/test_pca.py` removed 2026-04-26.
+- ~~CLIP figure fallback~~ — `src/figures.py` was never implemented; figure-side retrieval works via captions in the chunk space. File removed 2026-04-26.
 
 ### Recently closed
 - ~~Clustering / topic map~~ — landed 2026-04-23 (Xan): `src/clustering.py`, `src/graph.py`, `scripts/compute_topic_graph.py`, `GET /api/topic-map`, `TopicGraph3D.tsx`. UMAP layout + drift added 2026-04-25.

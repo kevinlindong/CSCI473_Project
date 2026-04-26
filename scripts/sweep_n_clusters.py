@@ -24,12 +24,13 @@ from src.clustering import kmeans
 
 
 def _contingency(a, b):
+    # np.unique returns sorted, so searchsorted gives the position-in-uniques
+    # in O(N log K) numpy time — replaces an O(N) Python loop with dict lookups.
     ca, cb = np.unique(a), np.unique(b)
+    ai = np.searchsorted(ca, a)
+    bi = np.searchsorted(cb, b)
     M = np.zeros((len(ca), len(cb)), dtype=np.int64)
-    ai = {v: i for i, v in enumerate(ca)}
-    bi = {v: i for i, v in enumerate(cb)}
-    for x, y in zip(a, b):
-        M[ai[x], bi[y]] += 1
+    np.add.at(M, (ai, bi), 1)
     return M
 
 

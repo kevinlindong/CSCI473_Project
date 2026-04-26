@@ -1,9 +1,7 @@
 """Tests for hierarchical chunking — get_section_depth, group_paragraphs, chunk_paper."""
 
-import pytest
-
 from src.chunker import chunk_paper, get_section_depth, group_paragraphs
-from src.data import Figure, Paper, Section
+from src.data import Paper, Section
 
 
 # ---------------------------------------------------------------------------

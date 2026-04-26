@@ -95,9 +95,7 @@ The notebook mirrors the full pipeline and renders the 3D topic graph as an inte
 │   ├── retrieval.py                 # From-scratch cosine similarity NN search
 │   ├── clustering.py                # From-scratch k-means (Lloyd's + k-means++) + topic labeling
 │   ├── graph.py                     # From-scratch symmetric k-NN graph construction
-│   ├── pca.py                       # From-scratch PCA (paper-only — UMAP took its place at runtime)
 │   ├── reranker.py                  # Cross-encoder reranking fallback
-│   ├── figures.py                   # CLIP-based figure encoding fallback (stub)
 │   ├── papers_db.py                 # SQLite paper store + LRU-cached lookup
 │   └── llm.py                       # Chat-LM generation (cluster labels, RAG answers, scoot chat)
 ├── frontend/                        # React + Vite app
@@ -111,8 +109,7 @@ The notebook mirrors the full pipeline and renders the 3D topic graph as an inte
 │   │   │   ├── CorpusGraph3D.tsx    # CustomGraph3D wrapper for the corpus map
 │   │   │   └── ScootChat.tsx        # Floating Qwen chat assistant
 │   │   ├── hooks/
-│   │   │   ├── useClusterLabels.ts  # Server labels + localStorage overrides
-│   │   │   └── useAmbientDrift.ts   # Subtle node drift animation
+│   │   │   └── useClusterLabels.ts  # Server labels + localStorage overrides
 │   │   └── lib/
 │   │       └── topicGraphCache.ts   # Stale-while-revalidate cache for /api/topic-map
 │   └── package.json                 # Three.js
@@ -151,7 +148,9 @@ All pure NumPy, no sklearn / scipy / faiss. Style reference: `src/retrieval.py`.
 
 ### Why no PCA?
 
-The original plan projected embeddings to 2D with PCA. On 768-d sentence-transformer output that threw away 93% of the variance (confirmed in `notebooks/exploration.ipynb`: 2 PCs ≈ 7% variance). Clusters smear, PC axes don't correspond to interpretable concepts, and the visualization becomes an atlas of noise. We swapped to a **force-directed k-NN graph** — no axes at all, interpretability lives in the edges ("these two are linked because they're mutual semantic neighbors in 768-d") and the k-means coloring.
+The original plan projected embeddings to 2D with PCA. On 768-d sentence-transformer output that throws away ~93% of the variance (confirmed in `notebooks/exploration.ipynb`: 2 PCs ≈ 7% variance). Clusters smear, PC axes don't correspond to interpretable concepts, and the visualization becomes an atlas of noise.
+
+We first tried a **from-scratch Fruchterman-Reingold force layout** over the k-NN graph (still in `notebooks/topic_graph.ipynb` for reference) — interpretability lived in the edges rather than spatial axes. That worked at the original 273-paper scale but didn't survive the scale-up: an FR force loop over 10k nodes + 20k edges is interactive-prohibitive in the browser and visibly fragile for the layout we wanted to ship. The production pipeline now precomputes a **3D UMAP layout** (`umap-learn`, cosine metric, n_neighbors=15, min_dist=0.1) at build time, bakes `(x, y, z)` into `topic_graph.json`, and the frontend renders the precomputed positions via a custom Three.js InstancedMesh — no force loop in the browser.
 
 ### How `N_CLUSTERS` was chosen
 

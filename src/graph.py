@@ -57,8 +57,10 @@ def knn_graph(
     # Mask self-similarity so argpartition never picks i itself as its own neighbor.
     np.fill_diagonal(sim_matrix, -np.inf)
 
-    # For each row i, the top-k column indices by similarity. O(N^2) memory is
-    # fine at our scale (N=273); argpartition is O(N) per row.
+    # For each row i, the top-k column indices by similarity. O(N^2) memory
+    # at N=10k is ~400 MB float32 — still fits comfortably; argpartition
+    # is O(N) per row, so total work is O(N^2). Past ~30k swap for an
+    # ANN-backed neighbor query (FAISS / hnswlib).
     top_unsorted = np.argpartition(-sim_matrix, kth=k - 1, axis=1)[:, :k]  # (N, k)
 
     # Collapse directed (i -> j) and (j -> i) into one undirected entry per

@@ -53,22 +53,16 @@ def cosine_similarity(query_vec: np.ndarray, corpus_matrix: np.ndarray) -> np.nd
     return np.where(row_norms == 0.0, 0.0, sims)
 
 
-def nearest_neighbors(query_vec: np.ndarray, corpus_matrix: np.ndarray, k: int) -> list[int]:
+def top_k_indices(scores: np.ndarray, k: int) -> list[int]:
     """
-    Return indices of the top-k most similar vectors in the corpus.
+    Return indices of the top-k entries in `scores`, sorted by descending score.
 
     Uses np.argpartition for an O(N) unordered top-k selection followed by
     np.argsort on just those k candidates — avoids a full O(N log N) sort.
-
-    Args:
-        query_vec: Shape (D,) — the query embedding.
-        corpus_matrix: Shape (N, D) — the corpus embeddings.
-        k: Number of neighbors to return. Clamped to len(corpus_matrix) when larger.
-
-    Returns:
-        List of integer indices into corpus_matrix, sorted by descending similarity.
+    Split out from `nearest_neighbors` so callers that already have the
+    similarity scores (e.g. /api/query-projection, which surfaces both
+    indices and scores) can skip a second cosine pass.
     """
-    scores = cosine_similarity(query_vec, corpus_matrix)
     n = len(scores)
     if n == 0 or k <= 0:
         return []
@@ -80,6 +74,21 @@ def nearest_neighbors(query_vec: np.ndarray, corpus_matrix: np.ndarray, k: int) 
     top_unsorted = np.argpartition(scores, -k)[-k:]
     top_sorted = top_unsorted[np.argsort(scores[top_unsorted])[::-1]]
     return [int(i) for i in top_sorted]
+
+
+def nearest_neighbors(query_vec: np.ndarray, corpus_matrix: np.ndarray, k: int) -> list[int]:
+    """
+    Return indices of the top-k most similar vectors in the corpus.
+
+    Args:
+        query_vec: Shape (D,) — the query embedding.
+        corpus_matrix: Shape (N, D) — the corpus embeddings.
+        k: Number of neighbors to return. Clamped to len(corpus_matrix) when larger.
+
+    Returns:
+        List of integer indices into corpus_matrix, sorted by descending similarity.
+    """
+    return top_k_indices(cosine_similarity(query_vec, corpus_matrix), k)
 
 
 def retrieve(
