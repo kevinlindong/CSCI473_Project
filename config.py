@@ -59,6 +59,17 @@ KNN_NEIGHBORS = 8
 # coherent 2-5 word topic phrases.
 LLM_MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"
 
+# Provider routing for per-request generation. "local" uses LLM_MODEL_NAME via
+# transformers; "openrouter" calls OpenRouter's OpenAI-compatible API.
+# Cluster labeling (generate_cluster_label) always uses the local path.
+LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "local")
+
+# Default OpenRouter model. Per-call override via the model_name kwarg on
+# generate_answer / generate_scoot_reply.
+OPENROUTER_MODEL = os.environ.get("OPENROUTER_MODEL", "anthropic/claude-haiku-4.5")
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+OPENROUTER_TEMPERATURE = 0.0
+
 # --- Arxiv Fetch ---
 ARXIV_CATEGORIES = ["cs.LG", "cs.AI", "cs.CV", "cs.CL", "cs.NE", "stat.ML"]
 # Cap per (category, month) arxiv.Search; well below arXiv's ~30k hard window

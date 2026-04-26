@@ -1,3 +1,4 @@
+import { Fragment, type ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkMath from 'remark-math'
 import rehypeKatex from 'rehype-katex'
@@ -7,17 +8,39 @@ interface Props {
   children: string
   /** Tighter spacing for compact panels (e.g. floating assistant) */
   compact?: boolean
+  /**
+   * Optional transform applied to every string child inside parsed markdown
+   * nodes. Used by the answer renderer to swap [n] markers for citation chips.
+   */
+  transformText?: (text: string) => ReactNode
 }
 
-export function NootMarkdown({ children, compact = false }: Props) {
+function applyTransform(
+  children: ReactNode,
+  transform?: (s: string) => ReactNode,
+): ReactNode {
+  if (!transform) return children
+  if (typeof children === 'string') return transform(children)
+  if (Array.isArray(children)) {
+    return children.map((c, i) =>
+      typeof c === 'string'
+        ? <Fragment key={i}>{transform(c)}</Fragment>
+        : c
+    )
+  }
+  return children
+}
+
+export function NootMarkdown({ children, compact = false, transformText }: Props) {
   const gap = compact ? 'mb-1.5' : 'mb-2'
+  const tx = (c: ReactNode) => applyTransform(c, transformText)
   return (
     <ReactMarkdown
       remarkPlugins={[remarkMath]}
       rehypePlugins={[rehypeKatex]}
       components={{
         p({ children }) {
-          return <p className={`${gap} last:mb-0 leading-relaxed`}>{children}</p>
+          return <p className={`${gap} last:mb-0 leading-relaxed`}>{tx(children)}</p>
         },
         code({ className, children, ...props }) {
           const match = /language-(\w+)/.exec(className || '')
@@ -44,25 +67,34 @@ export function NootMarkdown({ children, compact = false }: Props) {
           return <ol className={`list-decimal pl-5 ${gap} space-y-0.5`}>{children}</ol>
         },
         li({ children }) {
-          return <li className="leading-relaxed">{children}</li>
+          return <li className="leading-relaxed">{tx(children)}</li>
         },
         strong({ children }) {
-          return <strong className="font-semibold">{children}</strong>
+          return <strong className="font-semibold">{tx(children)}</strong>
         },
         em({ children }) {
-          return <em className="opacity-80">{children}</em>
+          return <em className="opacity-80">{tx(children)}</em>
         },
         h1({ children }) {
-          return <h1 className="font-[family-name:var(--font-display)] text-lg font-medium mb-1 mt-2 first:mt-0">{children}</h1>
+          const cls = compact
+            ? 'text-lg font-medium mb-1 mt-2 first:mt-0'
+            : 'text-[30px] font-semibold mb-3 mt-6 first:mt-0 tracking-tight text-forest leading-tight'
+          return <h1 className={`font-[family-name:var(--font-display)] ${cls}`}>{tx(children)}</h1>
         },
         h2({ children }) {
-          return <h2 className="font-[family-name:var(--font-display)] text-base font-medium mb-1 mt-2 first:mt-0">{children}</h2>
+          const cls = compact
+            ? 'text-base font-medium mb-1 mt-2 first:mt-0'
+            : 'text-[23px] font-semibold mb-2 mt-5 first:mt-0 tracking-tight text-forest leading-snug'
+          return <h2 className={`font-[family-name:var(--font-display)] ${cls}`}>{tx(children)}</h2>
         },
         h3({ children }) {
-          return <h3 className="font-[family-name:var(--font-display)] text-sm font-medium mb-1 mt-1 first:mt-0">{children}</h3>
+          const cls = compact
+            ? 'text-sm font-medium mb-1 mt-1 first:mt-0'
+            : 'text-[18px] font-semibold mb-1.5 mt-4 first:mt-0 tracking-tight text-forest leading-snug'
+          return <h3 className={`font-[family-name:var(--font-display)] ${cls}`}>{tx(children)}</h3>
         },
         blockquote({ children }) {
-          return <blockquote className="border-l-2 border-sage/40 pl-3 opacity-70 my-2">{children}</blockquote>
+          return <blockquote className="border-l-2 border-sage/40 pl-3 opacity-70 my-2">{tx(children)}</blockquote>
         },
         a({ href, children }) {
           return (

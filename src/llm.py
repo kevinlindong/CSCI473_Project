@@ -26,6 +26,7 @@ import config
 
 _TOKENIZER = None
 _MODEL = None
+_OR_CLIENT = None
 _SCOOT_SYSTEM_PROMPT: Optional[str] = None
 
 
@@ -68,10 +69,28 @@ def _chat_generate(
     messages: list[dict],
     max_new_tokens: int,
     model_name: Optional[str] = None,
+    *,
+    force_local: bool = False,
 ) -> str:
     """
-    Run deterministic greedy generation over a chat-template'd prompt and return
-    only the assistant's new tokens (not the input).
+    Provider-routing entry point. Dispatches on config.LLM_PROVIDER unless
+    force_local=True (used by cluster labeling so the offline pipeline never
+    accidentally hits the API).
+    """
+    provider = "local" if force_local else config.LLM_PROVIDER
+    if provider == "openrouter":
+        return _openrouter_generate(messages, max_new_tokens, model_name)
+    return _local_generate(messages, max_new_tokens, model_name)
+
+
+def _local_generate(
+    messages: list[dict],
+    max_new_tokens: int,
+    model_name: Optional[str] = None,
+) -> str:
+    """
+    Greedy generation over a chat-template'd prompt using the local Qwen model.
+    Returns only the assistant's new tokens (not the input).
     """
     import torch
     tokenizer, model = _get_model(model_name)
@@ -95,6 +114,35 @@ def _chat_generate(
     # Strip the prompt tokens; decode only the new tokens.
     new_tokens = out[0][inputs.input_ids.shape[1]:]
     return tokenizer.decode(new_tokens, skip_special_tokens=True).strip()
+
+
+def _openrouter_generate(
+    messages: list[dict],
+    max_new_tokens: int,
+    model_name: Optional[str] = None,
+) -> str:
+    """
+    OpenAI-compatible call to OpenRouter. Client is module-cached so we pay
+    construction cost once per process.
+    """
+    global _OR_CLIENT
+    if _OR_CLIENT is None:
+        from openai import OpenAI
+        api_key = os.environ.get("OPENROUTER_API_KEY")
+        if not api_key:
+            raise RuntimeError(
+                "LLM_PROVIDER=openrouter but OPENROUTER_API_KEY is not set. "
+                "Add it to .env or export it in your shell."
+            )
+        _OR_CLIENT = OpenAI(base_url=config.OPENROUTER_BASE_URL, api_key=api_key)
+
+    resp = _OR_CLIENT.chat.completions.create(
+        model=model_name or config.OPENROUTER_MODEL,
+        messages=messages,
+        max_tokens=max_new_tokens,
+        temperature=config.OPENROUTER_TEMPERATURE,
+    )
+    return (resp.choices[0].message.content or "").strip()
 
 
 # ---------------------------------------------------------------------------
@@ -173,7 +221,10 @@ def generate_cluster_label(titles: list[str], max_new_tokens: int = 24) -> str:
         return ""
 
     messages = _cluster_label_messages(titles)
-    raw = _chat_generate(messages, max_new_tokens=max_new_tokens)
+    # Cluster labeling runs offline in compute_topic_graph.py and works fine on
+    # the local 1.5B Qwen — pin to local so the offline pipeline never burns
+    # API credit when LLM_PROVIDER=openrouter.
+    raw = _chat_generate(messages, max_new_tokens=max_new_tokens, force_local=True)
 
     # Normalize: take first line, strip trailing punctuation, drop surrounding quotes.
     text = raw.split("\n")[0].strip()
@@ -225,8 +276,15 @@ def generate_answer(query: str, context: str, model_name: Optional[str] = None) 
         {
             "role": "system",
             "content": (
-                "Answer the user's question using only the provided context. "
-                "Cite sources inline as [1], [2], etc. when you use them. "
+                "Answer the user's question using only the provided context.\n\n"
+                "Citation rules:\n"
+                "- Cite sources as [1], [2], etc., placed at the END of the "
+                "sentence they support, immediately before the period (e.g. "
+                "\"...used for image segmentation [3].\").\n"
+                "- Never put a citation at the start of a sentence or inside "
+                "a heading.\n"
+                "- Group multiple citations like [1][2] when several sources "
+                "support the same claim.\n\n"
                 "If the context does not answer the question, say so plainly."
             ),
         },
@@ -235,7 +293,7 @@ def generate_answer(query: str, context: str, model_name: Optional[str] = None) 
             "content": f"Context:\n{context}\n\nQuestion: {query}",
         },
     ]
-    return _chat_generate(messages, max_new_tokens=256, model_name=model_name)
+    return _chat_generate(messages, max_new_tokens=1024, model_name=model_name)
 
 
 def _load_scoot_prompt() -> str:

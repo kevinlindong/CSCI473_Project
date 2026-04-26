@@ -28,6 +28,12 @@ import re
 from functools import lru_cache
 from typing import Optional
 
+from dotenv import load_dotenv
+
+# Load .env before importing config so LLM_PROVIDER / OPENROUTER_* env vars
+# are populated by the time config.py reads them.
+load_dotenv()
+
 import numpy as np
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -281,6 +287,7 @@ class HealthResponse(BaseModel):
     status: str
     loaded: dict
     llm_enabled: bool
+    llm_provider: str
 
 
 class ScootMessage(BaseModel):
@@ -322,6 +329,7 @@ async def health():
             "retriever_loaded": _RETRIEVER is not None,
         },
         llm_enabled=ENABLE_LLM,
+        llm_provider=config.LLM_PROVIDER,
     )
 
 

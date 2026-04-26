@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Navbar } from '../components/Navbar'
+import { NootMarkdown } from '../components/NootMarkdown'
 import { useLibrary } from '../hooks/useLibrary'
 import CorpusGraph3D from '../components/CorpusGraph3D'
 
@@ -287,8 +288,12 @@ export default function PaperBrowse() {
   const pagedResults = rankedPapers.slice(pageStart, pageStart + PAGE_SIZE)
 
   // ── "Synthesise" → /api/query (LLM answer + citations) ─────────────────
+  // Read `query` directly, not `debouncedQuery`: the user clicks at the moment
+  // they finish typing, and we don't want to send a 350-ms-stale string that
+  // truncates their last keystrokes (which would mislead the LLM about what
+  // they actually asked).
   const handleSynthesize = useCallback(async () => {
-    const q = debouncedQuery.trim()
+    const q = query.trim()
     if (!q) return
     setAnswering(true)
     setAnswer(null)
@@ -307,7 +312,7 @@ export default function PaperBrowse() {
     } finally {
       setAnswering(false)
     }
-  }, [debouncedQuery])
+  }, [query])
 
   // ── Render ───────────────────────────────────────────────────────────────
   return (
@@ -367,9 +372,9 @@ export default function PaperBrowse() {
           />
           <button
             onClick={handleSynthesize}
-            disabled={!debouncedQuery.trim() || answering}
+            disabled={!query.trim() || answering}
             className={`h-14 px-6 my-1 mr-1 rounded-full font-[family-name:var(--font-body)] text-[12px] tracking-[0.16em] transition-all flex items-center gap-2 shrink-0 ${
-              debouncedQuery.trim() && !answering
+              query.trim() && !answering
                 ? 'bg-forest text-parchment hover:bg-forest-ink'
                 : 'bg-forest/10 text-forest/35 cursor-not-allowed'
             }`}
@@ -483,9 +488,13 @@ export default function PaperBrowse() {
                   )
                 ) : answer ? (
                   <>
-                    <p className="font-[family-name:var(--font-body)] text-[16px] leading-[1.85] text-forest/90 mt-2 whitespace-pre-wrap">
-                      {renderAnswerWithCitations(answer.answer)}
-                    </p>
+                    <div className="font-[family-name:var(--font-body)] text-[15.5px] leading-[1.75] text-forest/90 mt-2">
+                      <NootMarkdown
+                        transformText={makeAnswerCitationRenderer(answer.citations, setSelectedPaperId)}
+                      >
+                        {answer.answer}
+                      </NootMarkdown>
+                    </div>
                     {answer.citations.length > 0 && (
                       <div className="mt-5 pt-4 border-t border-forest/15 flex flex-wrap gap-2">
                         {answer.citations.map((c, i) => (
@@ -908,20 +917,35 @@ function ClusterLegend({
 }
 
 // ─── Inline citation markers inside the synthesised answer ─────────────────
-function renderAnswerWithCitations(text: string) {
-  const parts = text.split(/(\[\d+\])/)
-  return parts.map((p, i) => {
-    const m = p.match(/\[(\d+)\]/)
-    if (m) return (
-      <sup
-        key={i}
-        className="inline-flex items-baseline font-[family-name:var(--font-mono)] text-[10px] text-forest bg-sage/30 border border-sage-deep/40 rounded-full px-1.5 py-[1px] mx-[2px] align-super"
-      >
-        {m[1]}
-      </sup>
-    )
-    return <span key={i}>{p}</span>
-  })
+// Factory: closes over the answer's citation list + a click handler so each
+// inline [n] chip resolves to the same paper as the bottom-row chip [n].
+function makeAnswerCitationRenderer(
+  citations: Citation[],
+  onSelect: (paperId: string) => void,
+) {
+  return function renderAnswerWithCitations(text: string) {
+    const parts = text.split(/(\[\d+\])/)
+    return parts.map((p, i) => {
+      const m = p.match(/\[(\d+)\]/)
+      if (m) {
+        const n = parseInt(m[1], 10)
+        const c = citations[n - 1]
+        return (
+          <button
+            key={i}
+            type="button"
+            onClick={c ? () => onSelect(c.paper_id) : undefined}
+            disabled={!c}
+            title={c ? c.title : undefined}
+            className="inline-flex items-center justify-center font-[family-name:var(--font-mono)] text-[10px] font-semibold text-sage-deep bg-sage/30 hover:bg-sage/55 border border-sage-deep/35 rounded-full min-w-[18px] h-[18px] px-[5px] mx-[2px] leading-none tabular-nums align-[1px] transition-colors disabled:opacity-40 disabled:cursor-default"
+          >
+            {n}
+          </button>
+        )
+      }
+      return <span key={i}>{p}</span>
+    })
+  }
 }
 
 // ─── Catalogue row ─────────────────────────────────────────────────────────
