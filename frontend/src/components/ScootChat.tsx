@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useCallback, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useEditorBridge, type BlockSpec } from '../contexts/EditorBridgeContext'
-import { useDrafts } from '../hooks/useDrafts'
+import { useDrafts, readDraftSource } from '../hooks/useDrafts'
 import type { BlockType } from '../hooks/useDocument'
+import { searchLibrary, extractBodyText, type SearchableDraft } from '../lib/librarySearch'
 
 /* ==========================================================================
    ScootChat — floating, draggable chat overlay for the scoot agent.
@@ -232,28 +233,11 @@ export function ScootChat({ open, onClose }: Props) {
   }
 
   // ── Action dispatchers ─────────────────────────────────────────────────
-
-  const STOP_WORDS = new Set(['a', 'an', 'the', 'of', 'on', 'in', 'for', 'to', 'and', 'my'])
-
-  const tokenScore = (qt: string, titleLower: string, titleWords: string[]): boolean => {
-    if (titleLower.includes(qt)) return true
-    if (qt.length < 4) return false
-    const prefix = qt.slice(0, Math.min(qt.length, 5))
-    return titleWords.some(tw => tw.startsWith(prefix))
-  }
-
-  const fuzzyMatch = (query: string, title: string, strict: boolean): boolean => {
-    const titleLower = title.toLowerCase()
-    const titleWords = titleLower.split(/[\s:,.\-—]+/).filter(Boolean)
-    const qTokens = query.toLowerCase().split(/\s+/)
-      .filter(Boolean)
-      .filter(t => !STOP_WORDS.has(t))
-    if (!qTokens.length) return false
-    const hits = qTokens.filter(qt => tokenScore(qt, titleLower, titleWords)).length
-    if (strict) return hits === qTokens.length
-    const required = qTokens.length <= 2 ? qTokens.length : qTokens.length - 1
-    return hits >= required
-  }
+  //
+  // Library lookup is delegated to lib/librarySearch.ts — title + body scoring
+  // with synonym expansion (CNN ↔ convolutional, GNN ↔ graph, SSL ↔ self-
+  // supervised, etc.) so casual queries like "open my CNN paper" match the
+  // ResNet draft even when the title doesn't say "CNN" verbatim.
 
   type OpenResult =
     | { status: 'opened'; title: string }
@@ -261,23 +245,43 @@ export function ScootChat({ open, onClose }: Props) {
     | { status: 'notfound' }
 
   const dispatchOpenDraft = useCallback((query: string): OpenResult => {
-    const q = query.toLowerCase().trim()
+    const q = query.trim()
     if (!q) return { status: 'notfound' }
 
-    let matches = drafts.filter(d => d.title.toLowerCase().includes(q))
-    if (matches.length === 0) {
-      matches = drafts.filter(d => fuzzyMatch(query, d.title, true))
-    }
-    if (matches.length === 0) {
-      matches = drafts.filter(d => fuzzyMatch(query, d.title, false))
+    // Fast path: exact substring against full title — usually a click-through
+    // from a follow-up message ("open the residual learning one").
+    const exact = drafts.filter(d => d.title.toLowerCase().includes(q.toLowerCase()))
+    if (exact.length === 1) {
+      navigate(`/editor/${exact[0].id}`)
+      return { status: 'opened', title: exact[0].title }
     }
 
-    if (matches.length === 1) {
-      navigate(`/editor/${matches[0].id}`)
-      return { status: 'opened', title: matches[0].title }
+    // Otherwise score every draft, including its LaTeX body for topic
+    // matching (catches "CNN paper" when the title is "Deep Residual Learning").
+    const searchable: SearchableDraft[] = drafts.map(d => {
+      const source = readDraftSource(d.id) ?? ''
+      return {
+        id: d.id,
+        title: d.title,
+        body: source ? extractBodyText(source, 4000) : undefined,
+      }
+    })
+    const result = searchLibrary(q, searchable)
+
+    if (result.status === 'opened' && result.best) {
+      const match = drafts.find(d => d.id === result.best!.draft.id)
+      if (match) {
+        navigate(`/editor/${match.id}`)
+        return { status: 'opened', title: match.title }
+      }
     }
-    if (matches.length > 1) {
-      return { status: 'ambiguous', titles: matches.map(d => d.title) }
+    if (result.status === 'ambiguous') {
+      return {
+        status: 'ambiguous',
+        titles: result.candidates
+          .map(c => drafts.find(d => d.id === c.draft.id)?.title)
+          .filter((t): t is string => Boolean(t)),
+      }
     }
     return { status: 'notfound' }
   }, [drafts, navigate])
