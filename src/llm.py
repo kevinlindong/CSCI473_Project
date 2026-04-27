@@ -573,13 +573,24 @@ def generate_scoot_reply(
     history: Optional[list[dict]] = None,
     max_new_tokens: int = 160,
     model_name: Optional[str] = None,
+    current_paper: Optional[str] = None,
 ) -> str:
     """
     Run a chat turn for the scoot agent. `history` is a list of {role, content}
     dicts (roles: 'user' | 'assistant'). The qwen_prompt.txt is prepended as
-    the system prompt.
+    the system prompt. If `current_paper` is provided, it is the user's live
+    LaTeX source (truncated client-side) and is appended to the system prompt
+    so scoot can answer questions about the paper they are writing.
     """
-    messages: list[dict] = [{"role": "system", "content": _load_scoot_prompt()}]
+    system_prompt = _load_scoot_prompt()
+    if current_paper and current_paper.strip():
+        system_prompt = (
+            system_prompt
+            + "\n\n--- USER'S CURRENT PAPER (LaTeX, may be truncated) ---\n"
+            + current_paper.strip()
+            + "\n--- END USER'S CURRENT PAPER ---\n"
+        )
+    messages: list[dict] = [{"role": "system", "content": system_prompt}]
     if history:
         for msg in history[-12:]:  # cap history to keep prompt under context
             role = msg.get("role")

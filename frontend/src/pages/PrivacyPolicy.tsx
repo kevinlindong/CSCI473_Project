@@ -124,16 +124,6 @@ export default function PrivacyPolicy() {
             <Link to="/how-it-works" className="font-[family-name:var(--font-body)] text-sm text-forest/55 hover:text-forest transition-colors px-3 py-1.5">
               How it works
             </Link>
-            <div className="h-4 w-px bg-forest/15 mx-1" />
-            <div className="flex squircle-sm overflow-hidden border border-forest/15">
-              <Link to="/login?mode=signin" className="font-[family-name:var(--font-body)] text-sm text-forest/65 hover:text-forest hover:bg-forest/[0.05] transition-colors px-5 py-1.5 text-center">
-                Sign In
-              </Link>
-              <div className="w-px bg-forest/15" />
-              <Link to="/login?mode=signup" className="font-[family-name:var(--font-body)] text-sm bg-forest text-parchment hover:bg-forest-deep transition-colors px-5 py-1.5 text-center">
-                Sign Up
-              </Link>
-            </div>
           </nav>
         </div>
       </header>
@@ -223,7 +213,6 @@ export default function PrivacyPolicy() {
           <div className="flex items-center gap-4">
             <Link to="/terms" className="font-mono text-[9px] text-forest/30 hover:text-forest/50 transition-colors tracking-wider">TERMS</Link>
             <Link to="/privacy" className="font-mono text-[9px] text-forest/30 hover:text-forest/50 transition-colors tracking-wider">PRIVACY</Link>
-            <Link to="/login" className="font-mono text-[9px] text-forest/30 hover:text-forest/50 transition-colors tracking-wider">SIGN IN</Link>
           </div>
         </div>
       </footer>

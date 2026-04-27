@@ -9,8 +9,44 @@ import rawSimplePrompt from '../../../src/qwen_prompt/qwen_prompt_simple.txt?raw
 import { useGraphHistory, rawNodesToItems } from '../hooks/useGraphHistory'
 import { useAuth } from '../hooks/useAuth'
 import { useEditorBridge, type BlockSpec } from '../contexts/EditorBridgeContext'
+import type { BlockType } from '../hooks/useDocument'
 import { supabase } from '../lib/supabase'
-import { parseWriteResponse, normalizeBlocks, titleFromBlocks } from '../lib/writeToEditor'
+import {
+  parseWriteResponse,
+  normalizeBlocks,
+  titleFromBlocks,
+  type BlockSpec as RawBlockSpec,
+  type ParsedWrite as RawParsedWrite,
+} from '../lib/writeToEditor'
+
+// writeToEditor.BlockSpec.type is a loose `string` because it parses raw LLM
+// output. Coerce it to the editor's BlockType union so the bridge accepts it.
+const KNOWN_BLOCK_TYPES: ReadonlySet<BlockType> = new Set<BlockType>([
+  'paragraph', 'h1', 'h2', 'h3', 'quote', 'latex', 'code',
+  'chemistry', 'callout', 'divider', 'table', 'diagram',
+  'bullet_list', 'ordered_list',
+])
+
+function toBridgeBlock(b: RawBlockSpec): BlockSpec {
+  const t = (b.type || 'paragraph').toLowerCase()
+  const type: BlockType = KNOWN_BLOCK_TYPES.has(t as BlockType) ? (t as BlockType) : 'paragraph'
+  const content =
+    typeof b.content === 'string'
+      ? b.content
+      : Array.isArray(b.content)
+        ? (b.content as unknown[]).map(String).join('\n')
+        : String(b.content ?? '')
+  return { type, content, meta: b.meta }
+}
+
+interface NormalizedWrite {
+  blocks: BlockSpec[]
+  confirmation: string
+}
+
+function toBridgeWrite(w: RawParsedWrite): NormalizedWrite {
+  return { blocks: w.blocks.map(toBridgeBlock), confirmation: w.confirmation }
+}
 
 interface AttachedFile {
   name: string
@@ -282,7 +318,8 @@ export function SpotlightSearch({
       historyRef.current = [...historyRef.current, { role: 'assistant', content }]
 
       // Check for write-to-editor response
-      const writeData = parseWriteResponse(content)
+      const rawWriteData = parseWriteResponse(content)
+      const writeData: NormalizedWrite | null = rawWriteData ? toBridgeWrite(rawWriteData) : null
       if (writeData) {
         if (editorBridge.isEditorActive) {
           editorBridge.insertBlocks(writeData.blocks)

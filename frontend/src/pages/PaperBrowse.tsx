@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Navbar } from '../components/Navbar'
 import { NootMarkdown } from '../components/NootMarkdown'
 import { useLibrary } from '../hooks/useLibrary'
 import CorpusGraph3D from '../components/CorpusGraph3D'
+import { PaperDetailDrawer } from '../components/PaperDetailDrawer'
 
 /* ==========================================================================
    Paper Browse — "the reading room". Live data from the FastAPI backend:
@@ -51,11 +52,6 @@ interface QueryResult {
   answer_generated: boolean
   reranked: boolean
   citations: Citation[]
-}
-
-interface PaperDetail extends Paper {
-  sections: Array<{ heading: string; text: string }>
-  figures: Array<{ caption: string; image_path: string }>
 }
 
 // ─── Config ────────────────────────────────────────────────────────────────
@@ -122,8 +118,17 @@ export default function PaperBrowse() {
   // Multi-select cluster filter. Empty set = "all". Clicking a chip toggles it.
   const [activeClusters, setActiveClusters] = useState<Set<number>>(new Set())
   const [queryConstellationActive, setQueryConstellationActive] = useState(false)
-  const [selectedPaperId, setSelectedPaperId] = useState<string | null>(null)
+  // ?paper={id} auto-opens that paper's drawer — used by Scoot citations to
+  // deep-link from the chat bubble back into the corpus browser.
+  const [searchParams] = useSearchParams()
+  const paperFromUrl = searchParams.get('paper')
+  const [selectedPaperId, setSelectedPaperId] = useState<string | null>(paperFromUrl)
   const [page, setPage] = useState(0)
+  // Re-open the drawer if the URL param changes after mount (e.g. user clicks
+  // a different Scoot citation while /browse is already open).
+  useEffect(() => {
+    if (paperFromUrl) setSelectedPaperId(paperFromUrl)
+  }, [paperFromUrl])
 
   // Auto-clear constellation isolation if the query/neighbors disappear so the
   // toggle can't sit "active" with nothing to show.
@@ -139,9 +144,7 @@ export default function PaperBrowse() {
       return next
     })
   }, [])
-  const constellationPanelRef = useRef<HTMLElement | null>(null)
-  const fieldSurveyHeaderRef = useRef<HTMLDivElement | null>(null)
-  const [graphHeight, setGraphHeight] = useState(520)
+  const [graphHeight] = useState(730)
 
   // ── Initial load: papers + topic map ────────────────────────────────────
   useEffect(() => {
@@ -195,36 +198,6 @@ export default function PaperBrowse() {
     const t = setTimeout(() => setDebouncedQuery(query), DEBOUNCE_MS)
     return () => clearTimeout(t)
   }, [query])
-
-  // Keep the field-survey panel close in height to the constellation list.
-  useEffect(() => {
-    if (typeof window === 'undefined' || graphNodes.length === 0) return
-    const asideEl = constellationPanelRef.current
-    const headerEl = fieldSurveyHeaderRef.current
-    if (!asideEl || !headerEl) return
-
-    const recompute = () => {
-      if (!window.matchMedia('(min-width: 1024px)').matches) {
-        setGraphHeight(prev => (prev === 520 ? prev : 520))
-        return
-      }
-      const asideH = asideEl.getBoundingClientRect().height
-      const headerH = headerEl.getBoundingClientRect().height
-      const next = Math.round(Math.max(520, Math.min(900, asideH - headerH - 16)))
-      setGraphHeight(prev => (Math.abs(prev - next) > 1 ? next : prev))
-    }
-
-    const ro = new ResizeObserver(recompute)
-    ro.observe(asideEl)
-    ro.observe(headerEl)
-    window.addEventListener('resize', recompute)
-    recompute()
-
-    return () => {
-      ro.disconnect()
-      window.removeEventListener('resize', recompute)
-    }
-  }, [graphNodes.length])
 
   // ── Projection (fast ranking) whenever debounced query changes ──────────
   useEffect(() => {
@@ -356,7 +329,7 @@ export default function PaperBrowse() {
           </span>
         </div>
 
-        <div className="flex items-stretch gap-0 bg-milk border border-forest/15 rounded-3xl shadow-[0_18px_36px_-22px_rgba(38,70,53,0.22)] overflow-hidden">
+        <div className="flex items-center gap-0 bg-milk border border-forest/15 rounded-3xl shadow-[0_18px_36px_-22px_rgba(38,70,53,0.22)] overflow-hidden">
           <div className="flex items-center justify-center w-14 shrink-0 text-forest/55">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
               <circle cx="11" cy="11" r="7" />
@@ -368,7 +341,7 @@ export default function PaperBrowse() {
             onChange={e => setQuery(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSynthesize()}
             placeholder="What methods have been proposed for efficient attention in long-context transformers?"
-            className="flex-1 h-14 px-2 bg-transparent font-[family-name:var(--font-body)] text-[15px] text-forest placeholder-forest/35 focus:outline-none"
+            className="flex-1 h-14 px-2 bg-transparent font-[family-name:var(--font-body)] text-[15px] leading-[3.5rem] text-left text-forest placeholder-forest/35 focus:outline-none"
           />
           <button
             onClick={handleSynthesize}
@@ -448,7 +421,8 @@ export default function PaperBrowse() {
         )}
       </section>
 
-      {/* Synthesized answer */}
+      {/* Synthesized answer — sits directly under the search bar, above the
+          topic constellations, so the user sees their answer first. */}
       {(answer || answering || answerError) && (
         <section className="max-w-6xl mx-auto px-8 pt-8 animate-fade-up">
           <div className="relative bg-milk border border-forest/15 rounded-3xl p-8 shadow-[0_18px_36px_-22px_rgba(38,70,53,0.18)] overflow-hidden">
@@ -520,7 +494,7 @@ export default function PaperBrowse() {
       {/* Top row — constellations (left) + 3D field survey (right) */}
       {graphNodes.length > 0 && (
         <section className="max-w-6xl mx-auto px-8 pt-12 grid grid-cols-12 gap-8">
-          <aside ref={constellationPanelRef} className="col-span-12 lg:col-span-4">
+          <aside className="col-span-12 lg:col-span-4 lg:flex lg:flex-col lg:overflow-hidden lg:h-[770px]">
             <div className="flex items-baseline justify-between mb-4">
               <div>
                 <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/50 mb-1">
@@ -544,11 +518,13 @@ export default function PaperBrowse() {
               onToggle={() => setQueryConstellationActive(v => !v)}
             />
 
-            <ClusterLegend
-              clusters={clusters}
-              active={activeClusters}
-              onPick={toggleCluster}
-            />
+            <div className="lg:flex-1 lg:min-h-0">
+              <ClusterLegend
+                clusters={clusters}
+                active={activeClusters}
+                onPick={toggleCluster}
+              />
+            </div>
 
             <p className="mt-5 font-[family-name:var(--font-body)] text-[13px] text-forest/55 leading-[1.7] max-w-[36ch]">
               {activeClusters.size === 0
@@ -560,7 +536,7 @@ export default function PaperBrowse() {
           </aside>
 
           <div className="col-span-12 lg:col-span-8">
-            <div ref={fieldSurveyHeaderRef} className="flex items-baseline gap-3 mb-4">
+            <div className="flex items-baseline gap-3 mb-4">
               <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/50">
                 figure · field survey
               </span>
@@ -656,10 +632,10 @@ export default function PaperBrowse() {
       </section>
 
       {selectedPaper && (
-        <DetailDrawer
+        <PaperDetailDrawer
           paperId={selectedPaper.paper_id}
           summary={selectedPaper}
-          clusterId={clusterById[selectedPaper.paper_id]}
+          clusterColor={clusterColor(clusterById[selectedPaper.paper_id] ?? -1)}
           clusterLabel={clusters.find(c => c.id === clusterById[selectedPaper.paper_id])?.label ?? ''}
           onClose={() => setSelectedPaperId(null)}
         />
@@ -850,6 +826,8 @@ function QueryConstellationCard({
 }
 
 // ─── Cluster legend (replaces the scatter map) ────────────────────────────
+// At lg+ the legend fills its parent's height (parent must size it via flex);
+// below lg it uses natural height so the stacked layout isn't clipped.
 function ClusterLegend({
   clusters, active, onPick,
 }: {
@@ -860,7 +838,7 @@ function ClusterLegend({
   const max = Math.max(1, ...clusters.map(c => c.size))
   const anyActive = active.size > 0
   return (
-    <div className="border border-forest/15 rounded-2xl bg-milk overflow-hidden">
+    <div className="border border-forest/15 rounded-2xl bg-milk overflow-hidden lg:h-full lg:flex lg:flex-col">
       {clusters.length === 0 ? (
         <div className="px-5 py-6 font-[family-name:var(--font-body)] text-[13px] text-forest/55">
           cluster assignments not yet computed.
@@ -869,48 +847,50 @@ function ClusterLegend({
           </div>
         </div>
       ) : (
-        clusters.map(c => {
-          const isActive = active.has(c.id)
-          const dim = anyActive && !isActive
-          const pct = (c.size / max) * 100
-          return (
-            <button
-              key={c.id}
-              onClick={() => onPick(c.id)}
-              aria-pressed={isActive}
-              className={`w-full text-left px-5 py-3 flex items-center gap-3 border-b border-forest/10 last:border-b-0 hover:bg-sage/10 transition-colors ${
-                dim ? 'opacity-50' : ''
-              } ${isActive ? 'bg-sage/15' : ''}`}
-            >
-              <span
-                className={`w-4 h-4 rounded-full shrink-0 flex items-center justify-center border transition-colors ${
-                  isActive ? 'border-forest/40' : 'border-forest/15'
-                }`}
-                style={{ background: isActive ? c.color : 'transparent' }}
+        <div className="overflow-y-auto lg:flex-1 lg:min-h-0">
+          {clusters.map(c => {
+            const isActive = active.has(c.id)
+            const dim = anyActive && !isActive
+            const pct = (c.size / max) * 100
+            return (
+              <button
+                key={c.id}
+                onClick={() => onPick(c.id)}
+                aria-pressed={isActive}
+                className={`w-full text-left px-5 py-3 flex items-center gap-3 border-b border-forest/10 last:border-b-0 hover:bg-sage/10 transition-colors ${
+                  dim ? 'opacity-50' : ''
+                } ${isActive ? 'bg-sage/15' : ''}`}
               >
-                {!isActive && (
-                  <span className="w-2 h-2 rounded-full" style={{ background: c.color }} />
-                )}
-                {isActive && (
-                  <svg className="w-2.5 h-2.5 text-parchment" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
-              </span>
-              <div className="flex-1 min-w-0">
-                <div className="font-[family-name:var(--font-body)] text-[13.5px] text-forest leading-snug truncate">
-                  {c.label}
+                <span
+                  className={`w-4 h-4 rounded-full shrink-0 flex items-center justify-center border transition-colors ${
+                    isActive ? 'border-forest/40' : 'border-forest/15'
+                  }`}
+                  style={{ background: isActive ? c.color : 'transparent' }}
+                >
+                  {!isActive && (
+                    <span className="w-2 h-2 rounded-full" style={{ background: c.color }} />
+                  )}
+                  {isActive && (
+                    <svg className="w-2.5 h-2.5 text-parchment" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  )}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="font-[family-name:var(--font-body)] text-[13.5px] text-forest leading-snug truncate">
+                    {c.label}
+                  </div>
+                  <div className="mt-1 h-[3px] rounded-full bg-forest/10 overflow-hidden">
+                    <span className="block h-full rounded-full" style={{ width: `${pct}%`, background: c.color, opacity: 0.7 }} />
+                  </div>
                 </div>
-                <div className="mt-1 h-[3px] rounded-full bg-forest/10 overflow-hidden">
-                  <span className="block h-full rounded-full" style={{ width: `${pct}%`, background: c.color, opacity: 0.7 }} />
-                </div>
-              </div>
-              <span className="font-[family-name:var(--font-mono)] text-[10px] text-forest/55 tabular-nums shrink-0">
-                {c.size}
-              </span>
-            </button>
-          )
-        })
+                <span className="font-[family-name:var(--font-mono)] text-[10px] text-forest/55 tabular-nums shrink-0">
+                  {c.size}
+                </span>
+              </button>
+            )
+          })}
+        </div>
       )}
     </div>
   )
@@ -1146,220 +1126,3 @@ function highlightQuery(text: string, query: string) {
   )
 }
 
-// ─── Detail drawer ─────────────────────────────────────────────────────────
-function DetailDrawer({
-  paperId, summary, clusterId, clusterLabel, onClose,
-}: {
-  paperId: string
-  summary: Paper
-  clusterId: number | undefined
-  clusterLabel: string
-  onClose: () => void
-}) {
-  const drawerRef = useRef<HTMLDivElement>(null)
-  const color = clusterColor(clusterId ?? -1)
-  const { has, toggle } = useLibrary()
-  const saved = has(paperId)
-
-  const [detail, setDetail] = useState<PaperDetail | null>(null)
-  const [detailLoading, setDetailLoading] = useState(true)
-  const [detailError, setDetailError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
-
-  useEffect(() => {
-    let cancelled = false
-    setDetailLoading(true)
-    setDetailError(null)
-    fetch(`${API_BASE}/api/papers/${encodeURIComponent(paperId)}`)
-      .then(r => (r.ok ? r.json() : Promise.reject(new Error(`${r.status}`))))
-      .then(json => { if (!cancelled) setDetail(json) })
-      .catch(e => { if (!cancelled) setDetailError(e instanceof Error ? e.message : String(e)) })
-      .finally(() => { if (!cancelled) setDetailLoading(false) })
-    return () => { cancelled = true }
-  }, [paperId])
-
-  const paper = detail ?? summary
-  const sections = detail?.sections ?? []
-  const figures = detail?.figures ?? []
-
-  return (
-    <div className="fixed inset-0 z-[60] flex justify-end">
-      <div className="absolute inset-0 bg-forest/45 backdrop-blur-sm" onClick={onClose} />
-      <div
-        ref={drawerRef}
-        className="relative w-full max-w-xl bg-milk paper-grain shadow-[0_30px_80px_-30px_rgba(38,70,53,0.5)] overflow-y-auto animate-slide-in-right border-l border-forest/15"
-      >
-        <div className="h-[3px]" style={{ background: color, opacity: 0.6 }} />
-
-        <div className="sticky top-0 z-10 bg-milk/95 backdrop-blur border-b border-forest/12 px-7 py-4 flex items-center gap-3">
-          <span className="w-2.5 h-2.5 rounded-full" style={{ background: color }} />
-          <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.24em] uppercase text-forest/60">arxiv:{paperId}</span>
-          <div className="flex-1" />
-          <button
-            onClick={() => toggle(paperId)}
-            className={`h-9 px-3 rounded-full flex items-center gap-2 font-[family-name:var(--font-body)] text-[12.5px] border transition-colors ${
-              saved
-                ? 'bg-sage/25 border-sage-deep/50 text-forest'
-                : 'bg-milk border-forest/20 text-forest/70 hover:text-forest hover:bg-sage/10 hover:border-forest/40'
-            }`}
-            title={saved ? 'remove from library' : 'save to library'}
-          >
-            <svg className="w-3.5 h-3.5" fill={saved ? 'currentColor' : 'none'} viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 5v14l7-5 7 5V5a2 2 0 00-2-2H7a2 2 0 00-2 2z" />
-            </svg>
-            {saved ? 'in library' : 'save'}
-          </button>
-          <button
-            onClick={onClose}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-forest/55 hover:text-forest hover:bg-sage/20 border border-forest/15 transition-colors"
-            title="Close (esc)"
-          >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        <div className="px-8 py-8">
-          <div className="flex items-baseline gap-3 mb-5">
-            <span className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/55">now reading</span>
-            <span className="h-px flex-1 bg-forest/12" />
-          </div>
-
-          <h2 className="font-[family-name:var(--font-display)] text-[34px] leading-[1.1] text-forest font-light mb-4 tracking-[-0.01em]">
-            {paper.title}
-          </h2>
-          {paper.authors.length > 0 && (
-            <div className="font-[family-name:var(--font-mono)] text-[12px] text-forest/65 mb-2">
-              {paper.authors.join(' · ')}
-            </div>
-          )}
-          <div className="flex items-center gap-2.5 mb-7 flex-wrap">
-            {clusterLabel && (
-              <span
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border font-[family-name:var(--font-body)] text-[12.5px]"
-                style={{ color, borderColor: `${color}55` }}
-              >
-                <span className="w-1.5 h-1.5 rounded-full" style={{ background: color }} />
-                {clusterLabel}
-              </span>
-            )}
-            {paper.date && (
-              <span className="font-[family-name:var(--font-mono)] text-[10px] text-forest/50 tracking-[0.22em] uppercase">
-                {paper.date}
-              </span>
-            )}
-          </div>
-
-          {/* Abstract */}
-          {paper.abstract && (
-            <div className="mb-8 bg-parchment/40 border border-forest/10 rounded-2xl pl-5 pr-5 pt-4 pb-5 relative">
-              <span className="absolute left-0 top-4 bottom-4 w-[3px] rounded-r-full bg-sage-deep/55" />
-              <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/50 mb-2">abstract</div>
-              <p className="font-[family-name:var(--font-body)] text-[14.5px] text-forest/85 leading-[1.85] whitespace-pre-wrap">
-                {paper.abstract}
-              </p>
-            </div>
-          )}
-
-          {/* Detail load states */}
-          {detailLoading && (
-            <div className="font-[family-name:var(--font-mono)] text-[10.5px] tracking-[0.24em] uppercase text-forest/45 mb-6">
-              loading full paper…
-            </div>
-          )}
-          {detailError && (
-            <div className="mb-8 p-4 rounded-xl bg-parchment/40 border border-forest/10 font-[family-name:var(--font-body)] text-[13px] text-forest/70">
-              couldn't load full paper detail ({detailError}).
-            </div>
-          )}
-
-          {/* Sections */}
-          {sections.length > 0 && (
-            <div className="mb-8">
-              <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/55 mb-3">
-                sections · {sections.length}
-              </div>
-              <div className="space-y-3">
-                {sections.slice(0, 6).map((s, i) => (
-                  <div key={i} className="bg-milk border border-forest/12 rounded-2xl px-5 py-4">
-                    <div className="font-[family-name:var(--font-mono)] text-[10px] text-sage-deep tracking-[0.2em] uppercase mb-1.5">
-                      § {s.heading || `section ${i + 1}`}
-                    </div>
-                    <p className="font-[family-name:var(--font-body)] text-[13.5px] text-forest/80 leading-[1.7] line-clamp-4 whitespace-pre-wrap">
-                      {s.text}
-                    </p>
-                  </div>
-                ))}
-                {sections.length > 6 && (
-                  <div className="font-[family-name:var(--font-mono)] text-[10px] text-forest/45 tracking-widest uppercase">
-                    + {sections.length - 6} more sections
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Figures */}
-          {figures.length > 0 && (
-            <div className="mb-8">
-              <div className="font-[family-name:var(--font-mono)] text-[10px] tracking-[0.3em] uppercase text-forest/55 mb-3">
-                figures · {figures.length}
-              </div>
-              <div className="space-y-3">
-                {figures.slice(0, 4).map((f, i) => (
-                  <figure key={i} className="border border-forest/15 rounded-2xl bg-milk overflow-hidden">
-                    {f.image_path ? (
-                      <img src={f.image_path} alt={f.caption || `figure ${i + 1}`} className="block w-full h-auto bg-parchment/40" />
-                    ) : (
-                      <div className="h-32 bg-parchment/40 flex items-center justify-center font-[family-name:var(--font-mono)] text-[10px] tracking-widest uppercase text-forest/40">
-                        caption only
-                      </div>
-                    )}
-                    <figcaption className="px-5 py-3 border-t border-forest/12 font-[family-name:var(--font-body)] text-[12.5px] text-forest/70 leading-snug">
-                      <span className="font-[family-name:var(--font-mono)] text-[9.5px] tracking-[0.22em] uppercase mr-2 text-sage-deep">figure {i + 1}.</span>
-                      {f.caption}
-                    </figcaption>
-                  </figure>
-                ))}
-                {figures.length > 4 && (
-                  <div className="font-[family-name:var(--font-mono)] text-[10px] text-forest/45 tracking-widest uppercase">
-                    + {figures.length - 4} more figures
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          <div className="flex gap-2 flex-wrap">
-            <Link
-              to="/editor/scratch"
-              className="flex-1 min-w-[180px] inline-flex items-center justify-center gap-2 h-11 rounded-full bg-forest text-parchment hover:bg-forest-ink transition-colors font-[family-name:var(--font-body)] text-[14px]"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-              cite in manuscript
-            </Link>
-            <a
-              href={paper.url || `https://arxiv.org/abs/${paperId}`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center justify-center gap-2 h-11 px-5 rounded-full bg-milk border border-forest/20 hover:bg-sage/15 hover:border-forest/40 transition-colors font-[family-name:var(--font-body)] text-[14px] text-forest/75 hover:text-forest"
-            >
-              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-              open on arXiv
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}

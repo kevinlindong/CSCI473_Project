@@ -1,22 +1,17 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import JSZip from 'jszip'
 import { Navbar } from '../components/Navbar'
-import { useAuth } from '../hooks/useAuth'
-import { supabase } from '../lib/supabase'
 import { useTheme, THEMES } from '../contexts/ThemeContext'
 
 /* ------------------------------------------------------------------ */
 /* Settings Page                                                        */
-/* Account, appearance, notifications, privacy, and danger zone        */
+/* Appearance, notifications, and a guest-friendly export tool.        */
 /* ------------------------------------------------------------------ */
 
-type Section = 'account' | 'appearance' | 'notifications' | 'danger'
+type Section = 'appearance' | 'danger'
 
 const sections: { id: Section; label: string; icon: string }[] = [
-  { id: 'account', label: 'Account', icon: '◉' },
   { id: 'appearance', label: 'Appearance', icon: '◈' },
-  { id: 'notifications', label: 'Notifications', icon: '◎' },
   { id: 'danger', label: 'Danger Zone', icon: '⚠' },
 ]
 
@@ -76,86 +71,8 @@ function ThemeCircle({ colors, size = 40 }: { colors: [string, string, string, s
 }
 
 export default function Settings() {
-  const [activeSection, setActiveSection] = useState<Section>('account')
-  const navigate = useNavigate()
-  const { user, profile, signOut } = useAuth()
+  const [activeSection, setActiveSection] = useState<Section>('appearance')
   const { themeId, setThemeId, fontScale, setFontScale, compactMode, setCompactMode, latexPreview, setLatexPreview } = useTheme()
-
-  // Account
-  const [fullName, setFullName] = useState(profile?.full_name ?? '')
-  const [handle, setHandle] = useState(profile?.display_name ?? '')
-  const [school, setSchool] = useState(profile?.organization ?? '')
-  const [savingProfile, setSavingProfile] = useState(false)
-  const [saveProfileMsg, setSaveProfileMsg] = useState<string | null>(null)
-
-  // Password
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [passwordMsg, setPasswordMsg] = useState<string | null>(null)
-  const [savingPassword, setSavingPassword] = useState(false)
-
-  // Notifications (persisted in localStorage)
-  const [notifyMerges, setNotifyMerges] = useState(() => localStorage.getItem('folio-notify-merges') !== 'false')
-  const [notifyComments, setNotifyComments] = useState(() => localStorage.getItem('folio-notify-comments') !== 'false')
-  const [notifyDigest, setNotifyDigest] = useState(() => localStorage.getItem('folio-notify-digest') !== 'false')
-  const [emailNotifications, setEmailNotifications] = useState(() => localStorage.getItem('folio-notify-email') === 'true')
-
-  // Sync profile fields when profile loads
-  useEffect(() => {
-    if (profile) {
-      setFullName(profile.full_name ?? '')
-      setHandle(profile.display_name ?? '')
-      setSchool(profile.organization ?? '')
-    }
-  }, [profile])
-
-  // Persist notification prefs
-  useEffect(() => { localStorage.setItem('folio-notify-merges', String(notifyMerges)) }, [notifyMerges])
-  useEffect(() => { localStorage.setItem('folio-notify-comments', String(notifyComments)) }, [notifyComments])
-  useEffect(() => { localStorage.setItem('folio-notify-digest', String(notifyDigest)) }, [notifyDigest])
-  useEffect(() => { localStorage.setItem('folio-notify-email', String(emailNotifications)) }, [emailNotifications])
-
-  async function saveProfile() {
-    if (!user) return
-    setSavingProfile(true)
-    setSaveProfileMsg(null)
-    const { error } = await supabase
-      .from('profiles')
-      .update({ full_name: fullName, display_name: handle, organization: school })
-      .eq('id', user.id)
-    setSavingProfile(false)
-    setSaveProfileMsg(error ? `Error: ${error.message}` : 'Changes saved.')
-    setTimeout(() => setSaveProfileMsg(null), 3000)
-  }
-
-  async function updatePassword() {
-    if (newPassword !== confirmPassword) {
-      setPasswordMsg("Passwords don't match.")
-      return
-    }
-    if (newPassword.length < 6) {
-      setPasswordMsg('Password must be at least 6 characters.')
-      return
-    }
-    setSavingPassword(true)
-    setPasswordMsg(null)
-    const { error } = await supabase.auth.updateUser({ password: newPassword })
-    setSavingPassword(false)
-    if (error) {
-      setPasswordMsg(`Error: ${error.message}`)
-    } else {
-      setPasswordMsg('Password updated successfully.')
-      setCurrentPassword('')
-      setNewPassword('')
-      setConfirmPassword('')
-    }
-    setTimeout(() => setPasswordMsg(null), 4000)
-  }
-
-  // Avatar initials
-  const initials = (fullName || profile?.display_name || user?.email || 'U')
-    .split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
 
   return (
     <div className="min-h-screen bg-cream flex flex-col">
@@ -187,141 +104,10 @@ export default function Settings() {
                   <span className="font-[family-name:var(--font-body)] text-xs font-medium">{s.label}</span>
                 </button>
               ))}
-
-              {/* Sign out */}
-              <div className="mt-3 pt-3 border-t border-forest/[0.08]">
-                <button
-                  onClick={async () => {
-                    await signOut()
-                    navigate('/login')
-                  }}
-                  className="flex items-center gap-3 px-3 py-2.5 squircle-sm text-left transition-all cursor-pointer w-full text-rust/50 hover:bg-rust/[0.06] hover:text-rust"
-                >
-                  <span className="text-[11px] opacity-70">⎋</span>
-                  <span className="font-[family-name:var(--font-body)] text-xs font-medium">Sign out</span>
-                </button>
-              </div>
             </nav>
 
             {/* Content */}
             <div className="space-y-6">
-
-              {/* ── Account ── */}
-              {activeSection === 'account' && (
-                <>
-                  <SectionCard title="Profile">
-                    {/* Avatar */}
-                    <div className="flex items-center gap-5 mb-6 pb-6 border-b border-forest/[0.06]">
-                      <div className="w-16 h-16 rounded-full bg-forest flex items-center justify-center text-xl font-medium text-parchment border-4 border-cream shadow shrink-0 overflow-hidden">
-                        {profile?.avatar_url
-                          ? <img src={profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
-                          : initials}
-                      </div>
-                      <div>
-                        <p className="font-[family-name:var(--font-body)] text-sm text-forest/60 mb-2">Profile picture</p>
-                        <button className="font-mono text-[10px] px-3 py-1.5 squircle-sm border border-forest/15 text-forest/50 hover:border-forest/30 hover:text-forest transition-all cursor-pointer">
-                          Change avatar
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Fields */}
-                    <div className="space-y-4">
-                      <div>
-                        <label className="font-mono text-[10px] text-forest/30 tracking-wider uppercase block mb-1.5">Full name</label>
-                        <input
-                          type="text"
-                          value={fullName}
-                          onChange={e => setFullName(e.target.value)}
-                          className="w-full bg-cream border border-forest/10 squircle-sm px-3 py-2 text-sm text-forest/80 font-[family-name:var(--font-body)] focus:outline-none focus:border-sage/50 transition-colors"
-                        />
-                      </div>
-                      <div>
-                        <label className="font-mono text-[10px] text-forest/30 tracking-wider uppercase block mb-1.5">Username / handle</label>
-                        <input
-                          type="text"
-                          value={handle}
-                          onChange={e => setHandle(e.target.value)}
-                          placeholder="@your-handle"
-                          className="w-full bg-cream border border-forest/10 squircle-sm px-3 py-2 text-sm text-forest/80 font-[family-name:var(--font-body)] focus:outline-none focus:border-sage/50 transition-colors"
-                        />
-                      </div>
-                      <div>
-                        <label className="font-mono text-[10px] text-forest/30 tracking-wider uppercase block mb-1.5">School / university</label>
-                        <input
-                          type="text"
-                          value={school}
-                          onChange={e => setSchool(e.target.value)}
-                          placeholder="e.g. NYU, MIT, Stanford…"
-                          className="w-full bg-cream border border-forest/10 squircle-sm px-3 py-2 text-sm text-forest/80 font-[family-name:var(--font-body)] focus:outline-none focus:border-sage/50 transition-colors"
-                        />
-                      </div>
-                      <div>
-                        <label className="font-mono text-[10px] text-forest/30 tracking-wider uppercase block mb-1.5">Email</label>
-                        <input
-                          type="text"
-                          value={user?.email ?? profile?.email ?? ''}
-                          readOnly
-                          className="w-full bg-cream/60 border border-forest/[0.06] squircle-sm px-3 py-2 text-sm text-forest/40 font-[family-name:var(--font-body)] focus:outline-none cursor-not-allowed"
-                        />
-                        <span className="font-mono text-[9px] text-forest/20 mt-1 block">Email cannot be changed here.</span>
-                      </div>
-                    </div>
-                  </SectionCard>
-
-                  {/* Save profile */}
-                  <div className="flex items-center justify-end gap-3">
-                    {saveProfileMsg && (
-                      <span className={`font-mono text-[10px] ${saveProfileMsg.startsWith('Error') ? 'text-rust' : 'text-sage'}`}>
-                        {saveProfileMsg}
-                      </span>
-                    )}
-                    <button
-                      onClick={saveProfile}
-                      disabled={savingProfile}
-                      className="font-mono text-[11px] px-5 py-2 squircle-sm bg-sage text-forest hover:bg-sage/80 transition-all cursor-pointer disabled:opacity-50"
-                    >
-                      {savingProfile ? 'Saving…' : 'Save changes'}
-                    </button>
-                  </div>
-
-                  {/* Password */}
-                  <SectionCard title="Password">
-                    <div className="space-y-4">
-                      {[
-                        { label: 'Current password', value: currentPassword, onChange: setCurrentPassword },
-                        { label: 'New password', value: newPassword, onChange: setNewPassword },
-                        { label: 'Confirm new password', value: confirmPassword, onChange: setConfirmPassword },
-                      ].map(field => (
-                        <div key={field.label}>
-                          <label className="font-mono text-[10px] text-forest/30 tracking-wider uppercase block mb-1.5">{field.label}</label>
-                          <input
-                            type="password"
-                            value={field.value}
-                            onChange={e => field.onChange(e.target.value)}
-                            placeholder="••••••••"
-                            className="w-full bg-cream border border-forest/10 squircle-sm px-3 py-2 text-sm text-forest/80 font-[family-name:var(--font-body)] focus:outline-none focus:border-sage/50 transition-colors"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                    {passwordMsg && (
-                      <p className={`font-mono text-[10px] mt-3 ${passwordMsg.startsWith('Error') || passwordMsg.includes("don't") || passwordMsg.includes('least') ? 'text-rust' : 'text-sage'}`}>
-                        {passwordMsg}
-                      </p>
-                    )}
-                    <div className="mt-5 flex justify-end">
-                      <button
-                        onClick={updatePassword}
-                        disabled={savingPassword}
-                        className="font-mono text-[11px] px-4 py-2 squircle-sm bg-forest text-parchment hover:bg-forest/80 transition-all cursor-pointer disabled:opacity-50"
-                      >
-                        {savingPassword ? 'Updating…' : 'Update password'}
-                      </button>
-                    </div>
-                  </SectionCard>
-                </>
-              )}
 
               {/* ── Appearance ── */}
               {activeSection === 'appearance' && (
@@ -386,28 +172,9 @@ export default function Settings() {
                 </SectionCard>
               )}
 
-              {/* ── Notifications ── */}
-              {activeSection === 'notifications' && (
-                <SectionCard title="Notifications">
-                  <SettingRow label="Merge activity" description="When someone merges into your noots">
-                    <Toggle checked={notifyMerges} onChange={setNotifyMerges} />
-                  </SettingRow>
-                  <SettingRow label="Comments" description="When someone comments on your noots">
-                    <Toggle checked={notifyComments} onChange={setNotifyComments} />
-                  </SettingRow>
-                  <SettingRow label="Weekly digest" description="Summary of your noot activity">
-                    <Toggle checked={notifyDigest} onChange={setNotifyDigest} />
-                  </SettingRow>
-                  <SettingRow label="Email notifications" description="Send notifications to your registered email">
-                    <Toggle checked={emailNotifications} onChange={setEmailNotifications} />
-                  </SettingRow>
-                  <p className="font-mono text-[10px] text-forest/45 mt-4">Notification preferences are saved locally.</p>
-                </SectionCard>
-              )}
-
               {/* ── Danger Zone ── */}
               {activeSection === 'danger' && (
-                <DangerZone onSignOut={signOut} />
+                <DangerZone />
               )}
 
             </div>
@@ -419,19 +186,17 @@ export default function Settings() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Danger Zone sub-component with confirmation states                  */
+/* Danger Zone — local-only export of drafts and settings              */
 /* ------------------------------------------------------------------ */
 
-function DangerZone({ onSignOut }: { onSignOut?: () => void }) {
+function DangerZone() {
   const [exportLoading, setExportLoading] = useState(false)
   const [exportMsg, setExportMsg] = useState<string | null>(null)
-  const [confirmDeactivate, setConfirmDeactivate] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
 
   // Bundle every scholar-local key into a ZIP download. The zip contains
-  // `profile.json` (account/settings/index metadata) plus a `papers/` folder
-  // with one .tex per draft so the source files survive as plain LaTeX even
-  // if the JSON is never re-imported.
+  // `scholar.json` (settings/index metadata) plus a `papers/` folder with one
+  // .tex per draft so the source files survive as plain LaTeX even if the
+  // JSON is never re-imported.
   async function handleExport() {
     setExportLoading(true)
     setExportMsg(null)
@@ -472,7 +237,7 @@ function DangerZone({ onSignOut }: { onSignOut?: () => void }) {
         fileMap.push({ id: d.id, title: d.title, file: `papers/${candidate}` })
       }
 
-      const profile = {
+      const manifest = {
         exported_at: new Date().toISOString(),
         version: 2,
         app: 'scholar',
@@ -485,7 +250,7 @@ function DangerZone({ onSignOut }: { onSignOut?: () => void }) {
         settings,
         otherLocalStorage,
       }
-      zip.file('profile.json', JSON.stringify(profile, null, 2))
+      zip.file('scholar.json', JSON.stringify(manifest, null, 2))
 
       const blob = await zip.generateAsync({ type: 'blob' })
       const url = URL.createObjectURL(blob)
@@ -506,6 +271,28 @@ function DangerZone({ onSignOut }: { onSignOut?: () => void }) {
     }
   }
 
+  const [confirmReset, setConfirmReset] = useState(false)
+  const [resetMsg, setResetMsg] = useState<string | null>(null)
+
+  function handleReset() {
+    try {
+      const keys: string[] = []
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i)
+        if (!k) continue
+        if (k === 'folio_drafts_v1' || k.startsWith('folio_draft_src_v1:') || k.startsWith('folio-') || k.startsWith('folio_') || k.startsWith('scholar') || k.startsWith('noots-')) {
+          keys.push(k)
+        }
+      }
+      keys.forEach(k => localStorage.removeItem(k))
+      setResetMsg(`Cleared ${keys.length} local entr${keys.length === 1 ? 'y' : 'ies'}.`)
+      setConfirmReset(false)
+      setTimeout(() => setResetMsg(null), 4000)
+    } catch (err) {
+      setResetMsg(`Reset failed: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }
+
   return (
     <div className="bg-parchment border border-rust/20 squircle-xl p-6 shadow-[0_2px_24px_-8px_rgba(139,69,19,0.08)]">
       <h3 className="font-[family-name:var(--font-display)] text-xl text-rust mb-4">Danger Zone</h3>
@@ -514,7 +301,7 @@ function DangerZone({ onSignOut }: { onSignOut?: () => void }) {
       <div className="flex items-center justify-between py-5 border-b border-rust/[0.08]">
         <div className="flex-1 pr-8">
           <span className="font-[family-name:var(--font-body)] text-sm text-forest/80 font-medium block">Export all data</span>
-          <span className="font-mono text-[10px] text-forest/45 mt-0.5 block">Download a ZIP with profile.json plus every draft saved as a .tex file.</span>
+          <span className="font-mono text-[10px] text-forest/45 mt-0.5 block">Download a ZIP with scholar.json plus every draft saved as a .tex file.</span>
           {exportMsg && (
             <span className={`font-mono text-[10px] mt-1.5 block ${exportMsg.startsWith('Export failed') ? 'text-rust' : 'text-sage-deep'}`}>
               {exportMsg}
@@ -530,64 +317,38 @@ function DangerZone({ onSignOut }: { onSignOut?: () => void }) {
         </button>
       </div>
 
-      {/* Deactivate */}
-      <div className="flex items-center justify-between py-5 border-b border-rust/[0.08]">
-        <div className="flex-1 pr-8">
-          <span className="font-[family-name:var(--font-body)] text-sm text-forest/80 font-medium block">Deactivate account</span>
-          <span className="font-mono text-[10px] text-forest/30 mt-0.5 block">Temporarily disable your account. You can reactivate anytime.</span>
-        </div>
-        {confirmDeactivate ? (
-          <div className="flex gap-2 shrink-0">
-            <button
-              onClick={() => setConfirmDeactivate(false)}
-              className="font-mono text-[10px] px-3 py-2 squircle-sm border border-forest/15 text-forest/40 hover:text-forest transition-all cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => { onSignOut?.(); setConfirmDeactivate(false) }}
-              className="font-mono text-[10px] px-3 py-2 squircle-sm border border-amber/50 text-amber/80 hover:border-amber hover:text-amber transition-all cursor-pointer"
-            >
-              Confirm
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={() => setConfirmDeactivate(true)}
-            className="font-mono text-[10px] px-4 py-2 squircle-sm border border-amber/30 text-amber/70 hover:border-amber/50 hover:text-amber transition-all cursor-pointer shrink-0"
-          >
-            Deactivate
-          </button>
-        )}
-      </div>
-
-      {/* Delete */}
+      {/* Reset local data */}
       <div className="flex items-center justify-between py-5">
         <div className="flex-1 pr-8">
-          <span className="font-[family-name:var(--font-body)] text-sm text-forest/80 font-medium block">Delete account</span>
-          <span className="font-mono text-[10px] text-forest/30 mt-0.5 block">Permanently delete your account and all associated data. This cannot be undone.</span>
+          <span className="font-[family-name:var(--font-body)] text-sm text-forest/80 font-medium block">Reset local data</span>
+          <span className="font-mono text-[10px] text-forest/30 mt-0.5 block">Clear every draft, library entry, and preference saved in this browser. This cannot be undone.</span>
+          {resetMsg && (
+            <span className={`font-mono text-[10px] mt-1.5 block ${resetMsg.startsWith('Reset failed') ? 'text-rust' : 'text-sage-deep'}`}>
+              {resetMsg}
+            </span>
+          )}
         </div>
-        {confirmDelete ? (
+        {confirmReset ? (
           <div className="flex gap-2 shrink-0">
             <button
-              onClick={() => setConfirmDelete(false)}
+              onClick={() => setConfirmReset(false)}
               className="font-mono text-[10px] px-3 py-2 squircle-sm border border-forest/15 text-forest/40 hover:text-forest transition-all cursor-pointer"
             >
               Cancel
             </button>
             <button
-              onClick={() => setConfirmDelete(false)}
+              onClick={handleReset}
               className="font-mono text-[10px] px-3 py-2 squircle-sm border border-rust/50 text-rust/80 hover:border-rust hover:text-rust transition-all cursor-pointer"
             >
-              Delete forever
+              Clear forever
             </button>
           </div>
         ) : (
           <button
-            onClick={() => setConfirmDelete(true)}
+            onClick={() => setConfirmReset(true)}
             className="font-mono text-[10px] px-4 py-2 squircle-sm border border-rust/30 text-rust/70 hover:border-rust/60 hover:text-rust transition-all cursor-pointer shrink-0"
           >
-            Delete account
+            Reset
           </button>
         )}
       </div>

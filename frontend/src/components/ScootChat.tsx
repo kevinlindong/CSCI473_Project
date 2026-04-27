@@ -4,6 +4,7 @@ import { useEditorBridge, type BlockSpec } from '../contexts/EditorBridgeContext
 import { useDrafts, readDraftSource } from '../hooks/useDrafts'
 import type { BlockType } from '../hooks/useDocument'
 import { searchLibrary, extractBodyText, type SearchableDraft } from '../lib/librarySearch'
+import { PaperDetailDrawer, type PaperSummary } from './PaperDetailDrawer'
 
 /* ==========================================================================
    ScootChat — floating, draggable chat overlay for the scoot agent.
@@ -13,7 +14,18 @@ import { searchLibrary, extractBodyText, type SearchableDraft } from '../lib/lib
    - Hits POST /api/scoot (local Qwen model) for replies.
    ========================================================================== */
 
-type ChatMsg = { role: 'user' | 'assistant'; content: string }
+interface Citation {
+  paper_id: string
+  title: string
+  url: string
+  passage?: string
+  heading?: string
+  score?: number
+}
+
+type ChatMsg =
+  | { role: 'user'; content: string }
+  | { role: 'assistant'; content: string; citations?: Citation[] }
 
 interface Props {
   open: boolean
@@ -46,8 +58,13 @@ function mapBlockType(raw: string): BlockType {
 }
 
 const OPEN_DRAFT_RE = /\[OPEN_DRAFT\]([\s\S]*?)\[\/OPEN_DRAFT\]/g
+const CREATE_DRAFT_RE = /\[CREATE_DRAFT\]([\s\S]*?)\[\/CREATE_DRAFT\]/g
 const INSERT_BLOCK_RE = /\[INSERT_BLOCK([^\]]*)\]([\s\S]*?)\[\/INSERT_BLOCK\]/g
 const SEARCH_CORPUS_RE = /\[SEARCH_CORPUS\]([\s\S]*?)\[\/SEARCH_CORPUS\]/g
+
+// Cap the LaTeX context we send to scoot so we don't blow the LLM's
+// context window with a 20k-line manuscript.
+const MAX_CURRENT_PAPER_CHARS = 6000
 
 function parseAttrs(attrStr: string): Record<string, string> {
   const out: Record<string, string> = {}
@@ -59,6 +76,7 @@ function parseAttrs(attrStr: string): Record<string, string> {
 
 interface ParsedActions {
   openDraft: string[]
+  createDraft: string[]
   insertBlocks: BlockSpec[]
   searchCorpus: string[]
   cleaned: string
@@ -66,10 +84,12 @@ interface ParsedActions {
 
 function parseActions(reply: string): ParsedActions {
   const openDraft: string[] = []
+  const createDraft: string[] = []
   const insertBlocks: BlockSpec[] = []
   const searchCorpus: string[] = []
 
   reply.replace(OPEN_DRAFT_RE, (_, q) => { openDraft.push(q.trim()); return '' })
+  reply.replace(CREATE_DRAFT_RE, (_, q) => { createDraft.push(q.trim()); return '' })
   reply.replace(INSERT_BLOCK_RE, (_, attr, content) => {
     const attrs = parseAttrs(attr)
     insertBlocks.push({
@@ -83,11 +103,12 @@ function parseActions(reply: string): ParsedActions {
 
   const cleaned = reply
     .replace(OPEN_DRAFT_RE, '')
+    .replace(CREATE_DRAFT_RE, '')
     .replace(INSERT_BLOCK_RE, '')
     .replace(SEARCH_CORPUS_RE, '')
     .trim()
 
-  return { openDraft, insertBlocks, searchCorpus, cleaned }
+  return { openDraft, createDraft, insertBlocks, searchCorpus, cleaned }
 }
 
 // ── Position helpers ────────────────────────────────────────────────────────
@@ -130,7 +151,7 @@ function defaultSize(): { w: number; h: number } {
 export function ScootChat({ open, onClose }: Props) {
   const navigate = useNavigate()
   const editorBridge = useEditorBridge()
-  const { drafts } = useDrafts()
+  const { drafts, createDraft } = useDrafts()
 
   const [messages, setMessages] = useState<ChatMsg[]>([])
   const [input, setInput] = useState('')
@@ -139,6 +160,9 @@ export function ScootChat({ open, onClose }: Props) {
   const [size, setSize] = useState<{ w: number; h: number }>(() => loadSize() ?? defaultSize())
   const [dragging, setDragging] = useState(false)
   const [resizing, setResizing] = useState(false)
+  // Inline preview drawer for citation cards — opening keeps the user on
+  // their current page (e.g. the editor) instead of routing to /browse.
+  const [previewCitation, setPreviewCitation] = useState<Citation | null>(null)
 
   const scrollRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
@@ -286,6 +310,13 @@ export function ScootChat({ open, onClose }: Props) {
     return { status: 'notfound' }
   }, [drafts, navigate])
 
+  const dispatchCreateDraft = useCallback((rawTitle: string): { title: string } => {
+    const title = rawTitle.trim() || 'untitled scholar'
+    const id = createDraft(title)
+    navigate(`/editor/${id}`)
+    return { title }
+  }, [createDraft, navigate])
+
   const dispatchInsertBlocks = useCallback((blocks: BlockSpec[]) => {
     if (!blocks.length) return false
     if (!editorBridge.isEditorActive) return false
@@ -293,22 +324,21 @@ export function ScootChat({ open, onClose }: Props) {
     return true
   }, [editorBridge])
 
-  const dispatchCorpusSearch = useCallback(async (query: string): Promise<string> => {
+  const dispatchCorpusSearch = useCallback(async (query: string): Promise<{ text: string; citations: Citation[] }> => {
     try {
       const res = await fetch(apiUrl('/query'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: query }),
       })
-      if (!res.ok) return `corpus search failed (${res.status})`
+      if (!res.ok) return { text: `corpus search failed (${res.status})`, citations: [] }
       const data = await res.json()
       const ans = (data.answer ?? '').toString().trim()
-      const cites = (data.citations ?? []) as Array<{ title: string; url: string }>
-      const citeBlock = cites.slice(0, 3).map((c, i) => `[${i + 1}] ${c.title} — ${c.url}`).join('\n')
-      return citeBlock ? `${ans}\n\nsources:\n${citeBlock}` : ans
+      const citations = (data.citations ?? []) as Citation[]
+      return { text: ans, citations }
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e)
-      return `corpus search error: ${msg}`
+      return { text: `corpus search error: ${msg}`, citations: [] }
     }
   }, [])
 
@@ -320,10 +350,19 @@ export function ScootChat({ open, onClose }: Props) {
     setMessages(nextHistory)
     setBusy(true)
     try {
+      // Snapshot whatever LaTeX the editor currently has so scoot can answer
+      // questions about the user's paper. Capped to keep the LLM context sane.
+      const liveSource = editorBridge.getSource?.() ?? null
+      const currentPaper = liveSource ? liveSource.slice(0, MAX_CURRENT_PAPER_CHARS) : null
+
       const res = await fetch(apiUrl('/scoot'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: text, history: messages }),
+        body: JSON.stringify({
+          message: text,
+          history: messages,
+          current_paper: currentPaper,
+        }),
       })
       if (!res.ok) throw new Error(`status ${res.status}`)
       const data = await res.json()
@@ -346,6 +385,11 @@ export function ScootChat({ open, onClose }: Props) {
         }
       }
 
+      for (const t of parsed.createDraft) {
+        const result = dispatchCreateDraft(t)
+        sideEffects.push(`Created a new blank paper "${result.title}" and opened the editor.`)
+      }
+
       if (parsed.insertBlocks.length) {
         const ok = dispatchInsertBlocks(parsed.insertBlocks)
         const count = parsed.insertBlocks.length
@@ -357,9 +401,15 @@ export function ScootChat({ open, onClose }: Props) {
       }
 
       let corpusAppendix = ''
+      const collectedCitations: Citation[] = []
       for (const q of parsed.searchCorpus) {
-        const ans = await dispatchCorpusSearch(q)
-        corpusAppendix += `\n\nHere's what the corpus says about "${q}":\n\n${ans}`
+        const result = await dispatchCorpusSearch(q)
+        corpusAppendix += `\n\nHere's what the corpus says about "${q}":\n\n${result.text}`
+        for (const c of result.citations) {
+          if (!collectedCitations.some(existing => existing.paper_id === c.paper_id)) {
+            collectedCitations.push(c)
+          }
+        }
       }
 
       const assistantText = [
@@ -368,14 +418,21 @@ export function ScootChat({ open, onClose }: Props) {
         corpusAppendix,
       ].filter(Boolean).join('\n\n').trim() || 'Done.'
 
-      setMessages(m => [...m, { role: 'assistant', content: assistantText }])
+      setMessages(m => [
+        ...m,
+        {
+          role: 'assistant',
+          content: assistantText,
+          citations: collectedCitations.length > 0 ? collectedCitations : undefined,
+        },
+      ])
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e)
       setMessages(m => [...m, { role: 'assistant', content: `scoot is offline (${msg})` }])
     } finally {
       setBusy(false)
     }
-  }, [input, busy, messages, dispatchOpenDraft, dispatchInsertBlocks, dispatchCorpusSearch])
+  }, [input, busy, messages, editorBridge, dispatchOpenDraft, dispatchCreateDraft, dispatchInsertBlocks, dispatchCorpusSearch])
 
   if (!open) return null
 
@@ -389,6 +446,7 @@ export function ScootChat({ open, onClose }: Props) {
   const hasMessages = messages.length > 0 || busy
 
   return (
+    <>
     <div
       ref={panelRef}
       className={`fixed z-[60] flex flex-col rounded-2xl bg-cream
@@ -472,15 +530,29 @@ export function ScootChat({ open, onClose }: Props) {
         >
           {messages.map((m, i) => (
             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div
-                className={`max-w-[88%] text-[13.5px] leading-relaxed font-[family-name:var(--font-body)] whitespace-pre-wrap break-words text-left ${
-                  m.role === 'user'
-                    ? 'bg-sage/15 text-forest rounded-2xl rounded-br-sm px-3.5 py-2'
-                    : 'bg-parchment text-forest/85 rounded-2xl rounded-bl-sm px-3.5 py-2 border border-forest/10'
-                }`}
-              >
-                {m.content}
-              </div>
+              {m.role === 'user' ? (
+                <div className="max-w-[88%] text-[13.5px] leading-relaxed font-[family-name:var(--font-body)] whitespace-pre-wrap break-words text-left bg-sage/15 text-forest rounded-2xl rounded-br-sm px-3.5 py-2">
+                  {m.content}
+                </div>
+              ) : (
+                <div className="max-w-[88%] flex flex-col gap-2">
+                  <div className="text-[13.5px] leading-relaxed font-[family-name:var(--font-body)] whitespace-pre-wrap break-words text-left bg-parchment text-forest/85 rounded-2xl rounded-bl-sm px-3.5 py-2 border border-forest/10">
+                    {m.content}
+                  </div>
+                  {m.citations && m.citations.length > 0 && (
+                    <div className="flex flex-col gap-2">
+                      {m.citations.map((c, j) => (
+                        <CitationCard
+                          key={`${c.paper_id}-${j}`}
+                          number={j + 1}
+                          citation={c}
+                          onOpenInCorpus={() => setPreviewCitation(c)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
           {busy && (
@@ -501,6 +573,83 @@ export function ScootChat({ open, onClose }: Props) {
           <circle cx="5"   cy="8.5" r="1" />
           <circle cx="8.5" cy="5"   r="1" />
         </svg>
+      </div>
+    </div>
+
+    {previewCitation && (
+      <PaperDetailDrawer
+        paperId={previewCitation.paper_id}
+        summary={citationToSummary(previewCitation)}
+        onClose={() => setPreviewCitation(null)}
+      />
+    )}
+    </>
+  )
+}
+
+function citationToSummary(c: Citation): PaperSummary {
+  return {
+    paper_id: c.paper_id,
+    title: c.title || c.paper_id,
+    url: c.url,
+  }
+}
+
+// ─── Citation card — preview + deep links into corpus & arXiv ─────────────
+function CitationCard({
+  number, citation, onOpenInCorpus,
+}: {
+  number: number
+  citation: Citation
+  onOpenInCorpus: () => void
+}) {
+  const arxivUrl = citation.url || `https://arxiv.org/abs/${citation.paper_id}`
+  return (
+    <div className="border border-forest/15 rounded-2xl bg-milk px-4 py-3">
+      <div className="flex items-baseline gap-2 mb-1.5">
+        <span className="font-[family-name:var(--font-mono)] text-[10px] text-forest/65 bg-sage/20 border border-sage-deep/30 rounded-full px-1.5 py-[1px] leading-none tabular-nums shrink-0">
+          {number}
+        </span>
+        <span className="font-[family-name:var(--font-mono)] text-[9.5px] tracking-[0.18em] text-forest/45 truncate">
+          arXiv:{citation.paper_id}
+        </span>
+      </div>
+      <h4 className="font-[family-name:var(--font-display)] text-[14.5px] text-forest leading-snug mb-1.5">
+        {citation.title || citation.paper_id}
+      </h4>
+      {citation.heading && (
+        <div className="font-[family-name:var(--font-mono)] text-[9.5px] tracking-[0.18em] uppercase text-sage-deep mb-1">
+          § {citation.heading}
+        </div>
+      )}
+      {citation.passage && (
+        <p className="font-[family-name:var(--font-body)] text-[12.5px] text-forest/70 leading-relaxed line-clamp-3 mb-2.5">
+          {citation.passage}
+        </p>
+      )}
+      <div className="flex items-center gap-2 flex-wrap">
+        <button
+          type="button"
+          onClick={onOpenInCorpus}
+          className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full bg-forest text-parchment hover:bg-forest-deep transition-colors font-[family-name:var(--font-body)] text-[11.5px]"
+        >
+          open in corpus
+          <span aria-hidden>→</span>
+        </button>
+        <a
+          href={arxivUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-1.5 h-7 px-3 rounded-full bg-milk border border-forest/20 hover:bg-sage/10 hover:border-forest/40 transition-colors font-[family-name:var(--font-body)] text-[11.5px] text-forest/75 hover:text-forest"
+        >
+          arXiv
+          <span aria-hidden>↗</span>
+        </a>
+        {typeof citation.score === 'number' && (
+          <span className="ml-auto font-[family-name:var(--font-mono)] text-[10px] text-forest/45 tabular-nums">
+            {citation.score.toFixed(3)}
+          </span>
+        )}
       </div>
     </div>
   )

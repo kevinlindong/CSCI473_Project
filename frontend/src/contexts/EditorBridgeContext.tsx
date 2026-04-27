@@ -23,6 +23,13 @@ interface EditorBridge {
   /** Append plain text to the active editor. Source-mode editors receive the
    *  text verbatim; block-mode editors wrap it in a paragraph block. */
   appendSource: (text: string) => void
+  /** Read the current LaTeX source. Returns null if no source-mode editor
+   *  is active (e.g. block-mode editor or no editor mounted). */
+  getSource: () => string | null
+  /** Insert a `\cite{paper_id}` into the active source-mode editor and
+   *  ensure a matching `\bibitem{paper_id}` exists in the bibliography
+   *  (creating one if needed). No-op when no source editor is active. */
+  insertCitation: (paperId: string, opts?: { title?: string; authors?: string[] }) => boolean
   register: (cb: RegisterPayload) => void
   unregister: () => void
 }
@@ -144,6 +151,8 @@ const EditorBridgeContext = createContext<EditorBridge>({
   isEditorActive: false,
   insertBlocks: () => {},
   appendSource: () => {},
+  getSource: () => null,
+  insertCitation: () => false,
   register: () => {},
   unregister: () => {},
 })
@@ -219,10 +228,72 @@ export function EditorBridgeProvider({ children }: { children: React.ReactNode }
     blockCb.setBlocks([...existing, { ...newBlock('paragraph'), content: text }])
   }, [])
 
+  const getSource = useCallback((): string | null => {
+    const cur = ref.current
+    if (!cur || !('mode' in cur) || cur.mode !== 'source') return null
+    return cur.getSource()
+  }, [])
+
+  const insertCitation = useCallback(
+    (paperId: string, opts?: { title?: string; authors?: string[] }): boolean => {
+      const cur = ref.current
+      if (!cur || !('mode' in cur) || cur.mode !== 'source') return false
+
+      // arXiv ids contain dots; LaTeX is happiest with letters/digits only.
+      const safeId = paperId.replace(/[^A-Za-z0-9]/g, '_')
+      const title = opts?.title?.trim() || paperId
+      const authors = (opts?.authors ?? []).filter(Boolean).join(', ')
+      const bibBody = `${authors ? authors + '. ' : ''}${title}. arXiv:${paperId}.`
+
+      let source = cur.getSource()
+
+      // Step 1 — make sure a \bibitem with this key exists, building a
+      // bibliography environment if the document doesn't have one yet.
+      if (!new RegExp(`\\\\bibitem\\{${safeId}\\}`).test(source)) {
+        const bibBegin = source.match(/\\begin\{thebibliography\}[^\n]*\n?/)
+        if (bibBegin) {
+          const bibEndIdx = source.indexOf('\\end{thebibliography}', bibBegin.index! + bibBegin[0].length)
+          const insertAt = bibEndIdx >= 0 ? bibEndIdx : source.length
+          const before = source.slice(0, insertAt)
+          const after = source.slice(insertAt)
+          source = `${before}  \\bibitem{${safeId}} ${bibBody}\n${after}`
+        } else {
+          const endDoc = source.match(/\\end\{document\}/)
+          const insertAt = endDoc ? endDoc.index! : source.length
+          const before = source.slice(0, insertAt)
+          const after = source.slice(insertAt)
+          const block =
+            `\n\\begin{thebibliography}{99}\n` +
+            `  \\bibitem{${safeId}} ${bibBody}\n` +
+            `\\end{thebibliography}\n\n`
+          source = before + block + after
+        }
+      }
+
+      // Step 2 — drop a \cite into the body, just before the bibliography
+      // (or before \end{document} if there's no bibliography). This keeps
+      // the cite inside readable prose rather than inside the references.
+      const bibBeginAfter = source.match(/\\begin\{thebibliography\}/)
+      const endDocAfter = source.match(/\\end\{document\}/)
+      const citeAnchor = bibBeginAfter?.index ?? endDocAfter?.index ?? source.length
+      const lineStart = source.lastIndexOf('\n', citeAnchor - 1) + 1
+      const before = source.slice(0, lineStart)
+      const after = source.slice(lineStart)
+      const lead = before.length === 0 || before.endsWith('\n') ? '' : '\n'
+      source = `${before}${lead}\\cite{${safeId}}\n${after}`
+
+      cur.setSource(source)
+      return true
+    },
+    [],
+  )
+
   const value: EditorBridge = {
     get isEditorActive() { return ref.current !== null },
     insertBlocks,
     appendSource,
+    getSource,
+    insertCitation,
     register,
     unregister,
   }

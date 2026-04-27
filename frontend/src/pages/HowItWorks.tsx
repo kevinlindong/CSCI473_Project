@@ -288,16 +288,6 @@ export default function HowItWorks() {
             <Link to="/how-it-works" className="font-[family-name:var(--font-body)] text-sm text-forest px-3 py-1.5 border-b border-forest/30">
               How it works
             </Link>
-            <div className="h-4 w-px bg-forest/15 mx-1" />
-            <div className="flex squircle-sm overflow-hidden border border-forest/15">
-              <Link to="/login?mode=signin" className="font-[family-name:var(--font-body)] text-sm text-forest/65 hover:text-forest hover:bg-forest/[0.05] transition-colors px-5 py-1.5 text-center">
-                Sign In
-              </Link>
-              <div className="w-px bg-forest/15" />
-              <Link to="/login?mode=signup" className="font-[family-name:var(--font-body)] text-sm bg-forest text-parchment hover:bg-forest-deep transition-colors px-5 py-1.5 text-center">
-                Sign Up
-              </Link>
-            </div>
           </nav>
         </div>
       </header>
@@ -408,10 +398,10 @@ export default function HowItWorks() {
           </p>
           <div className="flex items-center justify-center gap-3 flex-wrap">
             <Link
-              to="/login"
+              to="/editor/scratch"
               className="inline-flex items-center gap-2 bg-forest text-parchment px-6 py-3 squircle font-[family-name:var(--font-body)] text-sm hover:bg-forest-deep transition-colors shadow-[0_2px_20px_-4px_rgba(38,70,53,0.3)]"
             >
-              Create a free account
+              Open the editor
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" d="M5 12h14M12 5l7 7-7 7" />
               </svg>
@@ -436,7 +426,6 @@ export default function HowItWorks() {
             <div className="flex items-center gap-4">
               <Link to="/explore" className="font-mono text-[9px] text-forest/30 hover:text-forest/50 transition-colors tracking-wider">EXPLORE</Link>
               <Link to="/how-it-works" className="font-mono text-[9px] text-forest/30 hover:text-forest/50 transition-colors tracking-wider">HOW IT WORKS</Link>
-              <Link to="/login" className="font-mono text-[9px] text-forest/30 hover:text-forest/50 transition-colors tracking-wider">SIGN IN</Link>
             </div>
           </div>
         </footer>

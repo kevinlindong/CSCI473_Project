@@ -105,18 +105,27 @@ function lineCount(src: string): number {
 // ─── component ──────────────────────────────────────────────────────────────
 
 function initialSourceFor(draftId: string): string {
-  // Scratch always shows the presentation deck — saved drafts under
-  // /editor/:repoId still hydrate from localStorage as before.
-  if (draftId === SCRATCH_ID) return DEFAULT_LATEX
+  // Prefer the user's saved edits whenever they exist. Scratch falls back to
+  // the presentation deck only on a true first visit (no stored value yet)
+  // so subsequent edits aren't clobbered by re-hydrating the demo content.
   const stored = readDraftSource(draftId)
-  return stored !== null ? stored : ''
+  if (stored !== null) return stored
+  if (draftId === SCRATCH_ID) return DEFAULT_LATEX
+  return ''
 }
 
 export default function PaperEditor() {
   const { repoId } = useParams<{ repoId: string }>()
   const draftId = repoId ?? SCRATCH_ID
-  const { touchDraft } = useDrafts()
+  const { drafts, touchDraft, renameDraft } = useDrafts()
   const editorBridge = useEditorBridge()
+
+  // Latest drafts list inside the debounced autosave — keeps the effect's
+  // dependency array small (drafts mutates on every save and would loop).
+  const draftsRef = useRef(drafts)
+  useEffect(() => { draftsRef.current = drafts }, [drafts])
+
+  const draftMeta = drafts.find(d => d.id === draftId)
 
   const [source, setSource] = useState<string>(() => initialSourceFor(draftId))
   const sourceRef = useRef<string>(source)
@@ -244,18 +253,25 @@ export default function PaperEditor() {
   }, [])
 
   // ── debounced localStorage autosave ─────────────────────────────────────
-  // Writes the source under the per-draft key and upserts the index entry
-  // so the Library can enumerate every open draft with its latest title.
+  // Writes the source under the per-draft key and upserts the index entry.
+  // The display title is seeded from the LaTeX \title{} only on the FIRST
+  // save for this draft — after that it's user-controlled (renameDraft from
+  // the editable title in the header) so manual renames aren't clobbered.
   useEffect(() => {
     setSaveState('saving')
     const t = setTimeout(() => {
       try {
         writeDraftSource(draftId, source)
-        const extracted = extractMeta(source).meta.title
-        const title =
-          (extracted && extracted.replace(/\\\\/g, ' ').trim()) ||
-          (draftId === SCRATCH_ID ? 'scratch scholar' : 'untitled scholar')
-        touchDraft(draftId, title)
+        const existing = draftsRef.current.find(d => d.id === draftId)
+        const isFirstSave = !existing
+        let seedTitle: string | undefined
+        if (isFirstSave) {
+          const extracted = extractMeta(source).meta.title
+          seedTitle =
+            (extracted && extracted.replace(/\\\\/g, ' ').trim()) ||
+            (draftId === SCRATCH_ID ? 'scratch scholar' : 'untitled scholar')
+        }
+        touchDraft(draftId, seedTitle)
         setSaveState('saved')
       } catch { setSaveState('idle') }
     }, 420)
@@ -409,29 +425,36 @@ export default function PaperEditor() {
       {/* ── Manuscript Header — calm cream band with leaf mark ─────── */}
       <div className="border-b border-forest/12 shrink-0 bg-cream/80 backdrop-blur relative">
         <div className="px-4 py-3.5 flex items-center gap-5">
-          {/* Manuscript mark — leaf in soft halo */}
-          <div className="flex items-center gap-3 pr-5 border-r border-forest/12">
+          {/* Back to library — leaf mark doubles as the return affordance */}
+          <Link
+            to="/library"
+            className="flex items-center gap-3 pr-5 border-r border-forest/12 group hover:opacity-90 transition-opacity"
+          >
             <LeafBadge />
             <div className="flex flex-col leading-tight">
               <span className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.32em] uppercase text-forest/50">
-                editor
+                ← back to
               </span>
-              <span className="font-[family-name:var(--font-display)] text-[18px] text-forest leading-none mt-1">
-                guest
+              <span className="font-[family-name:var(--font-display)] text-[18px] text-forest leading-none mt-1 group-hover:text-forest-deep transition-colors">
+                library
               </span>
             </div>
-          </div>
+          </Link>
 
-          {/* Working title */}
+          {/* Working title — click to rename. Only updates DraftMeta in the
+              library; never touches \title{} in the LaTeX source. */}
           <div className="flex-1 min-w-0">
             <div className="font-[family-name:var(--font-mono)] text-[9px] tracking-[0.3em] uppercase text-forest/45 mb-1">
               working title
             </div>
-            <div className="font-[family-name:var(--font-display)] text-[19px] text-forest truncate">
-              {meta.title
-                ? meta.title.replace(/\\\\/g, ' ')
-                : <span className="text-forest/45">untitled — give your scholar a name</span>}
-            </div>
+            <EditableTitle
+              draftId={draftId}
+              currentTitle={
+                draftMeta?.title ||
+                (meta.title ? meta.title.replace(/\\\\/g, ' ') : '')
+              }
+              onRename={t => renameDraft(draftId, t)}
+            />
           </div>
 
           {/* Save state */}
@@ -887,6 +910,68 @@ export default function PaperEditor() {
         </div>
       )}
     </div>
+  )
+}
+
+/* ── Editable working-title — click the title text to rename the draft.
+   Updates DraftMeta only; never touches the LaTeX source. ─────────────── */
+function EditableTitle({
+  draftId, currentTitle, onRename,
+}: {
+  draftId: string
+  currentTitle: string
+  onRename: (title: string) => void
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(currentTitle)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => { if (!editing) setDraft(currentTitle) }, [currentTitle, editing])
+  useEffect(() => { if (editing) inputRef.current?.select() }, [editing])
+
+  const commit = () => {
+    const next = draft.trim()
+    setEditing(false)
+    if (!next || next === currentTitle) {
+      setDraft(currentTitle)
+      return
+    }
+    onRename(next)
+  }
+
+  const cancel = () => {
+    setEditing(false)
+    setDraft(currentTitle)
+  }
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        value={draft}
+        onChange={e => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={e => {
+          if (e.key === 'Enter') { e.preventDefault(); commit() }
+          else if (e.key === 'Escape') { e.preventDefault(); cancel() }
+        }}
+        spellCheck={false}
+        className="w-full bg-transparent border-b border-sage-deep/40 outline-none font-[family-name:var(--font-display)] text-[19px] text-forest"
+      />
+    )
+  }
+
+  const display = currentTitle || (draftId === SCRATCH_ID ? 'scratch scholar' : 'untitled scholar')
+  const isPlaceholder = !currentTitle
+  return (
+    <button
+      type="button"
+      onClick={() => setEditing(true)}
+      className="block w-full text-left truncate font-[family-name:var(--font-display)] text-[19px] hover:text-forest-deep transition-colors cursor-text"
+      title="Click to rename — only changes the library name, not the LaTeX"
+    >
+      <span className={isPlaceholder ? 'text-forest/45' : 'text-forest'}>{display}</span>
+    </button>
   )
 }
 

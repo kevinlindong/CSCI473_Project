@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom'
 import logoImg from '../assets/logo.png'
 
 /* ------------------------------------------------------------------ */
-/* Public Explore — visible before sign-in                            */
+/* Public Explore — open browse for all visitors                       */
 /* Public nav (logo → landing, no wordmark, no FAB)                  */
 /* ------------------------------------------------------------------ */
 
@@ -169,16 +169,6 @@ export default function PublicRepos() {
             <Link to="/how-it-works" className="font-[family-name:var(--font-body)] text-sm text-forest/55 hover:text-forest transition-colors px-3 py-1.5">
               How it works
             </Link>
-            <div className="h-4 w-px bg-forest/15 mx-1" />
-            <div className="flex squircle-sm overflow-hidden border border-forest/15">
-              <Link to="/login?mode=signin" className="font-[family-name:var(--font-body)] text-sm text-forest/65 hover:text-forest hover:bg-forest/[0.05] transition-colors px-5 py-1.5 text-center">
-                Sign In
-              </Link>
-              <div className="w-px bg-forest/15" />
-              <Link to="/login?mode=signup" className="font-[family-name:var(--font-body)] text-sm bg-forest text-parchment hover:bg-forest-deep transition-colors px-5 py-1.5 text-center">
-                Sign Up
-              </Link>
-            </div>
           </nav>
         </div>
       </header>
@@ -189,7 +179,7 @@ export default function PublicRepos() {
           <span className="font-mono text-[10px] text-sage/50 tracking-[0.3em] uppercase block mb-3">BROWSE</span>
           <h1 className="font-[family-name:var(--font-display)] text-6xl text-forest leading-[0.9] mb-4">Public Nootbooks</h1>
           <p className="font-[family-name:var(--font-body)] text-[15px] text-forest/50 max-w-lg">
-            Explore notes across organizations. Sign in to fork, contribute, and build the best study resources together.
+            Explore notes across organizations.
           </p>
 
           {/* Search + filter bar */}
@@ -226,7 +216,7 @@ export default function PublicRepos() {
             {repos.map(repo => (
               <Link
                 key={repo.id}
-                to="/login?mode=signup"
+                to="/library"
                 className="group bg-parchment border border-forest/10 squircle-xl p-6 hover:shadow-[0_4px_32px_-8px_rgba(38,70,53,0.1)] transition-all hover:border-forest/20"
               >
                 {/* Header row */}
@@ -273,7 +263,7 @@ export default function PublicRepos() {
                   </div>
                   <div className="ml-auto flex items-center gap-2">
                     <span className="font-mono text-[10px] text-forest/20">{repo.lastUpdated}</span>
-                    <span className="font-mono text-[9px] text-sage/50 bg-sage/[0.06] px-2 py-0.5 squircle-sm">Sign in to open</span>
+                    <span className="font-mono text-[9px] text-sage/50 bg-sage/[0.06] px-2 py-0.5 squircle-sm">open ↗</span>
                   </div>
                 </div>
               </Link>

@@ -8,9 +8,7 @@ import { ThemeProvider } from './contexts/ThemeContext'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { ScootFab } from './components/ScootFab'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import Landing from './pages/Landing.tsx'
 import Home from './pages/Home.tsx'
-import Login from './pages/Login.tsx'
 import Editor from './pages/Editor.tsx'
 import PaperEditor from './pages/PaperEditor.tsx'
 import PaperBrowse from './pages/PaperBrowse.tsx'
@@ -18,7 +16,6 @@ import Library from './pages/Library.tsx'
 import TopicGraph3D from './pages/TopicGraph3D.tsx'
 import Repos from './pages/Repos.tsx'
 import MyRepos from './pages/MyRepos.tsx'
-import GuestProfile from './pages/GuestProfile.tsx'
 import Diff from './pages/Diff.tsx'
 import Chat from './pages/Chat.tsx'
 import AuraStore from './pages/AuraStore.tsx'
@@ -34,11 +31,11 @@ import HomeV3 from './pages/HomeV3.tsx'
 import HomeV4 from './pages/HomeV4.tsx'
 import HomeV5 from './pages/HomeV5.tsx'
 
-// Scoot is shown on every page except landing, login, and the legal pages so
-// the user always has the agent within reach. ⌘K opens it from anywhere.
+// Scoot is shown on every page except the legal pages so the user always
+// has the agent within reach. ⌘K opens it from anywhere.
 function AppShell({ children }: { children: React.ReactNode }) {
   const location = useLocation()
-  const hideOn = new Set(['/', '/login', '/terms', '/privacy', '/1', '/2', '/3', '/4', '/5'])
+  const hideOn = new Set(['/terms', '/privacy', '/1', '/2', '/3', '/4', '/5'])
   const showFab = !hideOn.has(location.pathname)
   return (
     <>
@@ -62,9 +59,11 @@ createRoot(document.getElementById('root')!).render(
       <EditorBridgeProvider>
         <AppShell>
           <Routes>
-            <Route path="/" element={<Landing />} />
-            <Route path="/home" element={<ProtectedRoute><Home /></ProtectedRoute>} />
-            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<Home />} />
+            <Route path="/home" element={<Navigate to="/" replace />} />
+            <Route path="/landing" element={<Navigate to="/" replace />} />
+            <Route path="/login" element={<Navigate to="/" replace />} />
+            <Route path="/profile" element={<Navigate to="/library" replace />} />
             <Route path="/editor" element={<Navigate to="/editor/scratch" replace />} />
             <Route path="/editor/legacy/:repoId" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
             <Route path="/editor/:repoId" element={<PaperEditor />} />
@@ -75,14 +74,13 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/explore" element={<PublicRepos />} />
             <Route path="/repos" element={<ProtectedRoute><Repos /></ProtectedRoute>} />
             <Route path="/my-repos" element={<ProtectedRoute><MyRepos /></ProtectedRoute>} />
-            <Route path="/profile" element={<GuestProfile />} />
             <Route path="/diff/:repoId" element={<ProtectedRoute><Diff /></ProtectedRoute>} />
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/terms" element={<TermsOfService />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
             <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
             <Route path="/store" element={<ProtectedRoute><AuraStore /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/settings" element={<Settings />} />
             <Route path="/graph" element={<Graph_Creation />} />
             <Route path="/1" element={<HomeV1 />} />
             <Route path="/2" element={<HomeV2 />} />

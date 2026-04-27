@@ -298,6 +298,9 @@ class ScootMessage(BaseModel):
 class ScootRequest(BaseModel):
     message: str
     history: Optional[list[ScootMessage]] = None
+    # LaTeX source of the paper the user currently has open in the editor
+    # (truncated client-side). When present, scoot can answer questions about it.
+    current_paper: Optional[str] = None
 
 
 class ScootResponse(BaseModel):
@@ -506,7 +509,11 @@ async def scoot(req: ScootRequest):
     try:
         from src.llm import generate_scoot_reply
         history = [m.model_dump() for m in (req.history or [])]
-        reply = generate_scoot_reply(req.message, history=history)
+        reply = generate_scoot_reply(
+            req.message,
+            history=history,
+            current_paper=req.current_paper,
+        )
         return ScootResponse(reply=reply)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {e}")
