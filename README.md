@@ -1,4 +1,4 @@
-# ArXiv Research Assistant
+# Scholar
 
 A retrieval-augmented research tool that answers natural language questions over a 10,000-paper ArXiv corpus, with an interactive 3D topic map and an AI-powered LaTeX writing assistant.
 
