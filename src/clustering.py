@@ -18,7 +18,13 @@ to drive an external LLM (src.llm.generate_cluster_label) for human-readable
 cluster names.
 """
 
+from typing import Protocol
+
 import numpy as np
+
+
+class LLMLabeler(Protocol):
+    def generate_cluster_label(self, titles: list[str]) -> str: ...
 
 
 # ---------------------------------------------------------------------------
@@ -214,7 +220,8 @@ def kmeans(
             best_centroids = centroids
             best_assignments = assignments
 
-    assert best_centroids is not None and best_assignments is not None
+    if best_centroids is None or best_assignments is None:
+        raise ValueError("k-means failed to converge in any of the n_init runs")
     return best_centroids, best_assignments, best_inertia
 
 
@@ -223,7 +230,7 @@ def assign_topic_labels(
     centroids: np.ndarray,
     papers: list,
     assignments: np.ndarray,
-    llm: object = None,
+    llm: "LLMLabeler | None" = None,
     top_n_titles: int = 5,
 ) -> list[str]:
     """

@@ -69,6 +69,11 @@ def compute_topic_graph(
     with open(index_path) as f:
         index = json.load(f)
     abstract_ids = index["abstracts"]
+    if abstracts.shape[0] != len(abstract_ids):
+        raise RuntimeError(
+            f"Embedding/index mismatch: {abstracts.shape[0]} rows in abstracts.npy "
+            f"but {len(abstract_ids)} entries in index.json"
+        )
     print(f"  {abstracts.shape[0]} abstracts, dim={abstracts.shape[1]}")
 
     # --- Align papers to abstract rows ---

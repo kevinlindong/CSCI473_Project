@@ -16,6 +16,18 @@ import numpy as np
 from src.retrieval import cosine_similarity
 
 
+def _add_edges(edges: dict, i: int, neighbor_indices, sims_row: np.ndarray) -> None:
+    """Insert or update undirected edges for all neighbors of node i."""
+    for j in neighbor_indices:
+        j = int(j)
+        if j == i:
+            continue
+        a, b = (i, j) if i < j else (j, i)
+        w = float(sims_row[j])
+        if (a, b) not in edges or w > edges[(a, b)]:
+            edges[(a, b)] = w
+
+
 def knn_graph(
     X: np.ndarray,
     k_neighbors: int = 8,
@@ -67,14 +79,7 @@ def knn_graph(
     # pair, keeping the larger similarity if both directions nominated it.
     edges: dict[tuple[int, int], float] = {}
     for i in range(N):
-        for j in top_unsorted[i]:
-            j = int(j)
-            if j == i:
-                continue
-            a, b = (i, j) if i < j else (j, i)
-            w = float(sim_matrix[i, j])
-            if (a, b) not in edges or w > edges[(a, b)]:
-                edges[(a, b)] = w
+        _add_edges(edges, i, top_unsorted[i], sim_matrix[i])
 
     return [(a, b, w) for (a, b), w in edges.items()]
 
@@ -106,13 +111,6 @@ def knn_graph_via_retrieval(
         sims = cosine_similarity(X[i], X).copy()  # (N,)
         sims[i] = -np.inf                         # exclude self
         top_unsorted = np.argpartition(-sims, kth=k - 1)[:k]
-        for j in top_unsorted:
-            j = int(j)
-            if j == i:
-                continue
-            a, b = (i, j) if i < j else (j, i)
-            w = float(sims[j])
-            if (a, b) not in edges or w > edges[(a, b)]:
-                edges[(a, b)] = w
+        _add_edges(edges, i, top_unsorted, sims)
 
     return [(a, b, w) for (a, b), w in edges.items()]

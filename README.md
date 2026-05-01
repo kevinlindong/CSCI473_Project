@@ -1,191 +1,140 @@
 # ArXiv Research Assistant
 
-A retrieval-augmented research tool that answers natural language questions
-using a curated corpus of Arxiv papers, with an interactive topic map.
+A retrieval-augmented research tool that answers natural language questions over a 10,000-paper ArXiv corpus, with an interactive 3D topic map.
 
 Built for CSCI-UA 473 (Fundamentals of Machine Learning) at NYU, Spring 2026.
 
 ## Features
 
-- Natural language question answering over a 10,000-paper Arxiv corpus with citations
+- Natural language question answering over a 10,000-paper ArXiv corpus with inline citations
 - Three-tier retrieval: abstract → section chunks → figure captions, with cross-encoder reranking fallback
-- From-scratch ML: cosine similarity search, k-means (Lloyd's + k-means++ + spherical variant), k-NN graph construction
-- **Interactive 3D topic graph** at 10k+20k node/edge scale — UMAP layout, colored by k-means (k=26), labeled by a small instruction-tuned LLM (Qwen2.5-1.5B-Instruct, few-shot chat prompting)
-- **Query Constellation filter** — type a query, isolate the virtual query node + its top-k semantic neighbors against the rest of the cloud
-- **Scoot chat** — local Qwen-backed RAG assistant (`/api/scoot`) accessible from anywhere in the app
-- Editable cluster labels (localStorage in the UI, widget editor in the notebook)
-- React + Vite frontend with a custom Three.js renderer (`CustomGraph3D`) — InstancedMesh + LineSegments collapse ~33k draw calls into ~3 to keep 60fps on integrated GPUs
-- Self-contained Jupyter notebook for exploring the graph without running the web stack
+- Interactive 3D topic graph — UMAP layout, colored by k-means clusters (k=26), labeled by Qwen2.5-1.5B-Instruct
+- Query Constellation — type a query to isolate the query node and its top-k semantic neighbors in the graph
+- Scoot chat — a local Qwen-backed RAG assistant accessible from anywhere in the app
+- Editable cluster labels (persisted in localStorage, editable in the notebook)
+- React + Vite frontend with a custom Three.js renderer using InstancedMesh + LineSegments (~3 draw calls for 33k nodes/edges)
 
-## Quick Start (teammate setup, ~2 min)
+## Core Algorithms
 
-Pulls a pre-built data snapshot from GitHub Releases — saves ~7 hr of regeneration.
+All implemented from scratch using NumPy only — no sklearn, scipy, or faiss.
 
-```bash
-git clone https://github.com/kevinlindong/CSCI473_Project.git
-cd CSCI473_Project
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
-./scripts/setup_data.sh        # downloads ~1.4 GB tarball, extracts to data/
-./start.sh                     # FastAPI on :3001, Vite on :5173
-```
+**Cosine Similarity Search** (`src/retrieval.py`)
+Used to retrieve the top-k most relevant papers for a query. The query embedding is compared against all abstract embeddings using L2-normalized dot product. `np.argpartition` gives O(N) top-k selection without a full sort.
 
-Open http://localhost:5173. The Vite dev server proxies `/api` requests to the FastAPI backend on port 3001.
+**K-Means Clustering** (`src/clustering.py`)
+Used to group the 10,000-paper corpus into 26 topic clusters displayed in the 3D graph. Implements Lloyd's algorithm with k-means++ initialization, empty-cluster reinit (reseed to farthest point), n_init multi-restart keeping best inertia, and a spherical variant that renormalizes centroids to the unit sphere after each update — the correct default for L2-normalized sentence-transformer embeddings.
 
-## Full Setup (from scratch, ~7 hr)
+**K-NN Graph Construction** (`src/graph.py`)
+Used to build the edge set for the 3D topic graph. Constructs a symmetric undirected graph over cosine similarity: each node is linked to its k most similar peers, edges are symmetrized, self-loops excluded, and edge weight is the cosine similarity of the pair.
 
-Use this if you want to regenerate the corpus instead of downloading the snapshot.
+**Cluster Topic Labeling** (`src/clustering.py`, `src/llm.py`)
+Used to generate the human-readable cluster names shown in the legend. For each cluster, the 5 papers closest to the centroid are selected and their titles are passed to Qwen2.5-1.5B-Instruct via a 3-shot chat prompt. Falls back to the nearest paper's title if the LLM is unavailable.
 
-```bash
-# 1. Install backend dependencies
-pip install -r requirements.txt
+**External Cluster Validation** (`scripts/sweep_n_clusters.py`, `notebooks/topic_graph.ipynb`)
+Used to choose k=26. From-scratch Adjusted Rand Index (ARI) and Normalized Mutual Information (NMI) are computed against each paper's arXiv `primary_category` across a range of k values. Silhouette score is uninformative on high-dimensional sentence-transformer embeddings; ARI/NMI against ground-truth categories is used instead.
 
-# 2. (Optional) Set up environment variables
-cp .env.example .env
-# Edit .env with your HuggingFace token if needed
-
-# 3. Fetch papers from Arxiv
-python scripts/fetch_papers.py
-
-# 4. Build embedding matrices
-python scripts/build_embeddings.py
-
-# 5. Build the SQLite paper store (used by app.py for fast metadata lookup)
-python scripts/build_papers_db.py
-
-# 6. Build the topic-graph artifact (k-means + k-NN + LLM labels)
-python scripts/compute_topic_graph.py          # full pipeline with Qwen2.5-1.5B-Instruct (~3GB first-run download)
-# python scripts/compute_topic_graph.py --no-llm   # fast iteration, closest-paper-title fallback
-
-# 6. Start the backend
-uvicorn app:app --reload
-
-# 7. Start the frontend (in a separate terminal)
-cd frontend
-bun install     # or npm install
-bun run dev
-```
-
-## Exploring via the notebook (no frontend required)
-
-```bash
-jupyter lab notebooks/topic_graph.ipynb
-```
-
-The notebook mirrors the full pipeline and renders the 3D topic graph as an interactive plotly scene — **rotate (drag), zoom (scroll), pan (right-drag), hover for paper titles, click legend to toggle clusters**. A separate widget cell lets you rename clusters and re-render live; an export cell writes the edits back to `data/processed/topic_graph.json`. The main 3D view and the k-sweep plot use regular `go.Figure`s so they render in any notebook viewer (GitHub, VS Code preview, nbviewer) without a live kernel.
-
-## Project Structure
+## File Structure
 
 ```
-├── app.py                           # FastAPI backend server
-├── config.py                        # Central configuration (N_CLUSTERS, KNN_NEIGHBORS, ...)
-├── start.sh                         # Run backend + frontend together (dev)
-├── start-prod.sh                    # Same, but vite preview (prod-bundled)
+├── app.py                           # FastAPI backend
+├── config.py                        # Central config (N_CLUSTERS, KNN_NEIGHBORS, ...)
+├── requirements.txt
+├── start.sh                         # Start backend + frontend together (dev)
+├── start-prod.sh                    # Start with vite preview (prod build)
 ├── scripts/
-│   ├── fetch_papers.py              # Download papers from Arxiv API
-│   ├── build_embeddings.py          # Encode corpus into embedding spaces
-│   ├── build_papers_db.py           # Build SQLite store for paper metadata
+│   ├── setup_data.sh                # Download pre-built data snapshot (~1.4 GB)
+│   ├── fetch_papers.py              # Download papers from ArXiv API
+│   ├── build_embeddings.py          # Encode corpus into embedding matrices
+│   ├── build_papers_db.py           # Build SQLite paper store
 │   ├── compute_topic_graph.py       # k-means + k-NN + UMAP-3D + LLM labels → topic_graph.json
 │   ├── cluster_stability.py         # Bootstrap stability sweep over k
-│   ├── sweep_n_clusters.py          # External-validation k-sweep (NMI vs arXiv categories)
-│   └── setup_data.sh                # End-to-end data pipeline runner
+│   └── sweep_n_clusters.py          # External-validation k-sweep (NMI/ARI vs arXiv categories)
 ├── src/
-│   ├── data.py                      # Parse raw Arxiv data into structured records
-│   ├── encoder.py                   # Sentence-transformer encoding wrapper
-│   ├── retrieval.py                 # From-scratch cosine similarity NN search
-│   ├── clustering.py                # From-scratch k-means (Lloyd's + k-means++) + topic labeling
-│   ├── graph.py                     # From-scratch symmetric k-NN graph construction
+│   ├── retrieval.py                 # From-scratch cosine similarity nearest-neighbor search
+│   ├── clustering.py                # From-scratch k-means + topic labeling
+│   ├── graph.py                     # From-scratch symmetric k-NN graph
+│   ├── encoder.py                   # Sentence-transformer encoding
 │   ├── reranker.py                  # Cross-encoder reranking fallback
+│   ├── llm.py                       # LLM generation (cluster labels, RAG answers, chat)
 │   ├── papers_db.py                 # SQLite paper store + LRU-cached lookup
-│   └── llm.py                       # Chat-LM generation (cluster labels, RAG answers, scoot chat)
-├── frontend/                        # React + Vite app
+│   └── data.py                      # Parse raw ArXiv JSON into structured records
+├── frontend/
 │   ├── src/
-│   │   ├── main.tsx                 # App shell + routes
 │   │   ├── pages/
 │   │   │   ├── PaperBrowse.tsx      # Corpus map + Query Constellation + catalogue
 │   │   │   └── TopicGraph3D.tsx     # 3D topic-graph view with editable legend
 │   │   ├── components/
-│   │   │   ├── CustomGraph3D.tsx    # Direct Three.js renderer (InstancedMesh + LineSegments)
+│   │   │   ├── CustomGraph3D.tsx    # Three.js renderer (InstancedMesh + LineSegments)
 │   │   │   ├── CorpusGraph3D.tsx    # CustomGraph3D wrapper for the corpus map
 │   │   │   └── ScootChat.tsx        # Floating Qwen chat assistant
-│   │   ├── hooks/
-│   │   │   └── useClusterLabels.ts  # Server labels + localStorage overrides
-│   │   └── lib/
-│   │       └── topicGraphCache.ts   # Stale-while-revalidate cache for /api/topic-map
-│   └── package.json                 # Three.js
+│   │   └── hooks/
+│   │       └── useClusterLabels.ts  # Server labels + localStorage overrides
+│   └── package.json
 ├── data/
-│   ├── raw/enriched/                # Raw arXiv JSON (one per paper)
+│   ├── embeddings/
+│   │   ├── abstracts.npy            # (N, 768) L2-normalized abstract embeddings
+│   │   ├── chunks.npy               # Section-chunk embeddings
+│   │   ├── captions.npy             # Figure caption embeddings
+│   │   └── index.json               # Row index → paper_id / metadata
 │   ├── processed/
-│   │   ├── topic_graph.json         # Artifact served by /api/topic-map
-│   │   ├── cluster_stability.json   # Bootstrap k-stability scores
-│   │   └── sweep_n_clusters.json    # NMI/ARI vs arXiv categories per k
-│   ├── papers.db                    # SQLite paper store
-│   └── embeddings/
-│       ├── abstracts.npy            # (N, 768) L2-normalized
-│       ├── chunks.npy, captions.npy
-│       └── index.json               # Row-index → paper_id / metadata
-├── tests/                           # pytest suites for from-scratch modules
-└── notebooks/
-    ├── exploration.ipynb            # Original embedding sanity checks
-    ├── retrieval.ipynb              # Retrieval sanity check on the live corpus
-    ├── reranking.ipynb              # Cross-encoder reranker fallback demo
-    ├── topic_graph.ipynb            # End-to-end pipeline + k-sweep + interactive 3D view
-    └── query_distance_analysis.ipynb  # Quantifies query→cluster distances in embedding + UMAP space
+│   │   ├── topic_graph.json         # Precomputed 3D layout, clusters, labels
+│   │   ├── cluster_stability.json
+│   │   └── sweep_n_clusters.json
+│   └── papers.db                    # SQLite paper metadata store
+├── notebooks/
+│   ├── topic_graph.ipynb            # Full pipeline + k-sweep + interactive 3D view
+│   ├── retrieval.ipynb
+│   ├── reranking.ipynb
+│   └── query_distance_analysis.ipynb
+└── tests/
 ```
 
-## From-Scratch Algorithms
+## Running on a Clean Environment
 
-All pure NumPy, no sklearn / scipy / faiss. Style reference: `src/retrieval.py`.
+### Quick start (pre-built data, ~2 min)
 
-- **Cosine Similarity Search** (`src/retrieval.py`): L2-normalized dot product + `np.argpartition` for O(N) top-k, with defensive zero-norm handling.
-- **K-Means Clustering** (`src/clustering.py`): Lloyd's iteration with **k-means++ initialization**, empty-cluster reinit (reseed to farthest point), **n_init multi-restart** keeping best inertia, and a **spherical variant** that renormalizes centroids to the unit sphere after each update (the right default for L2-normalized sentence-transformer embeddings). Returns `(centroids, assignments, inertia)`.
-- **k-NN Graph** (`src/graph.py`): Symmetric undirected graph over cosine similarity; edge weight = similarity; no self-loops. Used as the edge set for the 3D layout.
-- **3D Fruchterman-Reingold Layout** (`notebooks/topic_graph.ipynb`): Pure-numpy force simulation (repulsion between all nodes, attraction along k-NN edges, cooling schedule). Kept in the notebook as the from-scratch reference implementation; the live runtime uses UMAP 3D (via `umap-learn`) precomputed offline in `scripts/compute_topic_graph.py` because force simulation doesn't scale to 10k nodes interactively.
-- **Cluster Topic Labeling** (`src/clustering.py::assign_topic_labels` + `src/llm.py::generate_cluster_label`): Picks the 5 papers closest to each centroid and hands their titles to a small instruction-tuned causal LM (Qwen2.5-1.5B-Instruct by default) via a **3-shot chat prompt**. Swapping models is a one-line config change. Falls back to the nearest-paper title if the LLM is unavailable.
-- **External Validation** (`notebooks/topic_graph.ipynb`): From-scratch Adjusted Rand Index (ARI) and Normalized Mutual Information (NMI) against arXiv `primary_category`, used to pick `k` rather than the noisy silhouette score.
+Requires: Python 3.9+, Node.js, `curl`, `tar`, `zstd`, `jq`
 
-## Topic Graph: design notes
+```bash
+git clone https://github.com/kevinlindong/CSCI473_Project.git
+cd CSCI473_Project
 
-### Why no PCA?
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
 
-The original plan projected embeddings to 2D with PCA. On 768-d sentence-transformer output that throws away ~93% of the variance (confirmed in `notebooks/exploration.ipynb`: 2 PCs ≈ 7% variance). Clusters smear, PC axes don't correspond to interpretable concepts, and the visualization becomes an atlas of noise.
+./scripts/setup_data.sh   # downloads ~1.4 GB data snapshot
 
-We first tried a **from-scratch Fruchterman-Reingold force layout** over the k-NN graph (still in `notebooks/topic_graph.ipynb` for reference) — interpretability lived in the edges rather than spatial axes. That worked at the original 273-paper scale but didn't survive the scale-up: an FR force loop over 10k nodes + 20k edges is interactive-prohibitive in the browser and visibly fragile for the layout we wanted to ship. The production pipeline now precomputes a **3D UMAP layout** (`umap-learn`, cosine metric, n_neighbors=15, min_dist=0.1) at build time, bakes `(x, y, z)` into `topic_graph.json`, and the frontend renders the precomputed positions via a custom Three.js InstancedMesh — no force loop in the browser.
+./start.sh                # backend on :3001, frontend on :5173
+```
 
-### How `N_CLUSTERS` was chosen
+Open http://localhost:5173. The Vite dev server proxies `/api/*` to the FastAPI backend.
 
-Silhouette is uninformative on high-dimensional sentence-transformer embeddings — all values sit in a narrow band regardless of k. The chosen k is the result of two complementary sweeps over the 10k corpus:
+**First query will be slow** (~30–60s) while sentence-transformer and Qwen models download (~3.5 GB total). Subsequent queries are fast.
 
-- **External validation** (`scripts/sweep_n_clusters.py` → `data/processed/sweep_n_clusters.json`): NMI / ARI of the cluster assignment against each paper's arXiv `primary_category`. Persisted so the choice is reproducible from data, not hand-tuned.
-- **Bootstrap stability** (`scripts/cluster_stability.py` → `data/processed/cluster_stability.json`): adjusted Rand index between full-corpus assignments and assignments fit on bootstrap subsamples. Penalizes k values where small data perturbations cause clusters to dissolve.
+### Environment variables (optional)
 
-Current setting: **`N_CLUSTERS = 26`** in `config.py`. Trace: see the k-sweep cell at the bottom of `notebooks/topic_graph.ipynb` for the full inertia / silhouette / ARI / NMI table.
+Copy `.env.example` to `.env`. Defaults work out of the box with local Qwen inference.
 
-### Cluster labeling
+| Variable           | Default | Description                                                        |
+|--------------------|---------|--------------------------------------------------------------------|
+| `LLM_PROVIDER`     | `local` | `local` uses Qwen2.5-1.5B on-device; `openrouter` uses remote API |
+| `OPENROUTER_API_KEY` | —     | Required only if `LLM_PROVIDER=openrouter`                         |
+| `ENABLE_LLM`       | `1`     | Set to `0` for retrieval-only mode (no LLM synthesis)              |
 
-We first tried `flan-T5-base` (250M params, seq2seq). Even with few-shot prompting it produced either single-word outputs or extractive copies of the first paper title (one cluster label came out as "Compressing Transformer Language Models via Matrix Product Operator Decomposition" — clearly just title 1). The labeler now uses `Qwen2.5-1.5B-Instruct` (a modern instruction-tuned causal LM) with a 3-shot chat prompt, which produces clean 2–5 word noun phrases ("weather forecasting", "transformer model compression", "federated learning", etc.). Swapping models is a one-line config change.
+### Full rebuild from scratch (~7 hr)
 
-In rare cases two semantically-adjacent clusters may receive the same label (e.g. both RL sub-clusters → "reinforcement learning"). The labels are editable in the UI and in the notebook to handle these.
+Use this to regenerate the corpus and embeddings rather than downloading the snapshot.
 
-### Editable labels
+```bash
+python scripts/fetch_papers.py        # fetch ~10k papers from ArXiv (~30 min)
+python scripts/build_embeddings.py    # encode corpus (~2–3 hr, GPU recommended)
+python scripts/build_papers_db.py     # build SQLite store (~5 min)
+python scripts/compute_topic_graph.py # k-means + k-NN + UMAP + LLM labels (~1–2 hr)
+./start.sh
+```
 
-The frontend stores overrides in `localStorage` under `cluster_labels_v1`; the `useClusterLabels` hook merges per-browser edits over the server-default labels and listens for cross-tab `storage` events. The notebook has a widget cell that edits the in-memory `labels` list and re-renders the 3D plot on button click; a follow-up export cell writes the edits back to `data/processed/topic_graph.json`.
+### Notebook exploration (no frontend required)
 
-## API
-
-- `GET /api/topic-map` — returns the cached `data/processed/topic_graph.json` as JSON (`nodes`, `edges`, `clusters`, `meta`). Run `scripts/compute_topic_graph.py` to rebuild the artifact; gzipped on the wire (~7 MB → ~2 MB) and module-level cached, so restart `uvicorn` to pick up changes.
-- `GET /api/query-projection?q=...&k=8` — encodes the query and returns its top-k nearest abstracts (paper_id + similarity) plus the dominant cluster among them. Backs the corpus-map's query node + Query Constellation feature.
-- `POST /api/query` — RAG answer over the corpus with citations; runs the bi-encoder retriever, falls back to the cross-encoder reranker on weak/bunched scores, and synthesizes the answer with Qwen2.5-1.5B-Instruct.
-- `POST /api/scoot` — chat replies from the local Qwen model with the scoot system prompt; used by `ScootChat`.
-- `GET /api/papers`, `GET /api/papers/{id}` — paper summaries / detail, served from `data/papers.db` via an LRU cache.
-
-## Team
-
-- Vivek — Data Pipeline
-- Xan/Ian — Retrieval System
-- Kevin Dong — Clustering, Visualization & Frontend
-- Kevin Pei — LLM Answer Generation & Integration
-
-## License
-
-MIT
+```bash
+jupyter lab notebooks/topic_graph.ipynb
+```

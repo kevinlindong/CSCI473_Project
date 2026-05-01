@@ -123,6 +123,18 @@ def _load_matrices():
     return _ABSTRACT_EMBS, _CHUNK_EMBS, _CAPTION_EMBS, _PAPER_INDEX
 
 
+def _build_source(paper_id: str, title: str, passage: str, heading: str, score: float) -> dict:
+    meta = _load_paper(paper_id) or {}
+    return {
+        "paper_id": paper_id,
+        "title":    title or meta.get("title", ""),
+        "url":      meta.get("url") or f"https://arxiv.org/abs/{paper_id}",
+        "passage":  passage,
+        "heading":  heading,
+        "score":    score,
+    }
+
+
 @lru_cache(maxsize=2048)
 def _load_paper(paper_id: str) -> Optional[dict]:
     """Look up a single paper from data/papers.db. LRU-cached so popular
@@ -373,25 +385,9 @@ async def query(req: QueryRequest):
     # Assemble aligned source list: position i <-> citation marker [i+1].
     sources: list[dict] = []
     for p in passages:
-        meta = _load_paper(p["paper_id"]) or {}
-        sources.append({
-            "paper_id": p["paper_id"],
-            "title":    p.get("paper_title") or meta.get("title", ""),
-            "url":      meta.get("url") or f"https://arxiv.org/abs/{p['paper_id']}",
-            "passage":  p.get("text", ""),
-            "heading":  p.get("heading", ""),
-            "score":    float(p.get("score", 0.0)),
-        })
+        sources.append(_build_source(p["paper_id"], p.get("paper_title", ""), p.get("text", ""), p.get("heading", ""), float(p.get("score", 0.0))))
     for c in captions:
-        meta = _load_paper(c["paper_id"]) or {}
-        sources.append({
-            "paper_id": c["paper_id"],
-            "title":    c.get("title") or meta.get("title", ""),
-            "url":      meta.get("url") or f"https://arxiv.org/abs/{c['paper_id']}",
-            "passage":  f"(figure caption) {c.get('caption', '')}",
-            "heading":  "figure",
-            "score":    float(c.get("score", 0.0)),
-        })
+        sources.append(_build_source(c["paper_id"], c.get("title", ""), f"(figure caption) {c.get('caption', '')}", "figure", float(c.get("score", 0.0))))
 
     # --- LLM synthesis (optional) -----------------------------------------
     answer_text = ""

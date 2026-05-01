@@ -91,6 +91,28 @@ def nearest_neighbors(query_vec: np.ndarray, corpus_matrix: np.ndarray, k: int) 
     return top_k_indices(cosine_similarity(query_vec, corpus_matrix), k)
 
 
+def _score_per_paper(
+    top_paper_ids: list,
+    rows_by_paper: dict,
+    embeddings: np.ndarray,
+    query_vec: np.ndarray,
+    top_per_paper: int,
+) -> list:
+    """Score passage rows within each top paper; return (paper_id, row, score) sorted by score desc."""
+    results = []
+    for pid in top_paper_ids:
+        rows = rows_by_paper.get(pid, [])
+        if not rows:
+            continue
+        sub_scores = cosine_similarity(query_vec, embeddings[rows])
+        n_pick = min(top_per_paper, len(rows))
+        local_order = np.argsort(sub_scores)[::-1][:n_pick]
+        for local_idx in local_order:
+            results.append((pid, rows[int(local_idx)], float(sub_scores[int(local_idx)])))
+    results.sort(key=lambda t: t[2], reverse=True)
+    return results
+
+
 def retrieve(
     query,
     abstract_embeddings: np.ndarray,
@@ -169,24 +191,15 @@ def retrieve(
             chunk_rows_by_paper[entry["paper_id"]].append(row)
 
     passages: list[dict] = []
-    for pid in top_paper_ids:
-        rows = chunk_rows_by_paper.get(pid, [])
-        if not rows:
-            continue
-        sub_scores = cosine_similarity(query_vec, chunk_embeddings[rows])
-        n_pick = min(top_chunks_per_paper, len(rows))
-        local_order = np.argsort(sub_scores)[::-1][:n_pick]
-        for local_idx in local_order:
-            row = rows[int(local_idx)]
-            entry = paper_index["chunks"][row]
-            passages.append({
-                "paper_id":    entry["paper_id"],
-                "paper_title": entry.get("paper_title", ""),
-                "heading":     entry.get("heading", ""),
-                "text":        entry.get("text", ""),
-                "score":       float(sub_scores[int(local_idx)]),
-            })
-    passages.sort(key=lambda p: p["score"], reverse=True)
+    for pid, row, score in _score_per_paper(top_paper_ids, chunk_rows_by_paper, chunk_embeddings, query_vec, top_chunks_per_paper):
+        entry = paper_index["chunks"][row]
+        passages.append({
+            "paper_id":    entry["paper_id"],
+            "paper_title": entry.get("paper_title", ""),
+            "heading":     entry.get("heading", ""),
+            "text":        entry.get("text", ""),
+            "score":       score,
+        })
 
     # --- Stage 3: captions within the top-k papers ---
     caption_entries = paper_index.get("captions", [])
@@ -202,29 +215,20 @@ def retrieve(
             caption_rows_by_paper[pid].append(row)
 
     captions_out: list[dict] = []
-    for pid in top_paper_ids:
-        rows = caption_rows_by_paper.get(pid, [])
-        if not rows:
-            continue
-        sub_scores = cosine_similarity(query_vec, caption_embeddings[rows])
-        n_pick = min(top_captions_per_paper, len(rows))
-        local_order = np.argsort(sub_scores)[::-1][:n_pick]
-        for local_idx in local_order:
-            row = rows[int(local_idx)]
-            entry = caption_entries[row]
-            if isinstance(entry, dict):
-                caption_text = entry.get("caption", "")
-                title = entry.get("title", title_lookup.get(pid, ""))
-            else:
-                caption_text = ""
-                title = title_lookup.get(pid, "")
-            captions_out.append({
-                "paper_id": pid,
-                "title":    title,
-                "caption":  caption_text,
-                "score":    float(sub_scores[int(local_idx)]),
-            })
-    captions_out.sort(key=lambda c: c["score"], reverse=True)
+    for pid, row, score in _score_per_paper(top_paper_ids, caption_rows_by_paper, caption_embeddings, query_vec, top_captions_per_paper):
+        entry = caption_entries[row]
+        if isinstance(entry, dict):
+            caption_text = entry.get("caption", "")
+            title = entry.get("title", title_lookup.get(pid, ""))
+        else:
+            caption_text = ""
+            title = title_lookup.get(pid, "")
+        captions_out.append({
+            "paper_id": pid,
+            "title":    title,
+            "caption":  caption_text,
+            "score":    score,
+        })
 
     return {
         "paper_ids": top_paper_ids,
