@@ -77,4 +77,4 @@ echo "  papers.db:        $(test -f data/papers.db && du -h data/papers.db | cut
 echo "  abstracts.npy:    $(test -f data/embeddings/abstracts.npy && du -h data/embeddings/abstracts.npy | cut -f1 || echo MISSING)"
 echo "  topic_graph.json: $(test -f data/processed/topic_graph.json && du -h data/processed/topic_graph.json | cut -f1 || echo MISSING)"
 echo
-echo "Run ./start.sh to launch the app."
+echo "Run ./start-prod.sh --rebuild to launch the app."

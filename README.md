@@ -37,8 +37,7 @@ Used to choose k=26. From-scratch Adjusted Rand Index (ARI) and Normalized Mutua
 ├── app.py                           # FastAPI backend
 ├── config.py                        # Central config (N_CLUSTERS, KNN_NEIGHBORS, ...)
 ├── requirements.txt
-├── start.sh                         # Start backend + frontend together (dev)
-├── start-prod.sh                    # Start with vite preview (prod build)
+├── start-prod.sh                    # Start backend + frontend together (vite preview, prod build)
 ├── scripts/
 │   ├── setup_data.sh                # Download pre-built data snapshot (~1.4 GB)
 │   ├── fetch_papers.py              # Download papers from ArXiv API
@@ -106,16 +105,18 @@ pip install -r requirements.txt
 
 ./scripts/setup_data.sh   # downloads ~1.4 GB data snapshot
 
-./start-prod.sh                # backend on :3001, frontend on :5173
+./start-prod.sh --rebuild      # first startup: builds the frontend bundle, then serves on :5173 (backend on :3001)
 ```
 
-Open http://localhost:5173. The Vite dev server proxies `/api/*` to the FastAPI backend.
+Subsequent runs can drop `--rebuild` (it'll reuse `frontend/dist/`); re-add it after editing frontend code.
+
+Open http://localhost:5173. Vite preview serves the built bundle and the FastAPI backend handles `/api/*`.
 
 **First query will be slow** (~30–60s) while the sentence-transformer model downloads (~400 MB). Subsequent queries are fast.
 
 ### Environment variables
 
-Copy `.env.example` to `.env`. The app runs without any keys in local inference mode; an OpenRouter key is required for Scoot chat.
+Add the `.env` file from the Google Doc link attached in our submission to the project root before running `./start-prod.sh`. (Alternatively, copy `.env.example` to `.env` — the app runs without any keys in local inference mode, but an OpenRouter key is required for Scoot chat.)
 
 | Variable             | Default                        | Description                                                        |
 |----------------------|--------------------------------|--------------------------------------------------------------------|
@@ -133,7 +134,7 @@ python scripts/fetch_papers.py        # fetch ~10k papers from ArXiv (~30 min)
 python scripts/build_embeddings.py    # encode corpus (~2–3 hr, GPU recommended)
 python scripts/build_papers_db.py     # build SQLite store (~5 min)
 python scripts/compute_topic_graph.py # k-means + k-NN + UMAP + LLM labels (~1–2 hr)
-./start-prod.sh
+./start-prod.sh --rebuild
 ```
 
 ### Notebook exploration (no frontend required)

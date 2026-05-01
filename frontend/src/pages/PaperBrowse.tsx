@@ -274,7 +274,7 @@ export default function PaperBrowse() {
               </div>
               <div>{loadError}</div>
               <div className="mt-2 text-forest/55">
-                Is the API running? Check <code className="font-[family-name:var(--font-mono)]">start.sh</code>.
+                Is the API running? Check <code className="font-[family-name:var(--font-mono)]">start-prod.sh</code>.
               </div>
             </div>
           ))}
