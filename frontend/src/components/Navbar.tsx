@@ -3,15 +3,15 @@ import { Link, useLocation } from 'react-router-dom'
 /* ==========================================================================
    Navbar — minimal zen botanical header.
    No auth surface; every visitor is a guest. The brand mark links home and
-   the three core destinations (corpus, library, editor) live in the middle.
+   the three core destinations (explorer, library, editor) live in the middle.
    ========================================================================== */
 
 type NavItem = { path: string; label: string }
 
 const navLinks: NavItem[] = [
-  { path: '/browse',         label: 'corpus'  },
-  { path: '/library',        label: 'library' },
-  { path: '/editor/scratch', label: 'editor'  },
+  { path: '/browse',         label: 'explorer' },
+  { path: '/library',        label: 'library'  },
+  { path: '/editor/scratch', label: 'editor'   },
 ]
 
 const BRAND_WORDMARK = 'scholar'

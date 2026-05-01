@@ -60,7 +60,7 @@ KNN_NEIGHBORS = 8
 LLM_MODEL_NAME = "Qwen/Qwen2.5-1.5B-Instruct"
 
 # Provider routing for per-request generation. "local" uses LLM_MODEL_NAME via
-# transformers; "openrouter" calls OpenRouter's OpenAI-compatible API.
+# transformers; "openrouter" calls the OpenRouter chat-completions API.
 # Cluster labeling (generate_cluster_label) always uses the local path.
 LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "local")
 

@@ -722,7 +722,7 @@ function Masthead({ papers, clusters }: { papers: number; clusters: number }) {
         </div>
 
         <h1 className="font-[family-name:var(--font-display)] text-forest leading-[0.94] font-light">
-          <span className="block text-[72px] md:text-[112px]">the corpus<span className="text-sage-deep">.</span></span>
+          <span className="block text-[72px] md:text-[112px]">the explorer<span className="text-sage-deep">.</span></span>
           <span className="block text-[20px] md:text-[26px] text-forest/60 mt-3 max-w-[60ch]">
             — a topographical index of current literature, settled into a quiet shelf.
           </span>

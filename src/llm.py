@@ -17,8 +17,11 @@ params it was prone to either single-word or extractively-copied outputs, so we
 switched to a modern instruction-tuned causal LM with chat templates.
 """
 
+import json
 import os
 import re
+import urllib.error
+import urllib.request
 from typing import Optional
 
 import config
@@ -26,7 +29,6 @@ import config
 
 _TOKENIZER = None
 _MODEL = None
-_OR_CLIENT = None
 _SCOOT_SYSTEM_PROMPT: Optional[str] = None
 
 
@@ -122,27 +124,39 @@ def _openrouter_generate(
     model_name: Optional[str] = None,
 ) -> str:
     """
-    OpenAI-compatible call to OpenRouter. Client is module-cached so we pay
-    construction cost once per process.
+    Chat-completion call to OpenRouter via stdlib urllib (no third-party SDK).
     """
-    global _OR_CLIENT
-    if _OR_CLIENT is None:
-        from openai import OpenAI
-        api_key = os.environ.get("OPENROUTER_API_KEY")
-        if not api_key:
-            raise RuntimeError(
-                "LLM_PROVIDER=openrouter but OPENROUTER_API_KEY is not set. "
-                "Add it to .env or export it in your shell."
-            )
-        _OR_CLIENT = OpenAI(base_url=config.OPENROUTER_BASE_URL, api_key=api_key)
+    api_key = os.environ.get("OPENROUTER_API_KEY")
+    if not api_key:
+        raise RuntimeError(
+            "LLM_PROVIDER=openrouter but OPENROUTER_API_KEY is not set. "
+            "Add it to .env or export it in your shell."
+        )
 
-    resp = _OR_CLIENT.chat.completions.create(
-        model=model_name or config.OPENROUTER_MODEL,
-        messages=messages,
-        max_tokens=max_new_tokens,
-        temperature=config.OPENROUTER_TEMPERATURE,
+    payload = json.dumps({
+        "model": model_name or config.OPENROUTER_MODEL,
+        "messages": messages,
+        "max_tokens": max_new_tokens,
+        "temperature": config.OPENROUTER_TEMPERATURE,
+    }).encode()
+
+    req = urllib.request.Request(
+        f"{config.OPENROUTER_BASE_URL}/chat/completions",
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {api_key}",
+        },
+        method="POST",
     )
-    return (resp.choices[0].message.content or "").strip()
+
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            data = json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        raise RuntimeError(f"OpenRouter HTTP {e.code}: {e.read().decode(errors='replace')}") from e
+
+    return (data["choices"][0]["message"]["content"] or "").strip()
 
 
 # ---------------------------------------------------------------------------
