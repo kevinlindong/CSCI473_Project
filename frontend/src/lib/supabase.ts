@@ -20,8 +20,6 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
 })
 
-// ─── DB Row Types ─────────────────────────────────────────────────────────────
-
 export interface Profile {
   id: string
   display_name: string

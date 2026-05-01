@@ -10,13 +10,6 @@ import {
 } from '../hooks/useDrafts'
 import { useEditorBridge } from '../contexts/EditorBridgeContext'
 
-/* ==========================================================================
-   PaperEditor — "the desk" — minimal zen botanical composer.
-   A soft cream chrome holds two panes: a calm dark "garden of code" on the
-   left, and a parchment scholar rising in real time on the right. Snippets
-   sit in a quiet pill strip; the outline whispers from a soft side rail.
-   ========================================================================== */
-
 type Snippet = {
   id: string
   label: string
@@ -42,9 +35,6 @@ const SNIPPETS: Snippet[] = [
   { id: 'ref',        glyph: '→',   label: 'Reference',   group: 'ref',    insert: '\\ref{}', cursor: 5, hint: 'reference label' },
 ]
 
-// Core snippets shown inline in the toolbar — the most-used LaTeX primitives
-// in priority order. The strip only renders as many pills as fit in the
-// currently available width; the rest remain accessible through the palette.
 const TOOLBAR_SNIPPET_IDS: ReadonlyArray<Snippet['id']> = [
   'section', 'subsection', 'eq', 'inline', 'bold', 'italic',
   'cite', 'ref', 'list', 'enum', 'figure', 'table',
@@ -52,11 +42,9 @@ const TOOLBAR_SNIPPET_IDS: ReadonlyArray<Snippet['id']> = [
 const TOOLBAR_SNIPPETS: ReadonlyArray<Snippet> = TOOLBAR_SNIPPET_IDS
   .map(id => SNIPPETS.find(s => s.id === id)!)
   .filter(Boolean)
-// gap-1.5 → 0.375rem → 6px. Keep in sync with the flex `gap-*` utility on
-// the strip container.
+// Must match the `gap-1.5` utility on the strip container.
 const TOOLBAR_GAP_PX = 6
 
-// soft, restrained tints — used as quiet ring/dot accents, never as flat fills
 const groupTint: Record<Snippet['group'], string> = {
   struct: 'rgba(38,70,53,0.55)',
   math:   'rgba(127,146,103,0.7)',
@@ -65,34 +53,20 @@ const groupTint: Record<Snippet['group'], string> = {
   ref:    'rgba(163,177,138,0.85)',
 }
 
-// ─── helpers ─────────────────────────────────────────────────────────────────
-
-// Count words across the entire document — including \title/\author/\date
-// in the preamble. Strips math, comments, and non-textual commands
-// (\cite, \ref, \usepackage, \documentclass, \includegraphics) but PRESERVES
-// textual brace content (\section{Title} → "Title", \textbf{word} → "word")
-// so the counter reflects what the reader will see.
+// Strips math/comments/non-text commands; keeps text in braces so word counts
+// reflect rendered output rather than markup.
 function wordCount(src: string): number {
   const body = src
-    // line comments (% to EOL, but not escaped \%)
     .replace(/(^|[^\\])%[^\n]*/g, '$1')
-    // display math environments
     .replace(/\\begin\{(equation|align|gather|multline|displaymath|eqnarray)\*?\}[\s\S]*?\\end\{\1\*?\}/g, ' ')
-    // verbatim / code / floats
     .replace(/\\begin\{(verbatim|lstlisting|tikzpicture|figure|table)\*?\}[\s\S]*?\\end\{\1\*?\}/g, ' ')
-    // inline / display math delimiters
     .replace(/\\\[[\s\S]*?\\\]/g, ' ')
     .replace(/\\\([\s\S]*?\\\)/g, ' ')
     .replace(/\$\$[\s\S]*?\$\$/g, ' ')
     .replace(/\$[^$\n]*\$/g, ' ')
-    // commands whose brace content is NOT prose — drop both the command and braces
     .replace(/\\(cite|citep|citet|ref|eqref|pageref|label|includegraphics|input|include|bibliography|bibliographystyle|usepackage|documentclass|pagestyle|setlength|setcounter|hypersetup|geometry|today|maketitle|tableofcontents|newcommand|renewcommand|definecolor)\*?(\[[^\]]*\])?(\{[^}]*\})?/g, ' ')
-    // \begin{env} / \end{env} markers — keep their inner content
     .replace(/\\(begin|end)\{[^}]*\}/g, ' ')
-    // any remaining command — drop the backslash name + optional [opts] but
-    // leave its brace content for the next pass to expose
     .replace(/\\[a-zA-Z@]+\*?(\[[^\]]*\])?/g, ' ')
-    // strip remaining braces
     .replace(/[{}]/g, ' ')
 
   return body.trim().split(/\s+/).filter(Boolean).length
@@ -102,12 +76,7 @@ function lineCount(src: string): number {
   return src.split('\n').length
 }
 
-// ─── component ──────────────────────────────────────────────────────────────
-
 function initialSourceFor(draftId: string): string {
-  // Prefer the user's saved edits whenever they exist. Scratch falls back to
-  // the presentation deck only on a true first visit (no stored value yet)
-  // so subsequent edits aren't clobbered by re-hydrating the demo content.
   const stored = readDraftSource(draftId)
   if (stored !== null) return stored
   if (draftId === SCRATCH_ID) return DEFAULT_LATEX
@@ -120,8 +89,7 @@ export default function PaperEditor() {
   const { drafts, touchDraft, renameDraft } = useDrafts()
   const editorBridge = useEditorBridge()
 
-  // Latest drafts list inside the debounced autosave — keeps the effect's
-  // dependency array small (drafts mutates on every save and would loop).
+  // draftsRef breaks the autosave effect's dep cycle on the drafts array.
   const draftsRef = useRef(drafts)
   useEffect(() => { draftsRef.current = drafts }, [drafts])
 
@@ -131,12 +99,7 @@ export default function PaperEditor() {
   const sourceRef = useRef<string>(source)
   useEffect(() => { sourceRef.current = source }, [source])
 
-  // ── undo / redo history ────────────────────────────────────────────────
-  // We maintain our own snapshot stack instead of relying on the textarea's
-  // native undo, because controlled inputs lose native undo grouping after
-  // setSource is called externally (snippets, scoot writes, imports). Typing
-  // is debounced into snapshots; programmatic changes push immediately so
-  // there's a clean undo step at the boundary.
+  // Custom snapshot stack: native textarea undo loses grouping after external setSource calls.
   const historyRef = useRef<{ stack: string[]; idx: number }>({
     stack: [sourceRef.current],
     idx: 0,
@@ -183,7 +146,6 @@ export default function PaperEditor() {
     return true
   }, [pushImmediate])
 
-  // Register with EditorBridge so scoot can append LaTeX into this editor.
   useEffect(() => {
     editorBridge.register({
       mode: 'source',
@@ -197,7 +159,6 @@ export default function PaperEditor() {
     return () => editorBridge.unregister()
   }, [editorBridge, pushImmediate])
 
-  // Re-hydrate when the user navigates between drafts without remounting.
   useEffect(() => {
     const fresh = initialSourceFor(draftId)
     setSource(fresh)
@@ -222,10 +183,6 @@ export default function PaperEditor() {
   const toolbarMeasureRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // How many pills fit inline at the current toolbar width. Remaining pills
-  // are only reachable through the palette. Measured via an offscreen layer
-  // that mirrors the full snippet set so we can compute natural pill widths
-  // without flashing them in the real toolbar.
   const [visibleCount, setVisibleCount] = useState(TOOLBAR_SNIPPETS.length)
   useLayoutEffect(() => {
     const strip = toolbarStripRef.current
@@ -252,11 +209,7 @@ export default function PaperEditor() {
     return () => ro.disconnect()
   }, [])
 
-  // ── debounced localStorage autosave ─────────────────────────────────────
-  // Writes the source under the per-draft key and upserts the index entry.
-  // The display title is seeded from the LaTeX \title{} only on the FIRST
-  // save for this draft — after that it's user-controlled (renameDraft from
-  // the editable title in the header) so manual renames aren't clobbered.
+  // Title is seeded from \title{} only on first save; later renames stay user-controlled.
   useEffect(() => {
     setSaveState('saving')
     const t = setTimeout(() => {
@@ -278,7 +231,6 @@ export default function PaperEditor() {
     return () => clearTimeout(t)
   }, [source, draftId, touchDraft])
 
-  // ── sync scroll ──────────────────────────────────────────────────────────
   const syncScroll = useCallback(() => {
     const ta = textareaRef.current
     if (!ta) return
@@ -291,7 +243,6 @@ export default function PaperEditor() {
     }
   }, [])
 
-  // ── drag resize ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!isDragging) return
     const onMove = (e: MouseEvent) => {
@@ -314,7 +265,6 @@ export default function PaperEditor() {
     }
   }, [isDragging])
 
-  // ── snippet insertion ──────────────────────────────────────────────────
   const insertSnippet = useCallback((snippet: Snippet) => {
     const ta = textareaRef.current
     if (!ta) return
@@ -333,7 +283,6 @@ export default function PaperEditor() {
     })
   }, [source, pushImmediate])
 
-  // ── file import ────────────────────────────────────────────────────────
   const handleImportClick = useCallback(() => {
     fileInputRef.current?.click()
   }, [])
@@ -352,7 +301,6 @@ export default function PaperEditor() {
     reader.readAsText(file)
   }, [pushImmediate])
 
-  // ── keyboard shortcuts ─────────────────────────────────────────────────
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === '/') {
@@ -375,7 +323,6 @@ export default function PaperEditor() {
     return () => document.removeEventListener('keydown', onKey)
   }, [insertSnippet])
 
-  // ── derived state ─────────────────────────────────────────────────────
   const meta = useMemo(() => extractMeta(source).meta, [source])
   const highlighted = useMemo(() => highlightTeX(source) + '\n', [source])
   const lines = useMemo(() => lineCount(source), [source])
@@ -404,7 +351,6 @@ export default function PaperEditor() {
     ta.scrollTop = Math.max(0, (line - 3) * lh)
   }, [source])
 
-  // ── rendered ───────────────────────────────────────────────────────────
 
   const showSource = focusMode !== 'preview'
   const showPreview = focusMode !== 'source'
@@ -913,8 +859,6 @@ export default function PaperEditor() {
   )
 }
 
-/* ── Editable working-title — click the title text to rename the draft.
-   Updates DraftMeta only; never touches the LaTeX source. ─────────────── */
 function EditableTitle({
   draftId, currentTitle, onRename,
 }: {
@@ -975,7 +919,6 @@ function EditableTitle({
   )
 }
 
-/* ── Leaf badge — soft botanical mark used as the "manuscript" sigil. ─── */
 function LeafBadge() {
   return (
     <svg width="40" height="40" viewBox="0 0 40 40" className="shrink-0">

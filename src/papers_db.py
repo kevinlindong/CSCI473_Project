@@ -1,13 +1,4 @@
-"""
-papers_db.py — SQLite-backed runtime store for paper metadata.
-
-Replaces the per-file reads of data/raw/enriched/{paper_id}.json that app.py
-used to do via _load_paper(). One sqlite3 connection per process, opened
-lazily on first lookup. Read-only by design: check_same_thread=False is safe
-because we never write from app.py (uvicorn runs handlers in a threadpool).
-
-Build the database once with: python scripts/build_papers_db.py
-"""
+"""SQLite-backed paper metadata store. Build with scripts/build_papers_db.py."""
 
 import json
 import os
@@ -28,15 +19,14 @@ def get_conn() -> sqlite3.Connection:
             raise FileNotFoundError(
                 f"{DB_PATH} missing. Run: python scripts/build_papers_db.py"
             )
+        # Read-only path; uvicorn handlers run in a threadpool, so disable check.
         _CONN = sqlite3.connect(DB_PATH, check_same_thread=False)
         _CONN.row_factory = sqlite3.Row
     return _CONN
 
 
 def load_paper(paper_id: str) -> Optional[dict]:
-    """Return a paper as a dict in the same shape consumers expect from
-    data/raw/enriched/*.json. None if the paper_id isn't present.
-    """
+    """Return the paper as a dict matching the data/raw/enriched/*.json shape."""
     row = get_conn().execute(
         "SELECT * FROM papers WHERE paper_id = ?", (paper_id,)
     ).fetchone()
@@ -48,10 +38,8 @@ def load_paper(paper_id: str) -> Optional[dict]:
     return d
 
 
-# Columns surfaced by /api/papers — deliberately omits the heavy
-# sections_json / figures_json so listings don't pay to deserialize text
-# they don't render. ~100× faster than 10k _load_paper() round-trips for
-# the no-filter listing on the home page.
+# Omit sections_json / figures_json: ~100x faster listings since the home page
+# never renders them.
 _SUMMARY_COLUMNS = "paper_id, title, abstract, date, url, authors_json"
 
 
@@ -59,12 +47,7 @@ def list_paper_summaries(
     paper_ids: Optional[list[str]] = None,
     limit: Optional[int] = None,
 ):
-    """Stream lightweight paper summaries in one SQL query.
-
-    If `paper_ids` is None, returns all papers (optionally limited).
-    If provided, filters to that set (preserves SQLite's natural row order
-    in the result; caller can re-order if needed).
-    """
+    """Stream lightweight paper summaries."""
     sql = f"SELECT {_SUMMARY_COLUMNS} FROM papers"
     params: tuple = ()
     if paper_ids is not None:

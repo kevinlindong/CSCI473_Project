@@ -1,14 +1,4 @@
-"""
-sweep_n_clusters.py — NMI / ARI / min-size sweep to pick N_CLUSTERS.
-
-Runs kmeans over a range of k against data/embeddings/abstracts.npy and
-scores each k against arXiv primary_category. Prints a table; the chosen
-k for config.N_CLUSTERS is the largest non-degenerate value before
-singleton clusters appear.
-
-Usage:
-    python scripts/sweep_n_clusters.py [k_min k_max k_step]
-"""
+"""NMI/ARI/min-size sweep to pick N_CLUSTERS, scored against arXiv primary_category."""
 
 import json
 import os
@@ -24,8 +14,7 @@ from src.clustering import kmeans
 
 
 def _contingency(a, b):
-    # np.unique returns sorted, so searchsorted gives the position-in-uniques
-    # in O(N log K) numpy time — replaces an O(N) Python loop with dict lookups.
+    # searchsorted on sorted uniques is O(N log K) numpy vs. an O(N) Python dict-lookup loop.
     ca, cb = np.unique(a), np.unique(b)
     ai = np.searchsorted(ca, a)
     bi = np.searchsorted(cb, b)
@@ -115,7 +104,6 @@ def main():
         json.dump(results, f, indent=2)
     print(f"\nWrote {out}")
 
-    # Recommendation: largest k where min_size > some floor
     floor = 10
     eligible = [r for r in results if r["min_size"] > floor]
     if eligible:

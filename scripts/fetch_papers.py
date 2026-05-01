@@ -1,17 +1,7 @@
-"""
-fetch_papers.py — Download papers from the Arxiv API and enrich via ar5iv.
+"""Download arXiv papers and enrich with ar5iv HTML (sections + figures).
 
-Target-seeking: walks backward in one-month slices from AR5IV_END_DATE and
-keeps enriching until `config.ARXIV_TARGET_ENRICHED` papers exist on disk
-(or `config.ARXIV_FETCH_MAX_MONTHS_BACK` months is exhausted). Resumable —
-skips any paper whose JSON is already on disk.
-
-Phase 1: Query arXiv API for a given (category, month) slice.
-Phase 2: Fetch ar5iv HTML for each paper to extract sections and figures.
-Saves one JSON file per paper to data/raw/enriched/.
-
-Usage:
-    python scripts/fetch_papers.py
+Walks backward in one-month slices from AR5IV_END_DATE until ARXIV_TARGET_ENRICHED
+papers exist on disk. Resumable — skips any paper already saved.
 """
 
 import json
@@ -43,13 +33,7 @@ def _month_floor(dt: datetime) -> datetime:
 def discover_papers_in_month(
     start_date: datetime, end_date: datetime
 ) -> list[dict]:
-    """Query arXiv API for papers in a single [start_date, end_date] slice.
-
-    end_date is clamped at AR5IV_END_DATE upstream; start_date is typically
-    the first day of the month containing end_date (or the month before).
-
-    Returns a de-duplicated list of metadata dicts sorted by date descending.
-    """
+    """Query arXiv API for papers in a [start_date, end_date] slice. Dedup by paper_id."""
     date_from = start_date.strftime("%Y%m%d0000")
     date_to = end_date.strftime("%Y%m%d2359")
     cat_query = " OR ".join(f"cat:{cat}" for cat in config.ARXIV_CATEGORIES)
@@ -114,10 +98,7 @@ def discover_papers_in_month(
 
 
 def enrich_paper(paper: dict) -> dict:
-    """Fetch ar5iv HTML and extract sections + figures for a single paper.
-
-    On failure, the paper is returned unchanged (abstract-only, ar5iv_success=False).
-    """
+    """Fetch ar5iv HTML and extract sections + figures. Returns paper unchanged on failure."""
     paper_id = paper["paper_id"]
     url = f"{config.AR5IV_BASE_URL}/{paper_id}"
 
@@ -162,12 +143,7 @@ def enrich_paper(paper: dict) -> dict:
 
 
 class Ar5ivSource:
-    """Discover via the arXiv API, enrich via ar5iv HTML scraping.
-
-    Today's only Source. Future ArxivS3Source / SemanticScholarSource would
-    implement the same .discover(start, end) -> list[dict] and .enrich(paper)
-    -> dict surface, so fetch_papers() can swap them via --source.
-    """
+    """Discover via the arXiv API, enrich via ar5iv HTML scraping."""
 
     name = "ar5iv"
 
@@ -188,7 +164,6 @@ def _count_enriched_on_disk() -> int:
 
 
 def _invalidate_papers_json() -> None:
-    """Remove stale processed/papers.json so compute_topic_graph.py rebuilds it."""
     papers_json = os.path.join(config.PROCESSED_DIR, "papers.json")
     if os.path.exists(papers_json):
         os.remove(papers_json)
@@ -199,14 +174,6 @@ def _invalidate_papers_json() -> None:
 
 
 def fetch_papers(source_name: str = "ar5iv"):
-    """Fetch broad-ML arXiv papers, enrich via the chosen source, save to
-    data/raw/enriched/.
-
-    Walks backward in one-month slices from AR5IV_END_DATE, streaming each
-    discovered paper through the source's enrich() and saving successes to
-    disk. Stops when ARXIV_TARGET_ENRICHED JSONs exist on disk, or when
-    ARXIV_FETCH_MAX_MONTHS_BACK months have been exhausted.
-    """
     if source_name not in SOURCES:
         raise SystemExit(
             f"Unknown source '{source_name}'. Available: {sorted(SOURCES)}"

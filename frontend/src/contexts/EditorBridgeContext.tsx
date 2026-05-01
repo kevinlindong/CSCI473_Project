@@ -2,33 +2,18 @@ import { createContext, useContext, useCallback, useRef } from 'react'
 import type { Block, BlockType } from '../hooks/useDocument'
 import { newBlock } from '../hooks/useDocument'
 
-// ─── Types ─────────────────────────────────────────────────────────────────────
-
 export interface BlockSpec {
   type: BlockType
   content: string
   meta?: Record<string, unknown>
-  /** Optional placement hint for source-mode editors. Forms:
-   *  "end" | "start" | "after:<section>" | "before:<section>".
-   *  Section match is case-insensitive substring of \section{...}. */
   position?: string
 }
 
 interface EditorBridge {
-  /** true when an editor (block-mode or source-mode) is mounted */
   isEditorActive: boolean
-  /** Append blocks to the current document. Translates to LaTeX source when
-   *  the active editor is source-mode (e.g. PaperEditor). */
   insertBlocks: (specs: BlockSpec[]) => void
-  /** Append plain text to the active editor. Source-mode editors receive the
-   *  text verbatim; block-mode editors wrap it in a paragraph block. */
   appendSource: (text: string) => void
-  /** Read the current LaTeX source. Returns null if no source-mode editor
-   *  is active (e.g. block-mode editor or no editor mounted). */
   getSource: () => string | null
-  /** Insert a `\cite{paper_id}` into the active source-mode editor and
-   *  ensure a matching `\bibitem{paper_id}` exists in the bibliography
-   *  (creating one if needed). No-op when no source editor is active. */
   insertCitation: (paperId: string, opts?: { title?: string; authors?: string[] }) => boolean
   register: (cb: RegisterPayload) => void
   unregister: () => void
@@ -48,14 +33,6 @@ type SourcePayload = {
 
 type RegisterPayload = BlockPayload | SourcePayload
 
-// Pick the offset in the LaTeX source where new content should be inserted.
-// Handles "end" / "start" / "after:<anchor>" / "before:<anchor>". Falls back to
-// just before \end{document} (or end-of-source if it's missing).
-//
-// Anchors recognized for after/before:
-//   - any \section{...} whose name contains the target
-//   - common metadata commands: \title, \author, \date, \maketitle, \today
-//   - environments: abstract, thebibliography, references
 function findInsertOffset(source: string, position?: string): number {
   const endDocMatch = source.match(/\\end\{document\}/)
   const defaultOffset = endDocMatch ? endDocMatch.index! : source.length
@@ -74,13 +51,11 @@ function findInsertOffset(source: string, position?: string): number {
   }
 
   if ((op === 'after' || op === 'before') && target) {
-    // 1. Try matching a \section{...} containing the target.
     const sectionRe = /\\section\*?\{([^}]*)\}/g
     let m: RegExpExecArray | null
     while ((m = sectionRe.exec(source)) !== null) {
       if (m[1].toLowerCase().includes(target)) {
         if (op === 'before') return m.index
-        // After: insert before the next \section, \begin{thebibliography}, or \end{document}.
         const startIdx = m.index + m[0].length
         const tailRe = /\\section\*?\{|\\begin\{thebibliography\}|\\end\{document\}/g
         tailRe.lastIndex = startIdx
@@ -89,8 +64,6 @@ function findInsertOffset(source: string, position?: string): number {
       }
     }
 
-    // 2. Environments by name: abstract, thebibliography, references.
-    //    Treat "references" / "bibliography" as aliases for thebibliography.
     const envName = target === 'references' || target === 'bibliography'
       ? 'thebibliography'
       : target
@@ -106,7 +79,6 @@ function findInsertOffset(source: string, position?: string): number {
       }
     }
 
-    // 3. Single-line metadata commands: \title{...}, \author{...}, \date{...}, \maketitle.
     const cmdNames = ['title', 'author', 'date', 'maketitle']
     if (cmdNames.includes(target)) {
       const cmdRe = target === 'maketitle'
@@ -124,7 +96,6 @@ function findInsertOffset(source: string, position?: string): number {
   return defaultOffset
 }
 
-// Convert a BlockSpec into a LaTeX source fragment for source-mode editors.
 function blockSpecToLatex(spec: BlockSpec): string {
   const c = spec.content.trim()
   switch (spec.type) {
@@ -132,7 +103,6 @@ function blockSpecToLatex(spec: BlockSpec): string {
     case 'h2': return `\\subsection{${c}}\n`
     case 'h3': return `\\subsubsection{${c}}\n`
     case 'latex':
-      // If the user already wrote a full env or $...$, pass through. Otherwise wrap.
       if (/\\begin\{|^\$/.test(c)) return `${c}\n`
       return `\\begin{equation}\n  ${c}\n\\end{equation}\n`
     case 'code': return `\\begin{verbatim}\n${c}\n\\end{verbatim}\n`
@@ -144,8 +114,6 @@ function blockSpecToLatex(spec: BlockSpec): string {
     default: return `${c}\n`
   }
 }
-
-// ─── Context ───────────────────────────────────────────────────────────────────
 
 const EditorBridgeContext = createContext<EditorBridge>({
   isEditorActive: false,
@@ -160,8 +128,6 @@ const EditorBridgeContext = createContext<EditorBridge>({
 export function useEditorBridge() {
   return useContext(EditorBridgeContext)
 }
-
-// ─── Provider ──────────────────────────────────────────────────────────────────
 
 export function EditorBridgeProvider({ children }: { children: React.ReactNode }) {
   const ref = useRef<RegisterPayload | null>(null)
@@ -178,11 +144,9 @@ export function EditorBridgeProvider({ children }: { children: React.ReactNode }
     const cur = ref.current
     if (!cur) return
 
-    // Source-mode editor: translate blocks → LaTeX, splice at target offset.
     if ('mode' in cur && cur.mode === 'source') {
       const source = cur.getSource()
       const latex = specs.map(blockSpecToLatex).join('\n')
-      // Position taken from the first spec — all blocks in one call go together.
       const offset = findInsertOffset(source, specs[0]?.position)
       const before = source.slice(0, offset)
       const after = source.slice(offset)
@@ -192,7 +156,6 @@ export function EditorBridgeProvider({ children }: { children: React.ReactNode }
       return
     }
 
-    // Block-mode editor (legacy Editor.tsx).
     const blockCb = cur as BlockPayload
     const existing = blockCb.getBlocks()
     const normalizeContent = (type: BlockSpec['type'], raw: unknown): string => {
@@ -239,7 +202,7 @@ export function EditorBridgeProvider({ children }: { children: React.ReactNode }
       const cur = ref.current
       if (!cur || !('mode' in cur) || cur.mode !== 'source') return false
 
-      // arXiv ids contain dots; LaTeX is happiest with letters/digits only.
+      // arXiv ids contain dots; LaTeX bibitem keys must be alphanumeric.
       const safeId = paperId.replace(/[^A-Za-z0-9]/g, '_')
       const title = opts?.title?.trim() || paperId
       const authors = (opts?.authors ?? []).filter(Boolean).join(', ')
@@ -247,8 +210,6 @@ export function EditorBridgeProvider({ children }: { children: React.ReactNode }
 
       let source = cur.getSource()
 
-      // Step 1 — make sure a \bibitem with this key exists, building a
-      // bibliography environment if the document doesn't have one yet.
       if (!new RegExp(`\\\\bibitem\\{${safeId}\\}`).test(source)) {
         const bibBegin = source.match(/\\begin\{thebibliography\}[^\n]*\n?/)
         if (bibBegin) {
@@ -270,9 +231,6 @@ export function EditorBridgeProvider({ children }: { children: React.ReactNode }
         }
       }
 
-      // Step 2 — drop a \cite into the body, just before the bibliography
-      // (or before \end{document} if there's no bibliography). This keeps
-      // the cite inside readable prose rather than inside the references.
       const bibBeginAfter = source.match(/\\begin\{thebibliography\}/)
       const endDocAfter = source.match(/\\end\{document\}/)
       const citeAnchor = bibBeginAfter?.index ?? endDocAfter?.index ?? source.length

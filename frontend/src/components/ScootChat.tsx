@@ -6,14 +6,6 @@ import type { BlockType } from '../hooks/useDocument'
 import { searchLibrary, extractBodyText, type SearchableDraft } from '../lib/librarySearch'
 import { PaperDetailDrawer, type PaperSummary } from './PaperDetailDrawer'
 
-/* ==========================================================================
-   ScootChat — floating, draggable chat overlay for the scoot agent.
-   - No backdrop: the page behind stays interactive and unblurred.
-   - Drag from the grip strip at the top of the panel.
-   - Position persists in localStorage between opens.
-   - Hits POST /api/scoot (local Qwen model) for replies.
-   ========================================================================== */
-
 interface Citation {
   paper_id: string
   title: string
@@ -62,8 +54,7 @@ const CREATE_DRAFT_RE = /\[CREATE_DRAFT\]([\s\S]*?)\[\/CREATE_DRAFT\]/g
 const INSERT_BLOCK_RE = /\[INSERT_BLOCK([^\]]*)\]([\s\S]*?)\[\/INSERT_BLOCK\]/g
 const SEARCH_CORPUS_RE = /\[SEARCH_CORPUS\]([\s\S]*?)\[\/SEARCH_CORPUS\]/g
 
-// Cap the LaTeX context we send to scoot so we don't blow the LLM's
-// context window with a 20k-line manuscript.
+// Cap LaTeX context to keep the LLM prompt under its window.
 const MAX_CURRENT_PAPER_CHARS = 6000
 
 function parseAttrs(attrStr: string): Record<string, string> {
@@ -110,8 +101,6 @@ function parseActions(reply: string): ParsedActions {
 
   return { openDraft, createDraft, insertBlocks, searchCorpus, cleaned }
 }
-
-// ── Position helpers ────────────────────────────────────────────────────────
 
 function loadPos(): { x: number; y: number } | null {
   if (typeof window === 'undefined') return null
@@ -160,8 +149,6 @@ export function ScootChat({ open, onClose }: Props) {
   const [size, setSize] = useState<{ w: number; h: number }>(() => loadSize() ?? defaultSize())
   const [dragging, setDragging] = useState(false)
   const [resizing, setResizing] = useState(false)
-  // Inline preview drawer for citation cards — opening keeps the user on
-  // their current page (e.g. the editor) instead of routing to /browse.
   const [previewCitation, setPreviewCitation] = useState<Citation | null>(null)
 
   const scrollRef = useRef<HTMLDivElement | null>(null)
@@ -188,17 +175,13 @@ export function ScootChat({ open, onClose }: Props) {
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
 
-  // Persist drag position so the panel reopens where the user last left it.
   useEffect(() => {
     try { window.localStorage.setItem(POSITION_KEY, JSON.stringify(pos)) } catch { /* ignore */ }
   }, [pos])
 
-  // Persist size across sessions.
   useEffect(() => {
     try { window.localStorage.setItem(SIZE_KEY, JSON.stringify(size)) } catch { /* ignore */ }
   }, [size])
-
-  // ── Drag handling ──────────────────────────────────────────────────────
 
   const onDragStart = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return
@@ -227,7 +210,6 @@ export function ScootChat({ open, onClose }: Props) {
     try { e.currentTarget.releasePointerCapture(e.pointerId) } catch { /* ignore */ }
   }
 
-  // ── Resize handling ────────────────────────────────────────────────────
   const onResizeStart = (e: ReactPointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return
     e.preventDefault()
@@ -256,13 +238,6 @@ export function ScootChat({ open, onClose }: Props) {
     window.addEventListener('pointerup', onUp)
   }
 
-  // ── Action dispatchers ─────────────────────────────────────────────────
-  //
-  // Library lookup is delegated to lib/librarySearch.ts — title + body scoring
-  // with synonym expansion (CNN ↔ convolutional, GNN ↔ graph, SSL ↔ self-
-  // supervised, etc.) so casual queries like "open my CNN paper" match the
-  // ResNet draft even when the title doesn't say "CNN" verbatim.
-
   type OpenResult =
     | { status: 'opened'; title: string }
     | { status: 'ambiguous'; titles: string[] }
@@ -272,16 +247,12 @@ export function ScootChat({ open, onClose }: Props) {
     const q = query.trim()
     if (!q) return { status: 'notfound' }
 
-    // Fast path: exact substring against full title — usually a click-through
-    // from a follow-up message ("open the residual learning one").
     const exact = drafts.filter(d => d.title.toLowerCase().includes(q.toLowerCase()))
     if (exact.length === 1) {
       navigate(`/editor/${exact[0].id}`)
       return { status: 'opened', title: exact[0].title }
     }
 
-    // Otherwise score every draft, including its LaTeX body for topic
-    // matching (catches "CNN paper" when the title is "Deep Residual Learning").
     const searchable: SearchableDraft[] = drafts.map(d => {
       const source = readDraftSource(d.id) ?? ''
       return {
@@ -350,8 +321,6 @@ export function ScootChat({ open, onClose }: Props) {
     setMessages(nextHistory)
     setBusy(true)
     try {
-      // Snapshot whatever LaTeX the editor currently has so scoot can answer
-      // questions about the user's paper. Capped to keep the LLM context sane.
       const liveSource = editorBridge.getSource?.() ?? null
       const currentPaper = liveSource ? liveSource.slice(0, MAX_CURRENT_PAPER_CHARS) : null
 
@@ -595,7 +564,6 @@ function citationToSummary(c: Citation): PaperSummary {
   }
 }
 
-// ─── Citation card — preview + deep links into corpus & arXiv ─────────────
 function CitationCard({
   number, citation, onOpenInCorpus,
 }: {

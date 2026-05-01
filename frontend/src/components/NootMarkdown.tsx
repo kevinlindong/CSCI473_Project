@@ -8,10 +8,7 @@ interface Props {
   children: string
   /** Tighter spacing for compact panels (e.g. floating assistant) */
   compact?: boolean
-  /**
-   * Optional transform applied to every string child inside parsed markdown
-   * nodes. Used by the answer renderer to swap [n] markers for citation chips.
-   */
+  /** Used by the answer renderer to swap [n] markers for citation chips. */
   transformText?: (text: string) => ReactNode
 }
 

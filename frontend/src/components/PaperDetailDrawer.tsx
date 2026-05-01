@@ -2,13 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useEditorBridge } from '../contexts/EditorBridgeContext'
 
-/* ==========================================================================
-   PaperDetailDrawer — slide-in preview of a single corpus paper.
-   Shared by /browse (catalogue rows + Scoot citation deep-links) and the
-   ScootChat overlay (so users can preview a paper without leaving the page
-   they're working on).
-   ========================================================================== */
-
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? ''
 
 export interface PaperSummary {
@@ -210,8 +203,6 @@ export function PaperDetailDrawer({
                   setTimeout(() => setCiteFlash(null), 1800)
                   return
                 }
-                // No editor mounted — fall back to opening the scratch draft.
-                // The user can hit "cite in paper" again once the editor is ready.
                 navigate('/editor/scratch')
                 onClose()
               }}

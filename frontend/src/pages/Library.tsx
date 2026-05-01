@@ -6,11 +6,6 @@ import { useDrafts, writeDraftSource, readDraftSource, type DraftMeta } from '..
 import { extractMeta } from '../lib/latex'
 import { SAMPLE_PAPERS } from '../sample-papers'
 
-/* ==========================================================================
-   Library — "papers you're working on". Grid of Google-Docs-style tiles,
-   each tile a paper-shaped preview thumbnail + title + last-edited time.
-   ========================================================================== */
-
 interface PaperSummary {
   paper_id: string
   title: string
@@ -316,7 +311,6 @@ export default function Library() {
   )
 }
 
-// ─── Empty state ───────────────────────────────────────────────────────────
 function EmptyState({ onNew }: { onNew: () => void }) {
   return (
     <div className="bg-milk border border-dashed border-forest/15 rounded-3xl py-20 px-10 text-center">
@@ -353,7 +347,6 @@ function EmptyState({ onNew }: { onNew: () => void }) {
   )
 }
 
-// ─── Helpers ───────────────────────────────────────────────────────────────
 
 function formatRelative(ts: number): string {
   const diff = Date.now() - ts
@@ -397,7 +390,6 @@ function extractBodyLines(source: string, max = 8): string[] {
     .slice(0, max)
 }
 
-// ─── Paper-shaped thumbnail used by both tiles ────────────────────────────
 function PaperThumbnail({
   title,
   lines,
@@ -482,7 +474,6 @@ function PaperThumbnail({
   )
 }
 
-// ─── Draft tile ────────────────────────────────────────────────────────────
 function DraftTile({
   draft, onOpen, onDelete,
 }: {
@@ -543,7 +534,6 @@ function DraftTile({
   )
 }
 
-// ─── arXiv paper tile ──────────────────────────────────────────────────────
 function PaperTile({
   paper, clusterId, clusterLabel, onRemove,
 }: {
