@@ -133,7 +133,7 @@ python scripts/fetch_papers.py        # fetch ~10k papers from ArXiv (~30 min)
 python scripts/build_embeddings.py    # encode corpus (~2–3 hr, GPU recommended)
 python scripts/build_papers_db.py     # build SQLite store (~5 min)
 python scripts/compute_topic_graph.py # k-means + k-NN + UMAP + LLM labels (~1–2 hr)
-./start.sh
+./start-prod.sh
 ```
 
 ### Notebook exploration (no frontend required)
