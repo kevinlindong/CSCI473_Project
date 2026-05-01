@@ -291,7 +291,6 @@ class TestRetrieve:
         Uses a fake src.encoder module inserted into sys.modules so the test
         runs even in environments without sentence-transformers installed.
         """
-        import sys
         import types
 
         fake_vec = np.array([1.0, 0.0, 0.0, 0.0], dtype=np.float32)
@@ -306,7 +305,7 @@ class TestRetrieve:
         fake_module.load_model = lambda: (_ for _ in ()).throw(
             RuntimeError("load_model should not be called when model is provided")
         )
-        monkeypatch.setitem(sys.modules, "src.encoder", fake_module)
+        monkeypatch.setattr("src.encoder", fake_module)
 
         sentinel_model = object()
         result = retrieve(

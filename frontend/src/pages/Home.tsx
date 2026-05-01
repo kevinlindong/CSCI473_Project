@@ -18,11 +18,6 @@ interface CorpusStats {
   artifacts: { label: string; ready: boolean }[]
 }
 
-/* ==========================================================================
-   Home — the introduction. A calm, botanical hello that explains what
-   scholar is and points the visitor at the corpus explorer.
-   ========================================================================== */
-
 export default function Home() {
   return (
     <div className="min-h-screen bg-cream text-forest antialiased">
@@ -43,8 +38,6 @@ export default function Home() {
     </div>
   )
 }
-
-/* ── Hero — a quiet welcome with the primary explorer CTA ──────────────── */
 
 function Hero() {
   return (
@@ -99,7 +92,6 @@ function Hero() {
   )
 }
 
-/* ── Feature grid — three rooms with previews ──────────────────────────── */
 
 function FeatureGrid() {
   return (
@@ -198,7 +190,6 @@ function FeatureCard({
   )
 }
 
-/* ── Previews ─────────────────────────────────────────────────────────── */
 
 function CorpusPreview() {
   const [active, setActive] = useState(0)
@@ -302,7 +293,6 @@ function LibraryPreview() {
   )
 }
 
-/* ── Divider ──────────────────────────────────────────────────────────── */
 
 function Divider() {
   return (
@@ -312,7 +302,6 @@ function Divider() {
   )
 }
 
-/* ── Live system ledger ──────────────────────────────────────────────── */
 
 function SystemLedger() {
   const [stats, setStats] = useState<CorpusStats | null>(null)

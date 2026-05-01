@@ -3,8 +3,6 @@ import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
 import type { Profile } from '../lib/supabase'
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 interface AuthContextValue {
   user: User | null
   profile: Profile | null
@@ -16,11 +14,7 @@ interface AuthContextValue {
   signOut: () => Promise<void>
 }
 
-// ─── Context ──────────────────────────────────────────────────────────────────
-
 const AuthContext = createContext<AuthContextValue | null>(null)
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function displayNameFromUser(user: User): string {
   return (
@@ -60,15 +54,12 @@ async function fetchProfile(userId: string): Promise<Profile | null> {
   return data ?? null
 }
 
-// ─── Provider ─────────────────────────────────────────────────────────────────
-
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // Load session on mount + subscribe to auth changes
   useEffect(() => {
     // onAuthStateChange is the single source of truth for auth state.
     // It fires INITIAL_SESSION immediately on subscribe, so we don't need
@@ -136,7 +127,5 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     </AuthContext.Provider>
   )
 }
-
-// ─── Export raw context for the hook ─────────────────────────────────────────
 
 export { AuthContext }

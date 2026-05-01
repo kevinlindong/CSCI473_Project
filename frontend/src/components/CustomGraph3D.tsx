@@ -10,28 +10,9 @@ import {
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 
-/* ============================================================================
-   CustomGraph3D — direct Three.js renderer for the topic graph.
-
-   Replaces react-force-graph-3d, which was emitting one individual Mesh per
-   node and per edge (~33,000 draw calls per frame at 10k+20k). This rewrite
-   collapses the scene to ~3 draw calls:
-
-     1. InstancedMesh of low-poly spheres for ALL nodes.
-     2. LineSegments for ALL edges (vertex-colored so hover-adjacent edges
-        can flash white without touching geometry).
-     3. (When a query is active) a separate LineSegments for query edges +
-        a small InstancedMesh of tiny spheres animated along them.
-
-   Step-change in interaction performance: rotate/zoom can stay smooth at
-   60fps even on weak integrated GPUs without hiding edges during drag.
-
-   Prop signature mimics ForceGraph3D for the subset we use, so the call
-   sites in TopicGraph3D.tsx and CorpusGraph3D.tsx need only an import +
-   tag swap.
-   ============================================================================ */
-
-// ─── Public types ──────────────────────────────────────────────────────────
+// Direct Three.js renderer: one InstancedMesh for nodes + one LineSegments for
+// edges = ~3 draw calls vs ~33k from react-force-graph-3d at 10k+20k. Smooth
+// rotate/zoom at 60fps without hiding edges during drag.
 
 export interface BaseNode {
   id: string
@@ -53,16 +34,11 @@ export interface CustomGraphMethods {
   camera: () => THREE.PerspectiveCamera
   renderer: () => THREE.WebGLRenderer
   controls: () => OrbitControls
-  /**
-   * Animate the camera to `target` over `durationMs` (default 1000), focusing
-   * on `lookAt` if provided. Matches ForceGraphMethods.cameraPosition signature.
-   */
   cameraPosition: (
     target: { x: number; y: number; z: number },
     lookAt?: { x: number; y: number; z: number },
     durationMs?: number,
   ) => void
-  /** Returns { nodes, links } (mostly for compatibility with old camera-pan code). */
   graphData: () => { nodes: BaseNode[]; links: BaseLink[] }
 }
 
@@ -71,18 +47,12 @@ export interface CustomGraph3DProps<N extends BaseNode, L extends BaseLink> {
   width: number
   height: number
   backgroundColor?: string
-  // ─── Node appearance ─────────────────────────────────────────────────────
-  /** Multiplier on the per-instance scale. Default 4 (matches ForceGraph3D's nodeRelSize). */
   nodeRelSize?: number
-  /** Per-node opacity. Default 0.92. */
   nodeOpacity?: number
   nodeColor?: (n: object) => string
-  /** Returns a "size factor" — final radius is nodeRelSize * sqrt(nodeVal). Default 1. */
   nodeVal?: (n: object) => number
   nodeLabel?: (n: object) => string
   nodeVisibility?: (n: object) => boolean
-  // ─── Link appearance ─────────────────────────────────────────────────────
-  /** Per-link opacity. Default 0.22. */
   linkOpacity?: number
   linkColor?: (l: object) => string
   linkWidth?: (l: object) => number
@@ -91,20 +61,15 @@ export interface CustomGraph3DProps<N extends BaseNode, L extends BaseLink> {
   linkDirectionalParticleSpeed?: number
   linkDirectionalParticleWidth?: number
   linkDirectionalParticleColor?: () => string
-  // ─── Interaction ─────────────────────────────────────────────────────────
   onNodeClick?: (n: object) => void
   onNodeHover?: (n: object | null) => void
   onBackgroundClick?: () => void
 }
 
-// ─── Internal helpers ──────────────────────────────────────────────────────
-
 const TOOLTIP_OFFSET = 12
-const CLICK_DRAG_THRESHOLD_PX_SQ = 25  // 5px movement = "drag", not "click"
+const CLICK_DRAG_THRESHOLD_PX_SQ = 25  // 5px movement = drag, not click
 const WHEEL_IDLE_MS = 220
-const MAX_PARTICLES = 96  // 16 query edges × 6 particles, max headroom
-
-// ─── Component ─────────────────────────────────────────────────────────────
+const MAX_PARTICLES = 96
 
 function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
   props: CustomGraph3DProps<N, L>,
@@ -123,9 +88,7 @@ function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
     nodeVisibility = () => true,
     linkOpacity = 0.22,
     linkColor = () => '#8ea7c4',
-    // linkWidth: accepted in props for ForceGraph3D parity but unused —
-    // WebGL caps `gl.LINES` width at 1px in most browsers. Honoring the
-    // callback would require LineMaterial from three's examples/jsm/lines.
+    // linkWidth ignored: gl.LINES is capped at 1px in WebGL.
     linkVisibility = () => true,
     linkDirectionalParticles = () => 0,
     linkDirectionalParticleSpeed = 0.006,
@@ -136,11 +99,9 @@ function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
     onBackgroundClick,
   } = props
 
-  // Container DOM
   const containerRef = useRef<HTMLDivElement | null>(null)
   const tooltipRef   = useRef<HTMLDivElement | null>(null)
 
-  // Three.js objects (created once, persist for the component's lifetime)
   const sceneRef       = useRef<THREE.Scene | null>(null)
   const cameraRef      = useRef<THREE.PerspectiveCamera | null>(null)
   const rendererRef    = useRef<THREE.WebGLRenderer | null>(null)
@@ -150,23 +111,18 @@ function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
   const queryLinesRef  = useRef<THREE.LineSegments | null>(null)
   const particleMeshRef = useRef<THREE.InstancedMesh | null>(null)
 
-  // Index data — kept in sync with current graphData
   const nodesRef        = useRef<BaseNode[]>([])
-  const linksRef        = useRef<BaseLink[]>([])  // non-query edges only, in geometry order
+  const linksRef        = useRef<BaseLink[]>([])
   const queryLinksRef   = useRef<BaseLink[]>([])
   const nodeIdToIndex   = useRef<Map<string, number>>(new Map())
 
-  // Interaction state
   const hoveredIndexRef         = useRef<number>(-1)
   const interactingRef          = useRef<boolean>(false)
   const pointerDownOnCanvasRef  = useRef<boolean>(false)
   const dragStartRef            = useRef<{ x: number; y: number; moved: boolean }>({ x: 0, y: 0, moved: false })
-  // Track whether the camera has been framed against the graph yet. Without
-  // this, every rebuild (query insertion, isolation toggle) would yank the
-  // camera back to the default — destroying the user's current view.
+  // Frame the camera once on first non-empty rebuild; later rebuilds (query, isolation) preserve user's view.
   const cameraFramedRef         = useRef<boolean>(false)
 
-  // Camera-tween state
   const tweenRef = useRef<{
     startTime: number
     duration: number
@@ -182,10 +138,8 @@ function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
     active: false,
   })
 
-  // Memoize callback refs so listeners always read the latest functions
-  // without resubscribing. Primitives like particle speed/width are also
-  // routed through here so the rAF tick (captured in the mount-only effect)
-  // still reflects live prop changes.
+  // Routes callbacks + animation primitives through a ref so listeners read
+  // latest values without resubscribing or rebuilding the rAF tick.
   const callbacksRef = useRef({
     nodeColor, nodeVal, nodeLabel, nodeVisibility,
     linkColor, linkVisibility,
@@ -201,7 +155,6 @@ function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
     onNodeClick, onNodeHover, onBackgroundClick,
   }
 
-  // ─── Mount: build scene + start render loop ──────────────────────────────
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
@@ -229,12 +182,11 @@ function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
     controls.zoomSpeed = 0.5
     controls.panSpeed = 0.3
     controls.minPolarAngle = 0
-    controls.maxPolarAngle = Math.PI  // allow rotating beyond the equator
+    controls.maxPolarAngle = Math.PI
     controls.minDistance = 50
     controls.maxDistance = 5000
     controlsRef.current = controls
 
-    // Particles InstancedMesh — pre-allocated; count toggled per query.
     const particleGeom = new THREE.SphereGeometry(1, 6, 6)
     const particleMat = new THREE.MeshBasicMaterial({ color: 0xa3d977 })
     const particleMesh = new THREE.InstancedMesh(particleGeom, particleMat, MAX_PARTICLES)
@@ -243,7 +195,6 @@ function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
     scene.add(particleMesh)
     particleMeshRef.current = particleMesh
 
-    // ─── Pointer / wheel handlers ─────────────────────────────────────────
     let wheelTimer: number | null = null
     const setInteracting = (v: boolean) => {
       if (interactingRef.current === v) return
@@ -256,33 +207,26 @@ function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
       dragStartRef.current = { x: e.clientX, y: e.clientY, moved: false }
       pointerDownOnCanvasRef.current = true
       setInteracting(true)
-      // Cancel any in-progress camera tween — otherwise its lerp into
-      // camera.position would fight OrbitControls' input every frame.
+      // Cancel any in-progress camera tween so its lerp doesn't fight OrbitControls.
       tweenRef.current.active = false
     }
     const onPointerMove = (e: PointerEvent) => {
-      // Drag-vs-click discrimination
       if (e.buttons > 0) {
         const dx = e.clientX - dragStartRef.current.x
         const dy = e.clientY - dragStartRef.current.y
         if (dx * dx + dy * dy > CLICK_DRAG_THRESHOLD_PX_SQ) dragStartRef.current.moved = true
       }
-      // Hover suppressed during ANY interaction. Includes wheel-only zoom
-      // where e.buttons === 0 — checking buttons here would let hover fire
-      // mid-zoom and fight the camera.
+      // Suppress hover during any interaction — including wheel-zoom where buttons===0.
       if (interactingRef.current) return
       handleHover(e)
     }
     const onPointerUp = (e: PointerEvent) => {
-      // Document-level listener fires for ANY pointerup, including releases
-      // unrelated to this canvas (e.g. user clicked the sidebar). Gate on
-      // the pointerdown having actually started here.
+      // Gate on pointerdown originating here — document listener also fires for unrelated releases.
       if (!pointerDownOnCanvasRef.current) return
       pointerDownOnCanvasRef.current = false
       const wasMoved = dragStartRef.current.moved
       setInteracting(false)
-      // Only the primary button is a "click"; right/middle releases come
-      // from OrbitControls' pan/zoom drags and shouldn't select a node.
+      // Right/middle releases come from OrbitControls pan/zoom — only primary is a click.
       if (!wasMoved && e.button === 0) handleClick(e)
     }
     const onWheel = () => {
@@ -297,20 +241,15 @@ function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
 
     renderer.domElement.addEventListener('pointerdown', onPointerDown, { passive: true })
     renderer.domElement.addEventListener('pointermove', onPointerMove, { passive: true })
-    // pointerup on document so a release that lands off the canvas (after
-    // dragging the camera past the viewport edge) still ends the interaction.
-    // Otherwise interactingRef sticks true and DPR/hover gating never reset.
+    // pointerup on document so a release off-canvas still ends the interaction.
     document.addEventListener('pointerup', onPointerUp, { passive: true })
     renderer.domElement.addEventListener('wheel',       onWheel,       { passive: true })
 
-    // ─── Render loop ──────────────────────────────────────────────────────
     let rafId = 0
     const tick = (now: number) => {
-      // Camera tween
       const tw = tweenRef.current
       if (tw.active) {
         const t = Math.min(1, (now - tw.startTime) / tw.duration)
-        // Cubic ease-in-out
         const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2
         camera.position.lerpVectors(tw.fromPos, tw.toPos, eased)
         controls.target.lerpVectors(tw.fromTarget, tw.toTarget, eased)
@@ -332,10 +271,8 @@ function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
       document.removeEventListener('pointerup', onPointerUp)
       renderer.domElement.removeEventListener('wheel',       onWheel)
       controls.dispose()
-      // Dispose particle mesh
       particleGeom.dispose()
       particleMat.dispose()
-      // Dispose any current node/edge meshes
       disposeNodeMesh()
       disposeEdgeLines()
       disposeQueryLines()
@@ -352,12 +289,9 @@ function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
       queryLinesRef.current = null
       particleMeshRef.current = null
     }
-    // intentionally run once: subsequent prop changes are handled by the
-    // dedicated effects below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ─── Width/height changes ─────────────────────────────────────────────────
   useEffect(() => {
     const cam = cameraRef.current
     const rnd = rendererRef.current
@@ -373,33 +307,23 @@ function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
     sc.background = new THREE.Color(backgroundColor)
   }, [backgroundColor])
 
-  // ─── Build / rebuild graph when graphData changes ────────────────────────
   useEffect(() => {
     rebuildScene()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [graphData, nodeRelSize, nodeOpacity, linkOpacity])
 
-  // ─── Re-apply per-instance node visuals when callbacks change ───────────
-  // The page's nodeColor / nodeVal / nodeVisibility callbacks change identity
-  // when their closure deps (hovered, selected, isolated) change. This effect
-  // re-walks the InstancedMesh and rewrites matrices + colors in place. Only
-  // the affected instances actually look different, but writing all of them
-  // keeps the logic simple — ~10k iters is sub-millisecond.
+  // Walks the InstancedMesh and rewrites matrices + colors in place when
+  // hovered/selected/isolated state changes — ~10k iters is sub-millisecond.
   useEffect(() => {
     applyNodeProps()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [nodeColor, nodeVal, nodeVisibility, nodeRelSize])
 
-  // ─── Re-apply per-edge visuals when callbacks change ────────────────────
-  // Hover (linkColor depends on hovered) + isolation (linkVisibility depends
-  // on activeClusters) both flow through here. Walks ~20k edges, ~1-2ms.
   useEffect(() => {
     applyEdgeProps()
     applyQueryEdgeProps()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [linkColor, linkVisibility])
-
-  // ─── Helper functions (closures share refs) ──────────────────────────────
 
   function disposeNodeMesh() {
     const m = nodeMeshRef.current
@@ -438,26 +362,15 @@ function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
     nodeIdToIndex.current = new Map()
     nodes.forEach((n, i) => nodeIdToIndex.current.set(n.id, i))
 
-    // Old hover index can now point to a different node (or out of bounds);
-    // reset it so visuals + tooltip don't carry stale state across rebuilds.
     hoveredIndexRef.current = -1
     if (tooltipRef.current) tooltipRef.current.style.opacity = '0'
 
-    // ── Node InstancedMesh — allocate; properties applied below ─────────
     disposeNodeMesh()
     if (nodes.length > 0) {
       const geom = new THREE.SphereGeometry(1, 8, 6)
-      // NOTE: no `vertexColors: true`. SphereGeometry has no per-vertex
-      // `color` attribute, and the three.js color shader chunk multiplies
-      // vColor by `color` BEFORE applying `instanceColor` — so enabling
-      // vertexColors here would zero out our per-instance colors. The
-      // standard shader picks up `instanceColor` (set via setColorAt)
-      // automatically once it's allocated.
-      //
-      // depthWrite is forced TRUE even when nodeOpacity < 1. Without it,
-      // transparent nodes don't populate the depth buffer, so subsequently
-      // drawn transparent edges aren't depth-tested against the spheres —
-      // edges visibly bleed through nodes from certain angles.
+      // No vertexColors: the color shader chunk multiplies vColor before
+      // applying instanceColor, which would zero out our per-instance colors.
+      // depthWrite forced TRUE even at opacity<1 so edges depth-test against nodes.
       const mat  = new THREE.MeshBasicMaterial({
         transparent: nodeOpacity < 1,
         opacity: nodeOpacity,
@@ -465,14 +378,11 @@ function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
       })
       const mesh = new THREE.InstancedMesh(geom, mat, nodes.length)
       mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage)
-      // Render before edges so the depth buffer has node depth populated
-      // before edges are tested against it.
       mesh.renderOrder = 0
       scene.add(mesh)
       nodeMeshRef.current = mesh
     }
 
-    // ── Split links + index for adjacency ───────────────────────────────
     const normalLinks: BaseLink[] = []
     const queryLinks:  BaseLink[] = []
     for (const l of links) {
@@ -482,9 +392,7 @@ function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
     linksRef.current = normalLinks
     queryLinksRef.current = queryLinks
 
-    // ── Edge LineSegments — allocate fresh; properties applied below ────
-    // renderOrder = 1 forces edges to draw after nodes regardless of how
-    // three.js's transparent-pass centroid sort would otherwise order them.
+    // renderOrder=1 draws edges after nodes regardless of transparent-pass centroid sort.
     disposeEdgeLines()
     if (normalLinks.length > 0) {
       edgeLinesRef.current = allocateEdgeLines(normalLinks.length, linkOpacity)
@@ -493,35 +401,23 @@ function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
     }
     disposeQueryLines()
     if (queryLinks.length > 0) {
-      // Query edges get higher opacity; per-edge color (e.g. sage green)
-      // flows from linkColor callback.
       queryLinesRef.current = allocateEdgeLines(queryLinks.length, Math.max(linkOpacity, 0.6))
       queryLinesRef.current.renderOrder = 1
       scene.add(queryLinesRef.current)
     }
 
-    // Apply visuals from current callbacks. (The standalone effects also
-    // call these, but only when the relevant dep identities actually
-    // change — calling here makes graphData-only rebuilds fully visual.)
     applyNodeProps()
     applyEdgeProps()
     applyQueryEdgeProps()
     rebuildParticles()
 
-    // Bounding spheres are computed only here. Subsequent applyNodeProps /
-    // applyEdgeProps calls during hover/isolation only mutate scales and
-    // colors, not positions — so the bounds stay valid until the next
-    // graphData rebuild. Computing on every hover would cost ~3 ms/event
-    // for no visible benefit (bounds are only used for frustum culling).
+    // Bounds only need recomputing here — hover/isolation mutates scales/colors, not positions.
     nodeMeshRef.current?.computeBoundingSphere()
     edgeLinesRef.current?.geometry.computeBoundingSphere()
     queryLinesRef.current?.geometry.computeBoundingSphere()
 
-    // First non-empty rebuild → fit camera to the graph extent. UMAP coords
-    // are not centered on the origin (range ~2..13 before scale, ~200..1300
-    // after the page's 100× COORD_SCALE), so the default (0,0,1400) camera
-    // looks past the graph entirely — visualization appears empty. Subsequent
-    // rebuilds keep the user's current view.
+    // First non-empty rebuild → frame camera. UMAP coords aren't origin-centered
+    // (~200..1300 after 100× COORD_SCALE), so default camera looks past the graph.
     if (!cameraFramedRef.current && nodes.length > 0) {
       frameCameraToNodes(nodes)
       cameraFramedRef.current = true
@@ -545,15 +441,12 @@ function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
     const cy = (minY + maxY) / 2
     const cz = (minZ + maxZ) / 2
     const extent = Math.max(maxX - minX, maxY - minY, maxZ - minZ, 1)
-    // Distance to fit `extent` vertically at the camera's FOV, with a
-    // 1.4× margin so the graph doesn't crowd the viewport edges.
     const halfFov = (camera.fov * Math.PI / 180) / 2
-    const dist = (extent / 2) / Math.tan(halfFov) * 1.4
+    const dist = (extent / 2) / Math.tan(halfFov) * 1.4  // 1.4× margin
     controls.target.set(cx, cy, cz)
     camera.position.set(cx, cy, cz + dist)
     camera.lookAt(cx, cy, cz)
     camera.updateProjectionMatrix()
-    // Constrain zoom so the user can't lose the graph entirely.
     controls.minDistance = extent * 0.05
     controls.maxDistance = extent * 8
     controls.update()
@@ -619,8 +512,7 @@ function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
       const ax = a?.x ?? 0, ay = a?.y ?? 0, az = a?.z ?? 0
       let bx = b?.x ?? 0, by = b?.y ?? 0, bz = b?.z ?? 0
       const visible = cb.linkVisibility(l)
-      // Collapse invisible edges to a degenerate (zero-length) segment so
-      // they render nothing without rebuilding geometry.
+      // Collapse invisible edges to a degenerate (zero-length) segment.
       if (!visible) { bx = ax; by = ay; bz = az }
       positions[i * 6 + 0] = ax; positions[i * 6 + 1] = ay; positions[i * 6 + 2] = az
       positions[i * 6 + 3] = bx; positions[i * 6 + 4] = by; positions[i * 6 + 5] = bz
@@ -632,7 +524,6 @@ function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
     ;(lines.geometry.getAttribute('color') as THREE.BufferAttribute).needsUpdate = true
   }
 
-  // ─── Particles along query edges ─────────────────────────────────────────
   function rebuildParticles() {
     const mesh = particleMeshRef.current
     if (!mesh) return
@@ -677,7 +568,6 @@ function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
       const b = nodes[idx.get(l.target) ?? -1]
       if (!a || !b) continue
       for (let p = 0; p < n && particleIdx < mesh.count; p++) {
-        // t ∈ [0, 1] cycles over time, offset per particle
         const phase = p / n
         const t = ((now * 0.001 * speed * 60 + phase) % 1)
         const x = (a.x ?? 0) + ((b.x ?? 0) - (a.x ?? 0)) * t
@@ -693,7 +583,6 @@ function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
     mesh.instanceMatrix.needsUpdate = true
   }
 
-  // ─── Hover ────────────────────────────────────────────────────────────────
   const raycaster = useMemo(() => new THREE.Raycaster(), [])
   const mouseVec  = useMemo(() => new THREE.Vector2(), [])
 
@@ -716,10 +605,7 @@ function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
     const prev = hoveredIndexRef.current
     if (idx === prev) return
     hoveredIndexRef.current = idx
-    // Visual updates (node scale + edge color) flow back through React: the
-    // page's setHovered triggers new callback identities, which retriggers
-    // applyNodeProps / applyEdgeProps via the dedicated effects above. We
-    // just notify the page here.
+    // Page's setHovered triggers new callback identities → retriggers applyNodeProps/applyEdgeProps.
     const cb = callbacksRef.current
     cb.onNodeHover?.(idx >= 0 ? nodesRef.current[idx] : null)
   }
@@ -734,7 +620,6 @@ function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
     }
   }
 
-  // ─── Tooltip ──────────────────────────────────────────────────────────────
   function updateTooltip() {
     const tip = tooltipRef.current
     if (!tip) return
@@ -750,7 +635,7 @@ function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
     if (!camera || !renderer) return
     const v = new THREE.Vector3(node.x ?? 0, node.y ?? 0, node.z ?? 0)
     v.project(camera)
-    if (v.z > 1) {  // behind the camera
+    if (v.z > 1) {  // behind camera
       tip.style.opacity = '0'
       return
     }
@@ -763,7 +648,6 @@ function CustomGraph3DInner<N extends BaseNode, L extends BaseLink>(
     tip.style.opacity = '1'
   }
 
-  // ─── Imperative ref API ──────────────────────────────────────────────────
   useImperativeHandle(ref, () => ({
     scene:    () => sceneRef.current!,
     camera:   () => cameraRef.current!,

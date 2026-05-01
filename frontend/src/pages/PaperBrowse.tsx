@@ -6,17 +6,6 @@ import { useLibrary } from '../hooks/useLibrary'
 import CorpusGraph3D from '../components/CorpusGraph3D'
 import { PaperDetailDrawer } from '../components/PaperDetailDrawer'
 
-/* ==========================================================================
-   Paper Browse — "the reading room". Live data from the FastAPI backend:
-     /api/papers           — corpus summaries
-     /api/topic-map        — cluster assignments + labels
-     /api/query-projection — nearest-neighbour ranking for a query
-     /api/query            — full RAG: retrieve → rerank → LLM synthesis
-     /api/papers/{id}      — full paper detail (sections + figures)
-   Users can save papers to a localStorage-backed Library (see /library).
-   ========================================================================== */
-
-// ─── Types mirroring the backend response shapes ───────────────────────────
 interface Paper {
   paper_id: string
   title: string
@@ -54,14 +43,12 @@ interface QueryResult {
   citations: Citation[]
 }
 
-// ─── Config ────────────────────────────────────────────────────────────────
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? ''
 const DEBOUNCE_MS = 300
 const PROJECTION_K = 24
 const PAGE_SIZE = 12
 
-// FastAPI HTTPException responses are `{"detail": "..."}` — pull that out so
-// we don't show users curly braces. Falls through to raw body, then HTTP code.
+// FastAPI HTTPExceptions are {"detail": "..."} — extract that, fall through to raw body.
 async function extractErrorDetail(res: Response): Promise<string> {
   const text = await res.text().catch(() => '')
   if (!text) return `HTTP ${res.status}`
@@ -74,7 +61,6 @@ async function extractErrorDetail(res: Response): Promise<string> {
 
 const ARTIFACT_HINT = /embedding artifacts|topic graph not computed|scripts\/build_embeddings|scripts\/compute_topic_graph/i
 
-// Stable cluster palette: hue derived from id so refreshes keep the same colors.
 function clusterColor(id: number): string {
   if (id < 0) return '#7F9267'
   const palette = [
@@ -92,9 +78,7 @@ const SAMPLE_QUERIES = [
   'denoising diffusion image synthesis',
 ]
 
-// ─── Component ─────────────────────────────────────────────────────────────
 export default function PaperBrowse() {
-  // corpus state
   const [papers, setPapers] = useState<Paper[]>([])
   const [clusters, setClusters] = useState<Cluster[]>([])
   const [clusterById, setClusterById] = useState<Record<string, number>>({})
@@ -103,35 +87,26 @@ export default function PaperBrowse() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
-  // search + projection
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [neighbors, setNeighbors] = useState<Neighbor[] | null>(null)
   const [searching, setSearching] = useState(false)
 
-  // synthesized answer via /api/query (LLM-gated on the backend)
   const [answer, setAnswer] = useState<QueryResult | null>(null)
   const [answering, setAnswering] = useState(false)
   const [answerError, setAnswerError] = useState<string | null>(null)
 
-  // filters / selection
-  // Multi-select cluster filter. Empty set = "all". Clicking a chip toggles it.
   const [activeClusters, setActiveClusters] = useState<Set<number>>(new Set())
   const [queryConstellationActive, setQueryConstellationActive] = useState(false)
-  // ?paper={id} auto-opens that paper's drawer — used by Scoot citations to
-  // deep-link from the chat bubble back into the corpus browser.
+  // ?paper={id} auto-opens that paper's drawer (used by Scoot citation deep-links).
   const [searchParams] = useSearchParams()
   const paperFromUrl = searchParams.get('paper')
   const [selectedPaperId, setSelectedPaperId] = useState<string | null>(paperFromUrl)
   const [page, setPage] = useState(0)
-  // Re-open the drawer if the URL param changes after mount (e.g. user clicks
-  // a different Scoot citation while /browse is already open).
   useEffect(() => {
     if (paperFromUrl) setSelectedPaperId(paperFromUrl)
   }, [paperFromUrl])
 
-  // Auto-clear constellation isolation if the query/neighbors disappear so the
-  // toggle can't sit "active" with nothing to show.
   useEffect(() => {
     if (!neighbors || neighbors.length === 0) setQueryConstellationActive(false)
   }, [neighbors])
@@ -146,7 +121,6 @@ export default function PaperBrowse() {
   }, [])
   const [graphHeight] = useState(730)
 
-  // ── Initial load: papers + topic map ────────────────────────────────────
   useEffect(() => {
     let cancelled = false
     async function load() {
@@ -193,13 +167,11 @@ export default function PaperBrowse() {
     return () => { cancelled = true }
   }, [])
 
-  // ── Debounce query input ────────────────────────────────────────────────
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(query), DEBOUNCE_MS)
     return () => clearTimeout(t)
   }, [query])
 
-  // ── Projection (fast ranking) whenever debounced query changes ──────────
   useEffect(() => {
     const q = debouncedQuery.trim()
     if (!q) {
@@ -223,7 +195,6 @@ export default function PaperBrowse() {
     return () => { cancelled = true }
   }, [debouncedQuery])
 
-  // ── Paper lookup + ranked view ──────────────────────────────────────────
   const paperById = useMemo(() => {
     const m = new Map<string, Paper>()
     for (const p of papers) m.set(p.paper_id, p)
@@ -251,8 +222,6 @@ export default function PaperBrowse() {
     return base
   }, [neighbors, debouncedQuery, papers, paperById, clusterById, activeClusters])
 
-  // Reset to the first page whenever the filter/query shifts, so users don't
-  // land on a page that no longer exists for the narrower result set.
   useEffect(() => { setPage(0) }, [debouncedQuery, activeClusters])
 
   const pageCount = Math.max(1, Math.ceil(rankedPapers.length / PAGE_SIZE))
@@ -260,11 +229,7 @@ export default function PaperBrowse() {
   const pageStart = clampedPage * PAGE_SIZE
   const pagedResults = rankedPapers.slice(pageStart, pageStart + PAGE_SIZE)
 
-  // ── "Synthesise" → /api/query (LLM answer + citations) ─────────────────
-  // Read `query` directly, not `debouncedQuery`: the user clicks at the moment
-  // they finish typing, and we don't want to send a 350-ms-stale string that
-  // truncates their last keystrokes (which would mislead the LLM about what
-  // they actually asked).
+  // Read `query` (not debouncedQuery) so the click sends what the user actually typed.
   const handleSynthesize = useCallback(async () => {
     const q = query.trim()
     if (!q) return
@@ -287,7 +252,6 @@ export default function PaperBrowse() {
     }
   }, [query])
 
-  // ── Render ───────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-cream relative">
       <Navbar variant="light" />
@@ -421,8 +385,6 @@ export default function PaperBrowse() {
         )}
       </section>
 
-      {/* Synthesized answer — sits directly under the search bar, above the
-          topic constellations, so the user sees their answer first. */}
       {(answer || answering || answerError) && (
         <section className="max-w-6xl mx-auto px-8 pt-8 animate-fade-up">
           <div className="relative bg-milk border border-forest/15 rounded-3xl p-8 shadow-[0_18px_36px_-22px_rgba(38,70,53,0.18)] overflow-hidden">
@@ -644,9 +606,6 @@ export default function PaperBrowse() {
   )
 }
 
-// ─── Setup notice — shown when the backend is up but missing precomputed
-// artifacts (embeddings / topic graph). Extracts the suggested command from
-// the detail string so the user can copy-run it directly.
 function SetupNotice({ message, inline = false }: { message: string; inline?: boolean }) {
   const cmdMatch = message.match(/python\s+scripts\/[\w.-]+\.py(?:\s+--\S+)*/)
   const cmd = cmdMatch?.[0] ?? 'python scripts/build_embeddings.py'
@@ -702,7 +661,6 @@ function SetupNotice({ message, inline = false }: { message: string; inline?: bo
   )
 }
 
-// ─── Masthead ──────────────────────────────────────────────────────────────
 function Masthead({ papers, clusters }: { papers: number; clusters: number }) {
   return (
     <header className="relative border-b border-forest/12 overflow-hidden bg-cream">
@@ -722,7 +680,7 @@ function Masthead({ papers, clusters }: { papers: number; clusters: number }) {
         </div>
 
         <h1 className="font-[family-name:var(--font-display)] text-forest leading-[0.94] font-light">
-          <span className="block text-[72px] md:text-[112px]">the corpus<span className="text-sage-deep">.</span></span>
+          <span className="block text-[72px] md:text-[112px]">the explorer<span className="text-sage-deep">.</span></span>
           <span className="block text-[20px] md:text-[26px] text-forest/60 mt-3 max-w-[60ch]">
             — a topographical index of current literature, settled into a quiet shelf.
           </span>
@@ -752,10 +710,6 @@ function Masthead({ papers, clusters }: { papers: number; clusters: number }) {
   )
 }
 
-// ─── Query constellation card ──────────────────────────────────────────────
-// Surfaces the virtual query node + its top-k neighbors as a separate
-// togglable scope alongside the cluster filter. Empty state explains the
-// feature so it's discoverable before the user has searched.
 function QueryConstellationCard({
   query, neighborCount, active, onToggle,
 }: {
@@ -825,9 +779,6 @@ function QueryConstellationCard({
   )
 }
 
-// ─── Cluster legend (replaces the scatter map) ────────────────────────────
-// At lg+ the legend fills its parent's height (parent must size it via flex);
-// below lg it uses natural height so the stacked layout isn't clipped.
 function ClusterLegend({
   clusters, active, onPick,
 }: {
@@ -896,9 +847,6 @@ function ClusterLegend({
   )
 }
 
-// ─── Inline citation markers inside the synthesised answer ─────────────────
-// Factory: closes over the answer's citation list + a click handler so each
-// inline [n] chip resolves to the same paper as the bottom-row chip [n].
 function makeAnswerCitationRenderer(
   citations: Citation[],
   onSelect: (paperId: string) => void,
@@ -928,7 +876,6 @@ function makeAnswerCitationRenderer(
   }
 }
 
-// ─── Catalogue row ─────────────────────────────────────────────────────────
 function CatalogueCard({
   rank, paper, similarity, clusterId, clusterLabel, query, isSelected, onSelect,
 }: {
@@ -1038,8 +985,6 @@ function CatalogueCard({
   )
 }
 
-// ─── Pagination — minimal prev/next with a windowed page cluster ───────────
-// Keeps the catalogue navigable when the full corpus runs into the hundreds.
 function Pagination({
   page, pageCount, onPick,
 }: {
@@ -1047,8 +992,6 @@ function Pagination({
   pageCount: number
   onPick: (p: number) => void
 }) {
-  // Windowed page numbers: always show first, last, the active page and its
-  // neighbours. Collapsed gaps become "…".
   const pages = useMemo(() => {
     const set = new Set<number>([0, pageCount - 1, page, page - 1, page + 1])
     const raw = [...set].filter(p => p >= 0 && p < pageCount).sort((a, b) => a - b)

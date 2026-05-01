@@ -3,7 +3,7 @@ import CustomGraph3D, { type CustomGraphMethods } from '../components/CustomGrap
 import { useClusterLabels, type ClusterInfo } from '../hooks/useClusterLabels'
 import { getTopicGraph, getCachedTopicGraphSync } from '../lib/topicGraphCache'
 
-// ─── Types from the backend ─────────────────────────────────────────────────
+// Types from the backend
 interface GraphNode {
   paper_id: string
   title: string
@@ -65,7 +65,6 @@ type VizLink = {
   isQueryEdge?: boolean
 }
 
-// ─── Config ─────────────────────────────────────────────────────────────────
 const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? ''
 const QUERY_NODE_ID = '__query__'
 const QUERY_DEBOUNCE_MS = 350
@@ -80,7 +79,6 @@ function clusterColor(id: number, total: number): string {
   return `hsl(${hue} 70% 55%)`
 }
 
-// ─── Component ──────────────────────────────────────────────────────────────
 export default function TopicGraph3D() {
   // Seed synchronously from the topic-graph cache. If there's a fresh entry
   // in localStorage from a previous session (or this same tab earlier),
@@ -114,7 +112,6 @@ export default function TopicGraph3D() {
   const fgRef = useRef<CustomGraphMethods | null>(null)
   const [size, setSize] = useState({ w: 800, h: 600 })
 
-  // ── Fetch topic map (cache-aware) ──
   // getTopicGraph returns immediately if cached, otherwise fires the network
   // request once and shares the inflight promise across all callers. After
   // any cached hit it also kicks off a background refresh — stale-while-
@@ -125,7 +122,6 @@ export default function TopicGraph3D() {
       .catch(e => setError(String(e)))
   }, [])
 
-  // ── Track container size ──
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
@@ -137,15 +133,15 @@ export default function TopicGraph3D() {
     return () => ro.disconnect()
   }, [data])
 
-  // ── Debounce the query before hitting the backend ──
+  // Debounce the query before hitting the backend
   useEffect(() => {
     const h = setTimeout(() => setDebouncedQuery(query.trim()), QUERY_DEBOUNCE_MS)
     return () => clearTimeout(h)
   }, [query])
 
-  // ── Constellation isolation: query node + its top-k neighbors ──
-  // Auto-cleared when the query is empty so a stale toggle can't leave the
-  // sidebar in an "active" state with no neighbors to show.
+  // Constellation isolation: query node + its top-k neighbors. Auto-cleared
+  // when the query is empty so a stale toggle can't leave the sidebar in an
+  // "active" state with no neighbors to show.
   const queryConstellationIds = useMemo(() => {
     if (!queryConstellationActive || !projection) return null
     const set = new Set<string>([QUERY_NODE_ID])
@@ -154,7 +150,6 @@ export default function TopicGraph3D() {
   }, [queryConstellationActive, projection])
   const isolationActive = isolatedClusters.size > 0 || queryConstellationIds !== null
 
-  // ── Project query into the corpus ──
   useEffect(() => {
     if (!debouncedQuery) {
       setProjection(null)
@@ -185,9 +180,6 @@ export default function TopicGraph3D() {
 
   const { labels, setLabel, resetLabel, hasOverride } = useClusterLabels(data?.clusters)
 
-  // ── Build the graph data consumed by ForceGraph3D ──
-  // Injects the virtual query node + its edges when projection is available.
-  //
   // UMAP gives coordinates with span ~7–8 units. Node spheres render at
   // radius ≈ nodeRelSize·√nodeVal ≈ 5 units, so at native scale every node
   // overlaps every other node. Multiply by COORD_SCALE so the layout extent
@@ -272,7 +264,7 @@ export default function TopicGraph3D() {
     return { nodes, links }
   }, [data, projection])
 
-  // ── Adjacency map for fast hover highlighting ──
+  // Adjacency map for fast hover highlighting
   const adjacency = useMemo(() => {
     const map = new Map<string, Set<string>>()
     for (const l of graphData.links) {
@@ -284,17 +276,16 @@ export default function TopicGraph3D() {
     return map
   }, [graphData.links])
 
-  // ── id → node map for O(1) edge endpoint resolution ───────────────────────
-  // Replaces the O(N) graphData.nodes.find() previously used in
-  // linkVisibility, which was 2 × 10k scans per edge × 62k edges =
-  // 1.24 billion ops per render frame whenever cluster isolation was active.
+  // id → node map for O(1) edge endpoint resolution. Replaces the O(N)
+  // graphData.nodes.find() previously used in linkVisibility, which was
+  // 2 × 10k scans per edge × 62k edges = 1.24 billion ops per render frame
+  // whenever cluster isolation was active.
   const idToNode = useMemo(() => {
     const m = new Map<string, VizNode>()
     for (const n of graphData.nodes) m.set(n.id, n)
     return m
   }, [graphData.nodes])
 
-  // ── Memoized callback props ───────────────────────────────────────────────
   // Inline arrow-function props would get fresh identity on every React
   // re-render (which fires often during interaction — every hover state flip,
   // every drag tick), and react-force-graph-3d treats a new prop identity as
@@ -389,7 +380,6 @@ export default function TopicGraph3D() {
     setHovered(n as VizNode | null)
   }, [])
 
-  // ── Click handler: fetch full paper detail for the drawer ──
   const handleNodeClick = useCallback((n: object) => {
     const node = n as VizNode
     setSelected(node)
@@ -407,7 +397,7 @@ export default function TopicGraph3D() {
       .catch(() => setSelectedDetail(null))
   }, [])
 
-  // ── Focus the camera on the query node when it first appears ──
+  // Focus the camera on the query node when it first appears
   useEffect(() => {
     if (!projection || !fgRef.current) return
     const fg = fgRef.current
@@ -432,7 +422,6 @@ export default function TopicGraph3D() {
     return () => clearTimeout(timeout)
   }, [projection])
 
-  // ── Guards ──
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center p-8 bg-neutral-900 text-neutral-100">
@@ -459,7 +448,6 @@ export default function TopicGraph3D() {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-neutral-900 text-neutral-100">
-      {/* ── Graph viewport ──────────────────────────────────────── */}
       <div ref={containerRef} className="flex-1 relative min-h-[60vh]">
         {/* Search bar overlay (top) */}
         <div className="absolute top-4 left-4 right-4 z-10 flex items-center gap-3 pointer-events-none">
@@ -520,20 +508,17 @@ export default function TopicGraph3D() {
           width={size.w}
           height={size.h}
           backgroundColor="#0b0f14"
-          // ── Node appearance ──
           nodeRelSize={4}
           nodeVal={nodeValMemo}
           nodeColor={nodeColorMemo}
           nodeOpacity={0.92}
           nodeLabel={nodeLabelMemo}
-          // ── Link appearance ──
           linkColor={linkColorMemo}
           linkOpacity={0.22}
           linkWidth={linkWidthMemo}
           linkDirectionalParticles={linkParticlesMemo}
           linkDirectionalParticleSpeed={0.006}
           linkDirectionalParticleWidth={1.6}
-          // ── Interaction ──
           onNodeClick={handleNodeClick}
           onNodeHover={onNodeHover}
           onBackgroundClick={() => { setSelected(null); setSelectedDetail(null) }}
@@ -561,7 +546,6 @@ export default function TopicGraph3D() {
         )}
       </div>
 
-      {/* ── Sidebar: query constellation + cluster legend ─────────── */}
       <aside className="w-full md:w-80 shrink-0 border-t md:border-t-0 md:border-l border-white/10 bg-neutral-950 p-4 overflow-y-auto">
         <div className="flex items-center justify-between mb-3">
           <div className="text-[10px] tracking-widest uppercase opacity-60">
@@ -655,7 +639,6 @@ export default function TopicGraph3D() {
   )
 }
 
-// ─── Legend row ─────────────────────────────────────────────────────────────
 function LegendRow({
   cluster, label, isOverride, color, isIsolated, isDimmed,
   onEditSave, onResetLabel, onToggleIsolate,
@@ -736,7 +719,6 @@ function LegendRow({
   )
 }
 
-// ─── Paper detail drawer ────────────────────────────────────────────────────
 function PaperDrawer({
   node, detail, clusterLabel, clusterColor, onClose,
 }: {

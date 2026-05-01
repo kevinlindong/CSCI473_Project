@@ -1,10 +1,4 @@
-"""
-data.py — Parse raw Arxiv JSON into structured Paper records.
-
-Handles loading raw API responses, extracting structured fields
-(title, abstract, sections, figures), and saving/loading the
-processed corpus.
-"""
+"""Parse raw Arxiv JSON into structured Paper records."""
 
 from dataclasses import dataclass, field
 import json
@@ -15,21 +9,18 @@ from bs4 import BeautifulSoup
 
 @dataclass
 class Section:
-    """A section of a paper (e.g., Background, Methodology, Results)."""
     heading: str
     text: str
 
 
 @dataclass
 class Figure:
-    """A figure from a paper with its caption and optional image path."""
     caption: str
     image_path: str = ""
 
 
 @dataclass
 class Paper:
-    """A structured representation of an Arxiv paper."""
     paper_id: str
     title: str
     abstract: str
@@ -47,26 +38,17 @@ class Chunk:
     paper_title: str
     level: int           # 1 = top-level section, 2 = subsection
     heading: str
-    parent_heading: str  # empty string for level-1 chunks
+    parent_heading: str  # empty for level-1 chunks
     text: str            # raw paragraph-group text (no context prefix)
     section_text: str    # full section body; used by late_chunk_encode
-    section_idx: int     # 0-based index of this section within the paper
-    chunk_index: int = 0 # position within split chunks (0 if not split)
+    section_idx: int     # 0-based section index within the paper
+    chunk_index: int = 0
 
 
 def parse_ar5iv_html(html: str, paper_id: str) -> tuple[list[Section], list[Figure]]:
-    """Extract sections and figures from an ar5iv HTML page.
-
-    Args:
-        html: Raw HTML string from ar5iv.
-        paper_id: The arXiv paper ID (used to resolve relative image URLs).
-
-    Returns:
-        A tuple of (sections, figures) parsed from the HTML.
-    """
+    """Extract sections and figures from an ar5iv HTML page."""
     soup = BeautifulSoup(html, "html.parser")
 
-    # --- Section extraction ---
     sections = []
     for section_el in soup.find_all(
         "section", class_=["ltx_section", "ltx_subsection"]
@@ -76,7 +58,7 @@ def parse_ar5iv_html(html: str, paper_id: str) -> tuple[list[Section], list[Figu
         )
         heading = heading_el.get_text(strip=True) if heading_el else "Untitled"
 
-        # Only direct-child paragraphs to avoid duplication with nested subsections
+        # Direct-child paragraphs only — avoids duplication with nested subsections.
         paras = section_el.find_all("div", class_="ltx_para", recursive=False)
         text_parts = []
         for p in paras:
@@ -88,7 +70,6 @@ def parse_ar5iv_html(html: str, paper_id: str) -> tuple[list[Section], list[Figu
         if body:
             sections.append(Section(heading=heading, text=body))
 
-    # --- Figure extraction ---
     figures = []
     for fig_el in soup.find_all("figure", class_="ltx_figure"):
         caption_el = fig_el.find("figcaption", class_="ltx_caption")
@@ -115,7 +96,6 @@ def parse_ar5iv_html(html: str, paper_id: str) -> tuple[list[Section], list[Figu
 
 
 def load_raw_papers(raw_dir: str) -> list[dict]:
-    """Load raw JSON files from the data/raw/ directory."""
     papers = []
     for filename in sorted(os.listdir(raw_dir)):
         if filename.endswith(".json"):
@@ -126,7 +106,6 @@ def load_raw_papers(raw_dir: str) -> list[dict]:
 
 
 def parse_paper(raw: dict) -> Paper:
-    """Convert a raw Arxiv API response dict into a structured Paper."""
     return Paper(
         paper_id=raw["paper_id"],
         title=raw["title"],
@@ -146,14 +125,12 @@ def parse_paper(raw: dict) -> Paper:
 
 
 def load_corpus(processed_path: str) -> list[Paper]:
-    """Load the processed paper corpus from disk."""
     with open(processed_path, "r") as f:
         corpus = json.load(f)
     return [parse_paper(raw) for raw in corpus]
 
 
 def save_corpus(papers: list[Paper], processed_path: str) -> None:
-    """Save the processed paper corpus to disk."""
     os.makedirs(os.path.dirname(processed_path), exist_ok=True)
     corpus = []
     for p in papers:

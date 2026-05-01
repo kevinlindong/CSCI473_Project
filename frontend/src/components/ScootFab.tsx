@@ -1,12 +1,6 @@
 import { useState, useEffect } from 'react'
 import { ScootChat } from './ScootChat'
 
-/* ------------------------------------------------------------------ */
-/* ScootFab                                                            */
-/* Bottom-right circular button. Click or ⌘K opens the scoot chat.    */
-/* Position is fixed across all pages — never shifts.                  */
-/* ------------------------------------------------------------------ */
-
 export function ScootFab() {
   const [open, setOpen] = useState(false)
 
@@ -42,7 +36,6 @@ export function ScootFab() {
             transition-all duration-200 cursor-pointer"
           aria-label="Open scoot (⌘K)"
         >
-          {/* Stylized 's' for scoot */}
           <span className="font-[family-name:var(--font-display)] text-parchment text-[22px] leading-none translate-y-[1px]">
             s
           </span>

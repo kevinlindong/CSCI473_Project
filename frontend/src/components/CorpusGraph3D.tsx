@@ -1,20 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import CustomGraph3D, { type CustomGraphMethods } from './CustomGraph3D'
 
-/* ==========================================================================
-   CorpusGraph3D — themed botanical 3D topic graph for the corpus page.
-   Palette matches the site (cream canvas, forest ink, sage query marker).
-   Takes nodes+edges already resolved to paper_id strings, plus the active
-   cluster filter and projection neighbours from the parent page.
-   ========================================================================== */
-
-// ─── Types ──────────────────────────────────────────────────────────────────
 export interface CorpusGraphNode {
   paper_id: string
   title: string
   cluster: number
-  // UMAP-precomputed 3D coordinates (added by scripts/compute_topic_graph.py).
-  // Optional for back-compat with older topic_graph.json.
+  // UMAP coords from scripts/compute_topic_graph.py; optional for older artifacts.
   x?: number
   y?: number
   z?: number
@@ -37,7 +28,6 @@ export interface CorpusGraphNeighbor {
   similarity: number
 }
 
-// Internal runtime shape for the force graph.
 type VizNode = CorpusGraphNode & {
   id: string
   color: string
@@ -51,16 +41,14 @@ type VizLink = {
   isQueryEdge?: boolean
 }
 
-// ─── Theme tokens ───────────────────────────────────────────────────────────
-const BG_COLOR = '#ede5cf'          // deeper cream — gives the graph quiet contrast
-const EDGE_COLOR = '#264635'        // forest
-const EDGE_HOVER = '#1a2f26'        // forest-ink
-const QUERY_COLOR = '#7F9267'       // sage-deep
-const QUERY_GLOW = '#A3B18A'        // sage
-const DIM_NODE = '#c4bda8'          // muted parchment for cluster-isolate dim
+const BG_COLOR = '#ede5cf'
+const EDGE_COLOR = '#264635'
+const EDGE_HOVER = '#1a2f26'
+const QUERY_COLOR = '#7F9267'
+const QUERY_GLOW = '#A3B18A'
+const DIM_NODE = '#c4bda8'
 const QUERY_NODE_ID = '__query__'
 
-// ─── Component ──────────────────────────────────────────────────────────────
 export default function CorpusGraph3D({
   nodes,
   edges,
@@ -102,7 +90,6 @@ export default function CorpusGraph3D({
   const [size, setSize] = useState({ w: 800, h: height })
   const [hovered, setHovered] = useState<VizNode | null>(null)
 
-  // ── Track container size ─────────────────────────────────────────────────
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
@@ -114,12 +101,8 @@ export default function CorpusGraph3D({
     return () => ro.disconnect()
   }, [])
 
-  // ── Build graph data ─────────────────────────────────────────────────────
-  // UMAP coords land in a ~7–8 unit span; node spheres render at radius ~5,
-  // so without scaling every node overlaps every other. Multiply by
-  // COORD_SCALE to match the extent d3-force-3d would produce naturally for
-  // 10k nodes (~hundreds of units), and so ambient-drift amplitude (0.5% of
-  // span) becomes a visible fraction of a node radius.
+  // UMAP coords span ~7-8 units; nodes render at radius ~5. Scale to ~hundreds
+  // of units so nodes don't all overlap and ambient drift is visible.
   const COORD_SCALE = 100
   const graphData = useMemo(() => {
     const vizNodes: VizNode[] = nodes.map(n => ({
@@ -140,9 +123,7 @@ export default function CorpusGraph3D({
       })
       .filter((l): l is VizLink => l !== null)
 
-    // Cap edges to top-K per node (strongest weights first). Cuts ~62k →
-    // ~20k segments, keeps each node's strongest neighbours, and drops the
-    // GPU rasterization cost during rotate/zoom by a factor of ~3.
+    // Cap edges to top-K per node (strongest weights first): 62k→20k segments, ~3x faster GPU rasterization.
     const PER_NODE_CAP = 3
     const adjCount = new Map<string, number>()
     const sortedAll = allLinks.slice().sort((a, b) => b.weight - a.weight)
@@ -158,9 +139,8 @@ export default function CorpusGraph3D({
 
     const hasQuery = queryText.trim().length > 0 && queryNeighbors && queryNeighbors.length > 0
     if (hasQuery) {
-      // Place the query node at the centroid of its top-k neighbors' coords.
-      // Without this it falls back to (0,0,0) in CustomGraph3D, which is far
-      // outside the UMAP cloud bbox and leaves the query visually detached.
+      // Place the query node at the centroid of its top-k neighbors; otherwise it falls back
+      // to (0,0,0) which is outside the UMAP cloud and looks visually detached.
       let cx = 0, cy = 0, cz = 0, count = 0
       for (const nb of queryNeighbors!) {
         const node = vizNodes.find(n => n.paper_id === nb.paper_id)
@@ -195,7 +175,6 @@ export default function CorpusGraph3D({
     return { nodes: vizNodes, links: vizLinks }
   }, [nodes, edges, queryText, queryNeighbors, clusterColor])
 
-  // ── Adjacency for hover highlights ──────────────────────────────────────
   const adjacency = useMemo(() => {
     const m = new Map<string, Set<string>>()
     for (const l of graphData.links) {
@@ -207,16 +186,12 @@ export default function CorpusGraph3D({
     return m
   }, [graphData.links])
 
-  // ── id → node map for O(1) edge endpoint resolution ──────────────────────
   const idToNode = useMemo(() => {
     const m = new Map<string, VizNode>()
     for (const n of graphData.nodes) m.set(n.id, n)
     return m
   }, [graphData.nodes])
 
-  // ── Memoized callback props (stable identity across hover/select state
-  //    changes; prevents react-force-graph from triggering full callback
-  //    re-evaluation passes on every React re-render).
   const nodeColorMemo = useCallback((n: object) => {
     const nn = n as VizNode
     if (nn.isQuery) return nn.color
@@ -257,9 +232,6 @@ export default function CorpusGraph3D({
     return sInScope && tInScope
   }, [isolationActive, activeClusters, queryConstellationIds, idToNode])
 
-  // Hover-dependent callbacks. They still regen on hover/select changes
-  // (unavoidable for visual updates), but no longer regen for unrelated
-  // state changes (resize, query input, isolation, etc.).
   const nodeValMemo = useCallback((n: object) => {
     const nn = n as VizNode
     if (nn.isQuery) return 14
@@ -295,13 +267,10 @@ export default function CorpusGraph3D({
     []
   )
 
-  // CustomGraph3D handles drag-aware hover suppression + dynamic DPR
-  // internally — no per-page wiring needed.
   const onNodeHover = useCallback((n: object | null) => {
     setHovered(n as VizNode | null)
   }, [])
 
-  // ── Focus the camera on the query node when it first appears ───────────
   useEffect(() => {
     if (!queryNeighbors || queryNeighbors.length === 0 || !fgRef.current) return
     const fg = fgRef.current
@@ -326,7 +295,6 @@ export default function CorpusGraph3D({
     return () => clearTimeout(t)
   }, [queryNeighbors])
 
-  // ── Click handler ────────────────────────────────────────────────────────
   const handleNodeClick = useCallback((n: object) => {
     const node = n as VizNode
     if (node.isQuery) return
@@ -400,13 +368,11 @@ export default function CorpusGraph3D({
           width={size.w}
           height={size.h}
           backgroundColor={BG_COLOR}
-          // ── Node appearance ──
           nodeRelSize={3.6}
           nodeVal={nodeValMemo}
           nodeColor={nodeColorMemo}
           nodeOpacity={0.95}
           nodeLabel={nodeLabelMemo}
-          // ── Link appearance ──
           linkColor={linkColorMemo}
           linkOpacity={0.18}
           linkWidth={linkWidthMemo}
@@ -414,7 +380,6 @@ export default function CorpusGraph3D({
           linkDirectionalParticleSpeed={0.006}
           linkDirectionalParticleWidth={1.6}
           linkDirectionalParticleColor={() => QUERY_GLOW}
-          // ── Interaction ──
           onNodeClick={handleNodeClick}
           onNodeHover={onNodeHover}
           nodeVisibility={nodeVisibilityMemo}

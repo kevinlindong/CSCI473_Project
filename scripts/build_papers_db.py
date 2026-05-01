@@ -1,13 +1,7 @@
-"""
-build_papers_db.py — Build data/papers.db from data/raw/enriched/*.json.
+"""Build data/papers.db from data/raw/enriched/*.json.
 
-Idempotent: drops and recreates the `papers` table on every run. Wrap inserts
-in a single transaction (~10× faster than autocommit at 10k papers).
-
-Schema kept in sync with what src/papers_db.py::load_paper() expects.
-
-Usage:
-    python scripts/build_papers_db.py
+Idempotent: drops and recreates the `papers` table. Inserts wrapped in one
+transaction (~10× faster than autocommit at 10k papers).
 """
 
 import json

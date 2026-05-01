@@ -1,21 +1,4 @@
-"""
-compute_topic_graph.py — Build the topic-map artifact consumed by /api/topic-map.
-
-Pipeline:
-    1. Load abstract embeddings and the paper index produced by build_embeddings.py.
-    2. If data/processed/papers.json is missing, materialize it from the raw
-       enriched JSON files via src.data.save_corpus().
-    3. Run k-means clustering in 768-d abstract space (from-scratch, numpy only).
-    4. Build an undirected k-NN graph over cosine similarity.
-    5. Generate a human-readable topic label per cluster using a small LLM
-       (Qwen2.5-1.5B-Instruct by default). Can be skipped with --no-llm for fast iteration.
-    6. Write data/processed/topic_graph.json with nodes, edges, clusters, meta.
-
-Usage:
-    python scripts/compute_topic_graph.py                # full pipeline with LLM
-    python scripts/compute_topic_graph.py --no-llm       # skip LLM, use title fallback
-    python scripts/compute_topic_graph.py --k 8          # override cluster count
-"""
+"""Build data/processed/topic_graph.json: k-means + k-NN graph + LLM labels + 3D UMAP."""
 
 import argparse
 import json
@@ -37,7 +20,6 @@ TOPIC_GRAPH_PATH      = os.path.join(config.PROCESSED_DIR, "topic_graph.json")
 
 
 def _ensure_papers_json() -> list:
-    """Make sure data/processed/papers.json exists; return the Paper list."""
     if not os.path.exists(PROCESSED_PAPERS_PATH):
         print(f"Materializing {PROCESSED_PAPERS_PATH} from {config.RAW_DIR} ...")
         raw = load_raw_papers(config.RAW_DIR)
@@ -55,7 +37,6 @@ def compute_topic_graph(
     n_init: int,
     max_iter: int,
 ) -> None:
-    # --- Load embeddings + index ---
     abstract_path = os.path.join(config.EMBEDDINGS_DIR, "abstracts.npy")
     index_path    = os.path.join(config.EMBEDDINGS_DIR, "index.json")
 
@@ -76,7 +57,6 @@ def compute_topic_graph(
         )
     print(f"  {abstracts.shape[0]} abstracts, dim={abstracts.shape[1]}")
 
-    # --- Align papers to abstract rows ---
     all_papers = _ensure_papers_json()
     paper_by_id = {p.paper_id: p for p in all_papers}
     missing = [pid for pid in abstract_ids if pid not in paper_by_id]
@@ -88,7 +68,6 @@ def compute_topic_graph(
         )
     papers = [paper_by_id[pid] for pid in abstract_ids]
 
-    # --- K-means ---
     print(f"Running k-means (k={k}, n_init={n_init}, seed={seed}) ...")
     centroids, assignments, inertia = kmeans(
         abstracts, k=k, max_iter=max_iter, seed=seed, n_init=n_init
@@ -97,12 +76,10 @@ def compute_topic_graph(
     print(f"  inertia={inertia:.3f}")
     print(f"  cluster sizes: {sizes}")
 
-    # --- k-NN graph ---
     print(f"Building k-NN graph (k_neighbors={k_neighbors}) ...")
     edges = knn_graph(abstracts, k_neighbors=k_neighbors)
     print(f"  {len(edges)} undirected edges")
 
-    # --- Labels ---
     llm_obj = None
     if use_llm:
         print(f"Loading LLM ({config.LLM_MODEL_NAME}) ...")
@@ -122,10 +99,6 @@ def compute_topic_graph(
     for j, label in enumerate(labels):
         print(f"  cluster {j} ({sizes[j]:3d} papers): {label}")
 
-    # --- 3D UMAP layout (precomputed positions for the frontend) ---
-    # Cosine-metric UMAP on the same abstract embeddings the clustering used.
-    # Frontend ships these as initial node coords + applies a sine-wave drift
-    # for ambient motion, so we never run d3-force in the browser.
     print("Computing 3D UMAP layout (n_components=3, n_neighbors=15) ...")
     import umap
     reducer = umap.UMAP(
@@ -146,11 +119,7 @@ def compute_topic_graph(
         )
     )
 
-    # --- Assemble artifact ---
-    # Round on serialize: UMAP coords land in ~7-unit span and the frontend
-    # multiplies by 100, so 3 decimals = 0.001-unit native = sub-pixel at any
-    # zoom. Edge weights are cosine similarities; 4 decimals is plenty.
-    # JSON shrinks ~25-30% from this alone (compounds with gzip).
+    # Round on serialize: 3 decimals = sub-pixel at any zoom; shrinks JSON ~25-30%.
     nodes = [
         {
             "paper_id": p.paper_id,
