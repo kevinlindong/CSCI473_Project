@@ -2,8 +2,6 @@
 
 A retrieval-augmented research tool that answers natural language questions over a 10,000-paper ArXiv corpus, with an interactive 3D topic map and an AI-powered LaTeX writing assistant.
 
-Built for CSCI-UA 473 (Fundamentals of Machine Learning) at NYU, Spring 2026.
-
 ## Features
 
 - **Natural language Q&A** over a 10,000-paper ArXiv corpus with inline citations and passage excerpts
@@ -108,7 +106,7 @@ pip install -r requirements.txt
 
 ./scripts/setup_data.sh   # downloads ~1.4 GB data snapshot
 
-./start.sh                # backend on :3001, frontend on :5173
+./start-prod.sh                # backend on :3001, frontend on :5173
 ```
 
 Open http://localhost:5173. The Vite dev server proxies `/api/*` to the FastAPI backend.
