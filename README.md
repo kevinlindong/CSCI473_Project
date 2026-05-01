@@ -96,6 +96,10 @@ Used to choose k=26. From-scratch Adjusted Rand Index (ARI) and Normalized Mutua
 
 Requires: Python 3.9+, Node.js, `curl`, `tar`, `zstd`, `jq`
 
+First, add the .env file from the Google Doc file we attached in our submission.
+
+The run the following commands:
+
 ```bash
 git clone https://github.com/kevinlindong/CSCI473_Project.git
 cd CSCI473_Project
