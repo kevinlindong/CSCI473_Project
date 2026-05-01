@@ -1,31 +1,11 @@
-"""
-build_embeddings.py — Encode the paper corpus into three embedding spaces.
-
-Loads raw enriched papers, runs them through the sentence-transformer encoder,
-and saves embedding matrices (.npy) to data/embeddings/.
+"""Encode the paper corpus into abstract, chunk, and caption embeddings.
 
 Chunk encoding uses late chunking: each section is tokenized as a single
-context-prefixed sequence ("Title | Heading\\n\\nsection body"), the transformer
-runs once per section, and token embeddings are mean-pooled within each chunk's
-character span. This gives every chunk full-section context via attention without
-baking a per-chunk prefix into stored text.
+context-prefixed sequence, the transformer runs once per section, and token
+embeddings are mean-pooled within each chunk's character span.
 
-Produces:
-    - abstracts.npy  (N x D) — one vector per paper abstract
-    - chunks.npy     (M x D) — one vector per text section/chunk
-    - captions.npy   (C x D) — one vector per figure caption
-    - index.json     — mapping from matrix row indices to paper IDs / metadata
-
-Incremental mode (default):
-    Only encodes papers not already present in index.json, then appends new
-    rows to the existing matrices. Run with --rebuild to re-encode everything.
-
-    WARNING: --rebuild is required when changing ENCODER_MODEL_NAME. Mixing
-    embeddings from different models silently corrupts retrieval results.
-
-Usage:
-    python scripts/build_embeddings.py           # incremental
-    python scripts/build_embeddings.py --rebuild  # full recompute
+Incremental by default; --rebuild re-encodes everything (required after
+changing ENCODER_MODEL_NAME).
 """
 
 import argparse
@@ -46,7 +26,6 @@ from src.encoder import encode, late_chunk_encode, load_model
 
 
 def _load_existing_index(index_path: str) -> dict:
-    """Load index.json if it exists, otherwise return an empty index skeleton."""
     if os.path.exists(index_path):
         with open(index_path) as f:
             return json.load(f)
@@ -54,27 +33,16 @@ def _load_existing_index(index_path: str) -> dict:
 
 
 def _load_existing_matrix(path: str) -> np.ndarray | None:
-    """Load an .npy matrix if it exists, otherwise return None."""
     if os.path.exists(path):
         return np.load(path)
     return None
 
 
-def _encode_papers(papers, model) -> tuple[
-    list[str],           # abstract_ids
-    np.ndarray,          # abstract_embs   (N, D)
-    list[object],        # all_chunks
-    np.ndarray,          # chunk_embs      (M, D)
-    list[dict],          # caption_records — {paper_id, title, caption}
-    np.ndarray,          # caption_embs    (C, D)
-]:
-    """Encode abstracts, chunks (via late chunking), and captions for a list of papers."""
-    # --- Abstracts ---
+def _encode_papers(papers, model):
     abstract_ids = [p.paper_id for p in papers]
     abstract_texts = [p.abstract for p in papers]
     abstract_embs = encode(abstract_texts, model)
 
-    # --- Chunks via late chunking ---
     all_chunks = []
     all_chunk_embs: list[np.ndarray] = []
 
@@ -109,7 +77,6 @@ def _encode_papers(papers, model) -> tuple[
         else np.empty((0, config.EMBEDDING_DIM), dtype=np.float32)
     )
 
-    # --- Captions ---
     caption_records = [
         {"paper_id": p.paper_id, "title": p.title, "caption": fig.caption}
         for p in papers
@@ -127,8 +94,6 @@ def _encode_papers(papers, model) -> tuple[
 
 
 def build_embeddings(rebuild: bool = False):
-    """Load corpus, encode new papers, and save (or append to) embedding matrices."""
-
     os.makedirs(config.EMBEDDINGS_DIR, exist_ok=True)
 
     abstract_path = os.path.join(config.EMBEDDINGS_DIR, "abstracts.npy")
@@ -136,7 +101,6 @@ def build_embeddings(rebuild: bool = False):
     caption_path  = os.path.join(config.EMBEDDINGS_DIR, "captions.npy")
     index_path    = os.path.join(config.EMBEDDINGS_DIR, "index.json")
 
-    # --- Load existing state ---
     existing_index = _load_existing_index(index_path)
 
     if not rebuild:
@@ -156,7 +120,6 @@ def build_embeddings(rebuild: bool = False):
 
     existing_ids: set[str] = set(existing_index.get("abstracts", []))
 
-    # --- Load papers ---
     print(f"Loading papers from {config.RAW_DIR} ...")
     raw_papers = load_raw_papers(config.RAW_DIR)
     all_papers = [parse_paper(r) for r in raw_papers]
@@ -173,11 +136,9 @@ def build_embeddings(rebuild: bool = False):
         print("Nothing to encode. Use --rebuild to force a full recompute.")
         return
 
-    # --- Load encoder ---
     print("Loading encoder model ...")
     model = load_model()
 
-    # --- Encode new papers ---
     print(f"Encoding {len(papers_to_encode)} papers ...")
     (
         new_abstract_ids,
@@ -192,7 +153,6 @@ def build_embeddings(rebuild: bool = False):
     print(f"  chunks:    {new_chunk_embs.shape}")
     print(f"  captions:  {new_caption_embs.shape}")
 
-    # --- Merge with existing matrices ---
     if rebuild:
         abstract_embs = new_abstract_embs
         chunk_embs    = new_chunk_embs
@@ -249,7 +209,6 @@ def build_embeddings(rebuild: bool = False):
     print(f"  chunks.npy:    {chunk_embs.shape}")
     print(f"  captions.npy:  {caption_embs.shape}")
 
-    # --- Save ---
     np.save(abstract_path, abstract_embs)
     np.save(chunk_path,    chunk_embs)
     np.save(caption_path,  caption_embs)

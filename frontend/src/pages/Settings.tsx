@@ -3,11 +3,6 @@ import JSZip from 'jszip'
 import { Navbar } from '../components/Navbar'
 import { useTheme, THEMES } from '../contexts/ThemeContext'
 
-/* ------------------------------------------------------------------ */
-/* Settings Page                                                        */
-/* Appearance, notifications, and a guest-friendly export tool.        */
-/* ------------------------------------------------------------------ */
-
 type Section = 'appearance' | 'danger'
 
 const sections: { id: Section; label: string; icon: string }[] = [
@@ -109,7 +104,6 @@ export default function Settings() {
             {/* Content */}
             <div className="space-y-6">
 
-              {/* ── Appearance ── */}
               {activeSection === 'appearance' && (
                 <SectionCard title="Appearance">
 
@@ -172,7 +166,6 @@ export default function Settings() {
                 </SectionCard>
               )}
 
-              {/* ── Danger Zone ── */}
               {activeSection === 'danger' && (
                 <DangerZone />
               )}
@@ -184,10 +177,6 @@ export default function Settings() {
     </div>
   )
 }
-
-/* ------------------------------------------------------------------ */
-/* Danger Zone — local-only export of drafts and settings              */
-/* ------------------------------------------------------------------ */
 
 function DangerZone() {
   const [exportLoading, setExportLoading] = useState(false)

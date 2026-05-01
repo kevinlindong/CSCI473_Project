@@ -1,11 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
 
-/* ==========================================================================
-   Navbar — minimal zen botanical header.
-   No auth surface; every visitor is a guest. The brand mark links home and
-   the three core destinations (explorer, library, editor) live in the middle.
-   ========================================================================== */
-
 type NavItem = { path: string; label: string }
 
 const navLinks: NavItem[] = [
@@ -29,7 +23,6 @@ export function Navbar({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
   return (
     <header className={`sticky top-0 z-50 ${chrome}`}>
       <div className="w-full flex items-center justify-between px-4 h-[64px]">
-        {/* ── Logo: custom botanical mark + Gamja Flower wordmark ── */}
         <Link
           to="/home"
           onClick={e => { if (location.pathname === '/home') e.preventDefault() }}
@@ -53,7 +46,6 @@ export function Navbar({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
           </span>
         </Link>
 
-        {/* ── Links ─────────────────────────────────────────────── */}
         <nav className="flex items-center gap-1 self-center">
           {navLinks.map(link => {
             const active =
@@ -76,7 +68,6 @@ export function Navbar({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
 
           <span className={`h-5 w-px mx-3 ${isDark ? 'bg-parchment/15' : 'bg-forest/15'}`} />
 
-          {/* ── Settings — quiet gear, no auth surface ─────────── */}
           <Link
             to="/settings"
             aria-label="Settings"

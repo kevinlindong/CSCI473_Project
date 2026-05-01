@@ -1,16 +1,4 @@
-"""
-cluster_stability.py — Quantify how reproducible config.N_CLUSTERS is.
-
-Runs kmeans with the configured k across multiple seeds (each with the full
-n_init=10 production setting), then computes pairwise ARI / NMI between
-the resulting assignments. Stable clusterings have mean pairwise ARI near
-1.0; noise-level clusterings drift toward 0.
-
-Usage:
-    python scripts/cluster_stability.py [seed1 seed2 ...]
-
-Defaults to seeds = [42, 7, 123, 999, 2025].
-"""
+"""Quantify reproducibility of config.N_CLUSTERS via pairwise ARI/NMI across seeds."""
 
 import json
 import os
@@ -48,7 +36,6 @@ def main():
         print(f"    inertia={ine:.3f}  size_range=[{sizes[0]}, {sizes[-1]}]")
     print()
 
-    # Pairwise comparison matrices
     n = len(seeds)
     ari_mat = np.eye(n)
     nmi_mat = np.eye(n)
@@ -80,15 +67,10 @@ def main():
     print(f"  mean NMI:  {off_diag_nmi.mean():.4f}  (std {off_diag_nmi.std():.4f})")
     print()
 
-    # Per-paper consistency: fraction of runs where each paper landed
-    # with its modal cluster's most-common co-members
     from collections import Counter
     co_assign = np.zeros((X.shape[0],), dtype=np.float64)
     for i in range(X.shape[0]):
-        # cluster id of paper i in each run; build a mapping seed→its cluster id
         my_clusters = {s: int(assignments[s][i]) for s in seeds}
-        # For each pair of runs, check if paper i ends up co-assigned with
-        # the same broad set. Cheaper proxy: just count its modal cluster.
         c = Counter(my_clusters.values()).most_common(1)[0][1]
         co_assign[i] = c / len(seeds)
     print(f"=== Per-paper modal-cluster fraction ===")

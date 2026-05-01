@@ -1,7 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 
-// ─── Types ─────────────────────────────────────────────────────────────────────
-
 export interface ThemeColors {
   forest: string
   forestDeep: string
@@ -24,8 +22,6 @@ export interface Theme {
 }
 
 export type FontScale = 'sm' | 'md' | 'lg'
-
-// ─── Theme Definitions ─────────────────────────────────────────────────────────
 
 export const THEMES: Theme[] = [
   {
@@ -233,7 +229,7 @@ export const THEMES: Theme[] = [
     },
   },
 
-  // ── Dark themes ───────────────────────────────────────────────────────────────
+  // Dark themes
   {
     id: 'dark-navy',
     name: 'Deep Navy',
@@ -287,8 +283,6 @@ export const THEMES: Theme[] = [
   },
 ]
 
-// ─── Context ───────────────────────────────────────────────────────────────────
-
 interface ThemeContextValue {
   themeId: string
   setThemeId: (id: string) => void
@@ -302,8 +296,6 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null)
-
-// ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [themeId, setThemeIdState] = useState<string>(
@@ -321,7 +313,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const currentTheme = THEMES.find(t => t.id === themeId) ?? THEMES[0]
 
-  // Apply CSS variables whenever theme changes
   useEffect(() => {
     const root = document.documentElement
     const c = currentTheme.colors
@@ -337,7 +328,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     root.style.setProperty('--color-lichen', c.lichen)
   }, [themeId, currentTheme])
 
-  // Apply font scale class to html element
   useEffect(() => {
     const html = document.documentElement
     html.classList.remove('font-scale-sm', 'font-scale-lg')
@@ -345,7 +335,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     else if (fontScale === 'lg') html.classList.add('font-scale-lg')
   }, [fontScale])
 
-  // Apply compact mode class to html element
   useEffect(() => {
     if (compactMode) document.documentElement.classList.add('compact-mode')
     else document.documentElement.classList.remove('compact-mode')
@@ -379,8 +368,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     </ThemeContext.Provider>
   )
 }
-
-// ─── Hook ─────────────────────────────────────────────────────────────────────
 
 export function useTheme() {
   const ctx = useContext(ThemeContext)

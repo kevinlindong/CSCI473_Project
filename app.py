@@ -1,25 +1,8 @@
-"""
-app.py — FastAPI backend for the ArXiv Research Assistant.
+"""FastAPI backend for the ArXiv Research Assistant.
 
 Run with: uvicorn app:app --reload
 
-Endpoints:
-  GET  /api/health             — system status (which artifacts + models are loaded)
-  POST /api/query              — full RAG: retrieve -> rerank -> synthesize cited answer
-  GET  /api/papers             — list paper summaries (id, title, authors, abstract)
-  GET  /api/papers/{id}        — full paper detail (sections, figures)
-  GET  /api/topic-map          — precomputed k-means + k-NN graph for the 3D visualization
-  GET  /api/query-projection   — encode query, return its nearest neighbors in abstract space
-                                  (used to inject a virtual "query" node into the 3D graph)
-
-Loading strategy:
-  Heavy artifacts (embedding matrices, encoder, cross-encoder, LLM) are lazy-loaded
-  on first use and cached at module scope. Keeps import + startup fast; the first
-  /api/query call pays the model-load latency.
-
-Env vars:
-  ENABLE_LLM=0  — skip LLM answer synthesis (retrieval results still returned).
-                  Useful on memory-constrained hosts or for fast iteration.
+Set ENABLE_LLM=0 to skip LLM synthesis (retrieval still returns).
 """
 
 import json
@@ -30,8 +13,7 @@ from typing import Optional
 
 from dotenv import load_dotenv
 
-# Load .env before importing config so LLM_PROVIDER / OPENROUTER_* env vars
-# are populated by the time config.py reads them.
+# Load .env before importing config so LLM_PROVIDER / OPENROUTER_* are populated.
 load_dotenv()
 
 import numpy as np
@@ -45,9 +27,7 @@ import config
 
 app = FastAPI(title="ArXiv Research Assistant API")
 
-# Gzip large responses on the wire. /api/topic-map is ~7 MB raw JSON;
-# gzip drops it to ~2 MB, ~3× faster first-load on home internet.
-# minimum_size avoids overhead on small responses (health, single paper).
+# Topic-map artifact is ~7 MB raw / ~2 MB gzipped.
 app.add_middleware(GZipMiddleware, minimum_size=1024, compresslevel=6)
 
 app.add_middleware(
@@ -59,20 +39,15 @@ app.add_middleware(
 )
 
 
-# --------------------------------------------------------------------------- #
-# Module-level caches. All heavy state is lazy-loaded on first use and then
-# retained for the life of the process. Prevents multi-second reload cost on
-# every request while keeping `import app` cheap.
-# --------------------------------------------------------------------------- #
-
+# Heavy artifacts are lazy-loaded on first use and cached for the process.
 _ABSTRACT_EMBS: Optional[np.ndarray] = None
 _CHUNK_EMBS:    Optional[np.ndarray] = None
 _CAPTION_EMBS:  Optional[np.ndarray] = None
 _PAPER_INDEX:   Optional[dict]       = None
 
-_ENCODER   = None  # SentenceTransformer
-_RERANKER  = None  # CrossEncoder
-_RETRIEVER = None  # src.retrieval.BruteForceRetriever
+_ENCODER   = None
+_RERANKER  = None
+_RETRIEVER = None
 
 _TOPIC_GRAPH: Optional[dict] = None
 
@@ -80,8 +55,6 @@ ENABLE_LLM = os.environ.get("ENABLE_LLM", "1") != "0"
 
 
 def _load_matrices():
-    """Load the three embedding matrices and paper index from disk. Raises 503
-    if the artifacts are missing (user needs to run build_embeddings.py)."""
     global _ABSTRACT_EMBS, _CHUNK_EMBS, _CAPTION_EMBS, _PAPER_INDEX
     if _ABSTRACT_EMBS is not None:
         return _ABSTRACT_EMBS, _CHUNK_EMBS, _CAPTION_EMBS, _PAPER_INDEX
@@ -125,18 +98,11 @@ def _load_matrices():
 
 @lru_cache(maxsize=2048)
 def _load_paper(paper_id: str) -> Optional[dict]:
-    """Look up a single paper from data/papers.db. LRU-cached so popular
-    papers stay hot. Returns None if the paper_id isn't present.
-
-    Backed by src/papers_db.py. Build the database with
-    `python scripts/build_papers_db.py` after fetching new papers.
-    """
     from src import papers_db
     return papers_db.load_paper(paper_id)
 
 
 def _get_encoder():
-    """Lazy-load the sentence-transformer. First call pays ~5s + ~400MB RAM."""
     global _ENCODER
     if _ENCODER is None:
         from src import encoder as _enc
@@ -145,7 +111,6 @@ def _get_encoder():
 
 
 def _get_reranker():
-    """Lazy-load the cross-encoder reranker. First call pays ~3s + ~100MB RAM."""
     global _RERANKER
     if _RERANKER is None:
         from src.reranker import load_reranker
@@ -154,12 +119,6 @@ def _get_reranker():
 
 
 def _get_retriever():
-    """Lazy-construct the retriever and cache for the life of the process.
-
-    Today's impl: BruteForceRetriever (numpy cosine over all abstracts).
-    Past N ~= 30k, swap for a FAISS-backed Retriever in src/retrieval.py
-    with the same .retrieve() surface and only this helper changes.
-    """
     global _RETRIEVER
     if _RETRIEVER is None:
         from src.retrieval import BruteForceRetriever
@@ -169,7 +128,6 @@ def _get_retriever():
 
 
 def _load_topic_graph() -> dict:
-    """Read the precomputed topic graph artifact. Cached after first call."""
     global _TOPIC_GRAPH
     if _TOPIC_GRAPH is not None:
         return _TOPIC_GRAPH
@@ -193,7 +151,7 @@ def _load_topic_graph() -> dict:
 
 class QueryRequest(BaseModel):
     question: str
-    k: Optional[int] = None  # overrides config.N_RETRIEVAL_RESULTS when set
+    k: Optional[int] = None
 
 
 class Citation(BaseModel):
@@ -207,8 +165,8 @@ class Citation(BaseModel):
 
 class QueryResponse(BaseModel):
     answer: str
-    answer_generated: bool     # False when LLM was skipped or failed; retrieval still returned
-    reranked: bool             # True when the cross-encoder reranker fired
+    answer_generated: bool
+    reranked: bool
     citations: list[Citation]
 
 
@@ -246,8 +204,6 @@ class GraphNode(BaseModel):
     paper_id: str
     title: str
     cluster: int
-    # UMAP-precomputed 3D coordinates. Optional for back-compat with older
-    # topic_graph.json artifacts that lack a layout step.
     x: Optional[float] = None
     y: Optional[float] = None
     z: Optional[float] = None
@@ -280,7 +236,7 @@ class QueryNeighbor(BaseModel):
 class QueryProjectionResponse(BaseModel):
     query: str
     neighbors: list[QueryNeighbor]
-    top_cluster: Optional[int]  # the cluster most represented in the neighbor set
+    top_cluster: Optional[int]
 
 
 class HealthResponse(BaseModel):
@@ -291,15 +247,13 @@ class HealthResponse(BaseModel):
 
 
 class ScootMessage(BaseModel):
-    role: str       # 'user' | 'assistant'
+    role: str
     content: str
 
 
 class ScootRequest(BaseModel):
     message: str
     history: Optional[list[ScootMessage]] = None
-    # LaTeX source of the paper the user currently has open in the editor
-    # (truncated client-side). When present, scoot can answer questions about it.
     current_paper: Optional[str] = None
 
 
@@ -313,7 +267,6 @@ class ScootResponse(BaseModel):
 
 @app.get("/api/health", response_model=HealthResponse)
 async def health():
-    """Report which artifacts and models are currently loaded in this process."""
     emb_dir = config.EMBEDDINGS_DIR
     proc_dir = config.PROCESSED_DIR
     return HealthResponse(
@@ -338,18 +291,7 @@ async def health():
 
 @app.post("/api/query", response_model=QueryResponse)
 async def query(req: QueryRequest):
-    """
-    Full RAG pipeline:
-      1. Encode the question.
-      2. Two-stage retrieval: abstract k-NN → chunks/captions for those papers.
-      3. Cross-encoder reranker kicks in when bi-encoder scores are weak/bunched.
-      4. Assemble context, call LLM for a cited answer (if ENABLE_LLM).
-      5. Parse [n] citation markers from the answer, return aligned source dicts.
-
-    When ENABLE_LLM=0 or LLM loading fails, returns retrieval results with a
-    stub answer and the top-k passages as citations so the frontend still
-    renders something useful.
-    """
+    """Encode question, retrieve, optionally rerank, synthesize cited answer."""
     from src.reranker import rerank_passages, should_rerank
 
     if not req.question.strip():
@@ -366,11 +308,10 @@ async def query(req: QueryRequest):
         passages = rerank_passages(req.question, passages, model=reranker)
         reranked = True
 
-    # Truncate to a reasonable context size. Captions continue the numbering.
     passages = passages[: config.N_RERANK_RESULTS]
     captions = captions[: config.N_RERANK_RESULTS]
 
-    # Assemble aligned source list: position i <-> citation marker [i+1].
+    # Source position i corresponds to citation marker [i+1].
     sources: list[dict] = []
     for p in passages:
         meta = _load_paper(p["paper_id"]) or {}
@@ -393,7 +334,6 @@ async def query(req: QueryRequest):
             "score":    float(c.get("score", 0.0)),
         })
 
-    # --- LLM synthesis (optional) -----------------------------------------
     answer_text = ""
     answer_generated = False
     if ENABLE_LLM and sources:
@@ -405,8 +345,6 @@ async def query(req: QueryRequest):
             answer_text = generate_answer(req.question, context)
             answer_generated = True
         except Exception as e:
-            # LLM failure is recoverable — fall back to retrieval-only mode so
-            # the user still sees the cited passages.
             answer_text = (
                 f"LLM synthesis unavailable ({type(e).__name__}: {e}). "
                 "Showing retrieved passages below."
@@ -416,7 +354,6 @@ async def query(req: QueryRequest):
     else:
         answer_text = "LLM synthesis disabled (ENABLE_LLM=0). Showing retrieved passages below."
 
-    # Parse citation markers [1], [2], ... from the answer.
     cited_nums = sorted({int(m) for m in re.findall(r"\[(\d+)\]", answer_text)})
     citations: list[Citation] = []
     if cited_nums:
@@ -425,8 +362,6 @@ async def query(req: QueryRequest):
                 s = sources[n - 1]
                 citations.append(Citation(**s))
     if not citations and sources:
-        # LLM cited nothing (or was disabled) — return the top retrieval hits
-        # so the UI has something to render instead of a bare answer.
         for s in sources[: config.N_RERANK_RESULTS]:
             citations.append(Citation(**s))
 
@@ -443,15 +378,6 @@ async def list_papers(
     cluster: Optional[int] = Query(None, description="Filter by cluster id"),
     limit: Optional[int] = Query(None, ge=1, le=2000),
 ):
-    """List paper summaries. Optionally filter by cluster id.
-
-    Uses a single SQL query over only the summary columns
-    (paper_id, title, abstract, date, url, authors). Critically does NOT
-    deserialize sections_json / figures_json — those are tens of KB per
-    paper and the listing endpoint never renders them. Without this
-    distinction the no-filter listing took ~27s for 10k papers; with it,
-    well under one second.
-    """
     from src import papers_db
 
     paper_ids: Optional[list[str]] = None
@@ -476,7 +402,6 @@ async def list_papers(
 
 @app.get("/api/papers/{paper_id}", response_model=PaperDetail)
 async def get_paper(paper_id: str):
-    """Full paper detail — title, authors, abstract, sections, figures."""
     p = _load_paper(paper_id)
     if p is None:
         raise HTTPException(status_code=404, detail=f"paper {paper_id} not found")
@@ -495,13 +420,11 @@ async def get_paper(paper_id: str):
 
 @app.get("/api/topic-map", response_model=TopicMapResponse)
 async def topic_map():
-    """Serve the precomputed k-means + k-NN topic graph artifact."""
     return _load_topic_graph()
 
 
 @app.post("/api/scoot", response_model=ScootResponse)
 async def scoot(req: ScootRequest):
-    """Generate a chat reply from the local Qwen model with the scoot system prompt."""
     if not req.message.strip():
         raise HTTPException(status_code=400, detail="message is required")
     if not ENABLE_LLM:
@@ -524,14 +447,7 @@ async def query_projection(
     q: str = Query(..., min_length=1, description="The query text"),
     k: int = Query(8, ge=1, le=50, description="Number of neighbors to return"),
 ):
-    """
-    Encode the query into abstract-embedding space and return its top-k nearest
-    papers. The frontend uses this to inject a virtual "query" node into the 3D
-    force graph with edges to each neighbor — the simulation then places the
-    query node spatially among its matches.
-
-    Cheaper than /api/query: one encode + one cosine pass, no LLM, no rerank.
-    """
+    """Encode q, return its top-k nearest abstracts + the dominant cluster."""
     from src.retrieval import cosine_similarity, top_k_indices
 
     abstract_embs, _, _, paper_index = _load_matrices()
@@ -539,8 +455,6 @@ async def query_projection(
     from src import encoder as _enc
     q_vec = _enc.encode([q], encoder)[0]
 
-    # One cosine pass — derive top-k from the precomputed scores instead of
-    # calling nearest_neighbors() (which would recompute cosine internally).
     scores = cosine_similarity(q_vec, abstract_embs)
     top_rows = top_k_indices(scores, k)
     abstract_ids = paper_index.get("abstracts", [])
@@ -553,7 +467,6 @@ async def query_projection(
         for i in top_rows
     ]
 
-    # Which cluster gets the most votes among the returned neighbors?
     top_cluster: Optional[int] = None
     try:
         tg = _load_topic_graph()
@@ -567,7 +480,6 @@ async def query_projection(
         if votes:
             top_cluster = votes.most_common(1)[0][0]
     except HTTPException:
-        # Topic graph missing — that's fine, projection still works without it.
         pass
 
     return QueryProjectionResponse(

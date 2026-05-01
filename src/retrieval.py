@@ -1,17 +1,6 @@
-"""
-retrieval.py — FROM-SCRATCH cosine similarity nearest-neighbor search.
+"""From-scratch cosine similarity nearest-neighbor search.
 
-This module implements cosine similarity and nearest-neighbor retrieval
-using only numpy primitives. No sklearn, no faiss, no library-based
-similarity functions.
-
-The retrieval pipeline:
-1. Encode the user query into a vector.
-2. Compute cosine similarity against the abstract embedding matrix.
-3. Return the top-K most similar paper IDs.
-4. Look up chunk and caption embeddings for those papers and rank them
-   against the same query vector so downstream callers (reranker, LLM
-   context builder) receive best-first passages and captions.
+Pure numpy. No sklearn / faiss / library similarity functions.
 """
 
 from collections import defaultdict
@@ -21,48 +10,27 @@ import numpy as np
 
 
 def cosine_similarity(query_vec: np.ndarray, corpus_matrix: np.ndarray) -> np.ndarray:
-    """
-    Compute cosine similarity between a query vector and every row in the corpus.
+    """Cosine similarity of `query_vec` against every row of `corpus_matrix`.
 
-    cosine_sim(a, b) = dot(a, b) / (||a|| * ||b||)
-
-    Implemented from first principles with numpy primitives only. Works on
-    both normalized and unnormalized inputs. If a row (or the query) has
-    zero norm, its score is forced to 0.0 rather than producing NaN.
-
-    Args:
-        query_vec: Shape (D,) — the query embedding.
-        corpus_matrix: Shape (N, D) — the corpus embeddings.
-
-    Returns:
-        Shape (N,) — cosine similarity scores, each in [-1.0, 1.0].
+    Zero-norm rows score 0 instead of NaN.
     """
     query_vec = np.asarray(query_vec).reshape(-1)
     corpus_matrix = np.asarray(corpus_matrix)
 
-    dots = corpus_matrix @ query_vec                          # (N,)
-    row_norms = np.linalg.norm(corpus_matrix, axis=1)         # (N,)
-    q_norm = float(np.linalg.norm(query_vec))                 # scalar
+    dots = corpus_matrix @ query_vec
+    row_norms = np.linalg.norm(corpus_matrix, axis=1)
+    q_norm = float(np.linalg.norm(query_vec))
 
     if q_norm == 0.0:
         return np.zeros_like(dots)
 
     safe_row_norms = np.where(row_norms == 0.0, 1.0, row_norms)
     sims = dots / (safe_row_norms * q_norm)
-    # Zero-norm rows: force score to 0 instead of dividing by the fill value
     return np.where(row_norms == 0.0, 0.0, sims)
 
 
 def top_k_indices(scores: np.ndarray, k: int) -> list[int]:
-    """
-    Return indices of the top-k entries in `scores`, sorted by descending score.
-
-    Uses np.argpartition for an O(N) unordered top-k selection followed by
-    np.argsort on just those k candidates — avoids a full O(N log N) sort.
-    Split out from `nearest_neighbors` so callers that already have the
-    similarity scores (e.g. /api/query-projection, which surfaces both
-    indices and scores) can skip a second cosine pass.
-    """
+    """Top-k indices by descending score via O(N) argpartition + sort of k."""
     n = len(scores)
     if n == 0 or k <= 0:
         return []
@@ -77,17 +45,6 @@ def top_k_indices(scores: np.ndarray, k: int) -> list[int]:
 
 
 def nearest_neighbors(query_vec: np.ndarray, corpus_matrix: np.ndarray, k: int) -> list[int]:
-    """
-    Return indices of the top-k most similar vectors in the corpus.
-
-    Args:
-        query_vec: Shape (D,) — the query embedding.
-        corpus_matrix: Shape (N, D) — the corpus embeddings.
-        k: Number of neighbors to return. Clamped to len(corpus_matrix) when larger.
-
-    Returns:
-        List of integer indices into corpus_matrix, sorted by descending similarity.
-    """
     return top_k_indices(cosine_similarity(query_vec, corpus_matrix), k)
 
 
@@ -102,53 +59,19 @@ def retrieve(
     top_chunks_per_paper: int = 3,
     top_captions_per_paper: int = 2,
 ) -> dict:
+    """Two-stage retrieval: top-k abstracts, then their best chunks + captions.
+
+    `query` may be a string (encoded here) or a pre-encoded np.ndarray.
+    Returns {"paper_ids", "scores", "passages", "captions"}.
     """
-    Full retrieval pipeline: encode query, search abstracts, look up chunks/captions.
-
-    Two-stage retrieval:
-      1. Cosine k-NN over abstract_embeddings → top-k paper IDs.
-      2. For each retrieved paper, score its chunks and captions against the
-         same query vector and keep the top_chunks_per_paper / top_captions_per_paper
-         of each. Passages and captions are then flattened and sorted globally
-         by descending score.
-
-    Args:
-        query: Natural-language string OR a pre-encoded np.ndarray of shape (D,).
-               Strings are encoded via the sentence transformer; pre-encoded
-               vectors skip the encoder entirely (useful for tests).
-        abstract_embeddings: Shape (N, D) — one vector per paper.
-        chunk_embeddings:    Shape (M, D) — one vector per text chunk.
-        caption_embeddings:  Shape (C, D) — one vector per figure caption.
-        paper_index: Index dict produced by scripts/build_embeddings.py. Expected
-                     keys: 'abstracts' (list[str]), 'chunks' (list[dict]),
-                     'captions' (list[dict] with paper_id/title/caption, or
-                     list[str] of paper_ids for legacy indices).
-        k: Number of papers to retrieve from abstract search.
-        model: Pre-loaded SentenceTransformer. Lazy-loaded via load_model()
-               only when query is a string AND model is None.
-        top_chunks_per_paper: Cap on chunks returned per retrieved paper.
-        top_captions_per_paper: Cap on captions returned per retrieved paper.
-
-    Returns:
-        {
-          "paper_ids": list[str],    # top-k papers, ordered by abstract score
-          "scores":    list[float],  # abstract-level scores aligned with paper_ids
-          "passages":  list[dict],   # each: {paper_id, paper_title, heading, text, score}
-          "captions":  list[dict],   # each: {paper_id, title, caption, score}
-        }
-    """
-    # --- Encode query (or accept a pre-encoded vector) ---
     if isinstance(query, np.ndarray):
         query_vec = query.reshape(-1)
     else:
-        # Lazy import so callers that pass a pre-encoded np.ndarray never pay
-        # the sentence-transformers / torch import cost.
         from src import encoder as _encoder
         if model is None:
             model = _encoder.load_model()
         query_vec = _encoder.encode([str(query)], model)[0]
 
-    # --- Stage 1: top-k abstracts ---
     abstract_scores = cosine_similarity(query_vec, abstract_embeddings)
     top_paper_rows = nearest_neighbors(query_vec, abstract_embeddings, k)
 
@@ -157,12 +80,10 @@ def retrieve(
     top_paper_scores = [float(abstract_scores[i]) for i in top_paper_rows]
     top_id_set = set(top_paper_ids)
 
-    # Chunks carry paper_title inline; reuse as a fallback for caption title
     title_lookup: dict[str, str] = {}
     for entry in paper_index.get("chunks", []):
         title_lookup.setdefault(entry["paper_id"], entry.get("paper_title", ""))
 
-    # --- Stage 2: chunks within the top-k papers ---
     chunk_rows_by_paper: dict[str, list[int]] = defaultdict(list)
     for row, entry in enumerate(paper_index.get("chunks", [])):
         if entry["paper_id"] in top_id_set:
@@ -188,11 +109,10 @@ def retrieve(
             })
     passages.sort(key=lambda p: p["score"], reverse=True)
 
-    # --- Stage 3: captions within the top-k papers ---
     caption_entries = paper_index.get("captions", [])
 
     def _entry_paper_id(e) -> str:
-        # Current format: dict with 'paper_id'. Legacy format: bare string.
+        # Current format: dict with 'paper_id'. Legacy: bare string.
         return e if isinstance(e, str) else e.get("paper_id", "")
 
     caption_rows_by_paper: dict[str, list[int]] = defaultdict(list)
@@ -235,18 +155,11 @@ def retrieve(
 
 
 class Retriever(Protocol):
-    """Anything that takes a query and returns ranked passages + captions."""
-
     def retrieve(self, query, k: int = 5) -> dict: ...
 
 
 class BruteForceRetriever:
-    """Numpy cosine over the full abstract matrix.
-
-    Right at N <= ~30k. Past that, swap for an ANN-backed Retriever
-    (FAISS / hnswlib) with the same .retrieve() surface — only this
-    module changes.
-    """
+    """Numpy cosine over the full abstract matrix."""
 
     def __init__(
         self,

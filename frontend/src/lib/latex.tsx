@@ -1,16 +1,6 @@
 import { type ReactNode } from 'react'
 import katex from 'katex'
 
-/* ==========================================================================
-   Minimal LaTeX → React renderer.
-   Supports: \documentclass, preamble (\title, \author, \date, \affiliation),
-   \maketitle, \begin{abstract}, \section, \subsection, \subsubsection,
-   \textbf, \textit, \emph, \underline, \texttt, \textsc, \cite, \ref,
-   \begin{itemize|enumerate}, \item, \begin{figure}, \caption,
-   \begin{equation}, \begin{align}, \begin{displaymath}, \[ \], $...$, $$...$$,
-   \LaTeX, \TeX, \&, \%, \_, ``...'', \\, and citation/figure numbering.
-   ========================================================================== */
-
 export type PaperMeta = {
   title?: string
   authors?: string[]
@@ -25,8 +15,6 @@ type Env = {
   body: string
   argKey?: string
 }
-
-// ─── utilities ──────────────────────────────────────────────────────────────
 
 const stripComments = (src: string): string =>
   src.replace(/(?<!\\)%.*$/gm, '')
@@ -60,8 +48,6 @@ const takeOptionalArg = (s: string, start: number): { arg: string; end: number }
   }
   return { arg: s.slice(i + 1, j - 1), end: j }
 }
-
-// ─── preamble extraction ────────────────────────────────────────────────────
 
 export function extractMeta(source: string): { meta: PaperMeta; body: string } {
   const src = stripComments(source)
@@ -199,8 +185,6 @@ export function extractMeta(source: string): { meta: PaperMeta; body: string } {
   return { meta, body }
 }
 
-// ─── math rendering ─────────────────────────────────────────────────────────
-
 function renderMath(expr: string, display: boolean, key: string | number): ReactNode {
   try {
     const html = katex.renderToString(expr.trim(), {
@@ -222,8 +206,8 @@ function renderMath(expr: string, display: boolean, key: string | number): React
   }
 }
 
-// ─── inline parser ──────────────────────────────────────────────────────────
-// Handles commands inside paragraph text: math, \textbf, \textit, \cite, etc.
+// Inline parser — handles commands inside paragraph text:
+// math, \textbf, \textit, \cite, etc.
 
 type Refs = {
   citations: Map<string, number>
@@ -406,8 +390,8 @@ function parseInline(src: string, refs: Refs, keyBase: string): ReactNode[] {
   return out
 }
 
-// ─── block parser ───────────────────────────────────────────────────────────
-// Splits body into structural blocks: sections, environments, paragraphs.
+// Block parser — splits body into structural blocks:
+// sections, environments, paragraphs.
 
 type Block =
   | { kind: 'section'; level: 1 | 2 | 3; text: string; number: string }
@@ -527,8 +511,6 @@ function parseBlocks(body: string): Block[] {
   flush()
   return blocks
 }
-
-// ─── environment renderers ──────────────────────────────────────────────────
 
 // Render a container env's body recursively as blocks. Used by wrapper envs
 // (center, flushleft, quote, theorem, …) so a nested \begin{tabular} or
@@ -786,8 +768,6 @@ function renderEnv(env: Env, refs: Refs, figNum: { n: number }, key: string): Re
   return <div key={key} className="my-2">{innerNodes}</div>
 }
 
-// ─── top-level renderer ─────────────────────────────────────────────────────
-
 export function RenderPaper({ source, showLineNumbers = false }: { source: string; showLineNumbers?: boolean }) {
   void showLineNumbers
   const { meta, body } = extractMeta(source)
@@ -916,8 +896,6 @@ export function RenderPaper({ source, showLineNumbers = false }: { source: strin
     </article>
   )
 }
-
-// ─── syntax highlighting for the source textarea overlay ────────────────────
 
 export function highlightTeX(src: string): string {
   const escape = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')

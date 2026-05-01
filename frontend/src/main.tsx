@@ -5,47 +5,24 @@ import './index.css'
 import { AuthProvider } from './contexts/AuthContext'
 import { EditorBridgeProvider } from './contexts/EditorBridgeContext'
 import { ThemeProvider } from './contexts/ThemeContext'
-import { ProtectedRoute } from './components/ProtectedRoute'
 import { ScootFab } from './components/ScootFab'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import Home from './pages/Home.tsx'
-import Editor from './pages/Editor.tsx'
 import PaperEditor from './pages/PaperEditor.tsx'
 import PaperBrowse from './pages/PaperBrowse.tsx'
 import Library from './pages/Library.tsx'
 import TopicGraph3D from './pages/TopicGraph3D.tsx'
-import Repos from './pages/Repos.tsx'
-import MyRepos from './pages/MyRepos.tsx'
-import Diff from './pages/Diff.tsx'
-import Chat from './pages/Chat.tsx'
-import AuraStore from './pages/AuraStore.tsx'
-import Graph_Creation from './pages/Graph_Creation.tsx'
 import Settings from './pages/Settings.tsx'
-import HowItWorks from './pages/HowItWorks.tsx'
-import PublicRepos from './pages/PublicRepos.tsx'
-import TermsOfService from './pages/TermsOfService.tsx'
-import PrivacyPolicy from './pages/PrivacyPolicy.tsx'
-import HomeV1 from './pages/HomeV1.tsx'
-import HomeV2 from './pages/HomeV2.tsx'
-import HomeV3 from './pages/HomeV3.tsx'
-import HomeV4 from './pages/HomeV4.tsx'
-import HomeV5 from './pages/HomeV5.tsx'
 
-// Scoot is shown on every page except the legal pages so the user always
-// has the agent within reach. ⌘K opens it from anywhere.
 function AppShell({ children }: { children: React.ReactNode }) {
   const location = useLocation()
-  const hideOn = new Set(['/terms', '/privacy', '/1', '/2', '/3', '/4', '/5'])
-  const showFab = !hideOn.has(location.pathname)
   return (
     <>
-      {/* keyed by pathname so each route mount replays the .page-enter stagger.
-          display:contents keeps the wrapper transparent to layout — pages
-          relying on h-screen on their root still get the viewport. */}
+      {/* key=pathname replays .page-enter on each route mount; display:contents keeps h-screen pages working. */}
       <div key={location.pathname} className="page-enter" style={{ display: 'contents' }}>
         {children}
       </div>
-      {showFab && <ScootFab />}
+      <ScootFab />
     </>
   )
 }
@@ -65,28 +42,12 @@ createRoot(document.getElementById('root')!).render(
             <Route path="/login" element={<Navigate to="/" replace />} />
             <Route path="/profile" element={<Navigate to="/library" replace />} />
             <Route path="/editor" element={<Navigate to="/editor/scratch" replace />} />
-            <Route path="/editor/legacy/:repoId" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
             <Route path="/editor/:repoId" element={<PaperEditor />} />
             <Route path="/browse" element={<PaperBrowse />} />
             <Route path="/library" element={<Library />} />
             <Route path="/topic-graph" element={<TopicGraph3D />} />
             <Route path="/papers" element={<Navigate to="/browse" replace />} />
-            <Route path="/explore" element={<PublicRepos />} />
-            <Route path="/repos" element={<ProtectedRoute><Repos /></ProtectedRoute>} />
-            <Route path="/my-repos" element={<ProtectedRoute><MyRepos /></ProtectedRoute>} />
-            <Route path="/diff/:repoId" element={<ProtectedRoute><Diff /></ProtectedRoute>} />
-            <Route path="/how-it-works" element={<HowItWorks />} />
-            <Route path="/terms" element={<TermsOfService />} />
-            <Route path="/privacy" element={<PrivacyPolicy />} />
-            <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
-            <Route path="/store" element={<ProtectedRoute><AuraStore /></ProtectedRoute>} />
             <Route path="/settings" element={<Settings />} />
-            <Route path="/graph" element={<Graph_Creation />} />
-            <Route path="/1" element={<HomeV1 />} />
-            <Route path="/2" element={<HomeV2 />} />
-            <Route path="/3" element={<HomeV3 />} />
-            <Route path="/4" element={<HomeV4 />} />
-            <Route path="/5" element={<HomeV5 />} />
           </Routes>
         </AppShell>
       </EditorBridgeProvider>
